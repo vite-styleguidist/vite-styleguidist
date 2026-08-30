@@ -1,13 +1,14 @@
-import { render } from '@testing-library/react';
 import React from 'react';
-import renderer from 'react-test-renderer';
-import Markdown from './Markdown';
+import { render } from '@testing-library/react';
+import Markdown from './Markdown.js';
 
 describe('Markdown', () => {
+	// Markdown output combines many Styled renderers; a DOM snapshot is the most readable
+	// way to pin the whole structure (tags, generated ids, JSS class names) at once.
 	const expectSnapshotToMatch = (markdown: string) => {
-		const actual = renderer.create(<Markdown text={markdown} />);
+		const { container } = render(<Markdown text={markdown} />);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		expect(container.firstChild).toMatchSnapshot();
 	};
 
 	it('should forward DOM attributes onto resulting HTML', () => {
@@ -79,11 +80,21 @@ and this is _emphasized_
 	});
 
 	it('should render check-lists', () => {
-		expectSnapshotToMatch(`
+		const { container, getAllByRole } = render(
+			<Markdown
+				text={`
 * [ ] to do 1
 * [ ] to do 2
 * [x] to do 3
-`);
+`}
+			/>
+		);
+
+		const checkboxes = getAllByRole('checkbox') as HTMLInputElement[];
+		expect(checkboxes.map((checkbox) => checkbox.checked)).toEqual([false, false, true]);
+		// Task list checkboxes are informational only
+		expect(checkboxes.every((checkbox) => checkbox.readOnly)).toBe(true);
+		expect(container.firstChild).toMatchSnapshot();
 	});
 
 	it('should render a blockquote', () => {
@@ -101,15 +112,26 @@ and this is _emphasized_
 	});
 
 	it('should render code blocks without escaping', () => {
-		expectSnapshotToMatch(`
+		const { container } = render(
+			<Markdown
+				text={`
 \`\`\`html
 <foo></foo>
 \`\`\`
-`);
+`}
+			/>
+		);
+
+		// Fenced code is pre-highlighted HTML (see the loaders), so it must be injected as is
+		expect(container.querySelector('pre foo')).not.toBeNull();
+		expect(container.firstChild).toMatchSnapshot();
 	});
 
 	it('should render inline code with escaping', () => {
-		expectSnapshotToMatch('Foo `<bar>` baz');
+		const { container, getByText } = render(<Markdown text="Foo `<bar>` baz" />);
+
+		expect(getByText('<bar>').tagName).toBe('CODE');
+		expect(container.firstChild).toMatchSnapshot();
 	});
 
 	it('should render a horizontal rule', () => {
@@ -125,7 +147,7 @@ and this is _emphasized_
 `);
 	});
 
-	it.only('should ignore single line comments', () => {
+	it('should ignore single line comments', () => {
 		const markdown = `Hello World
 <!-- This is a single line comment -->
 `;
@@ -153,13 +175,12 @@ comment`)
 });
 
 describe('Markdown inline', () => {
-	const expectSnapshotToMatch = (markdown: string) => {
-		const actual = renderer.create(<Markdown text={markdown} inline />);
-
-		expect(actual).toMatchSnapshot();
-	};
-
 	it('should render text in a span', () => {
-		expectSnapshotToMatch('Hello world!');
+		const { container } = render(<Markdown text="Hello world!" inline />);
+
+		const span = container.firstChild as HTMLElement;
+		expect(span.tagName).toBe('SPAN');
+		expect(span).toHaveTextContent('Hello world!');
+		expect(container.querySelector('p')).toBeNull();
 	});
 });

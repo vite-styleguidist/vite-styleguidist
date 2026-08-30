@@ -1,7 +1,7 @@
 import deepfreeze from 'deepfreeze';
-import getRouteData from '../getRouteData';
-import { DisplayModes } from '../../consts';
-import * as Rsg from '../../../typings';
+import getRouteData from '../getRouteData.js';
+import { DisplayModes } from '../../consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const example0: Rsg.Example = {
 	type: 'code',

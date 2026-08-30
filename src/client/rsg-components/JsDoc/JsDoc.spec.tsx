@@ -1,6 +1,6 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import JsDoc, { getMarkdown } from './JsDoc';
+import { render } from '@testing-library/react';
+import JsDoc, { getMarkdown } from './JsDoc.js';
 
 const tags = {
 	deprecated: [
@@ -52,7 +52,17 @@ const tags = {
 describe('getMarkdown', () => {
 	it('should return Markdown for all tags', () => {
 		const result = getMarkdown(tags);
-		expect(result).toMatchSnapshot();
+		expect(result).toBe(
+			[
+				'**Deprecated:** Use *another* method',
+				'[See 1](#TestLink)',
+				'[See 2](#TestLink2)',
+				'[Link 1](#TestLink)',
+				'Authors: [Author 1](#TestLink), [Author 2](#TestLink2)',
+				'Version: 2.0.0',
+				'Since: 1.0.0',
+			].join('\n\n')
+		);
 	});
 
 	it('should return Markdown for one author', () => {
@@ -60,29 +70,41 @@ describe('getMarkdown', () => {
 		const result = getMarkdown({
 			author,
 		});
-		expect(result).toMatchSnapshot();
+		expect(result).toBe('Author: [Author 1](#TestLink)');
 	});
 
 	it('should return Markdown for multiple authors', () => {
 		const result = getMarkdown({
 			author: tags.author,
 		});
-		expect(result).toMatchSnapshot();
+		expect(result).toBe('Authors: [Author 1](#TestLink), [Author 2](#TestLink2)');
 	});
 });
 
 describe('JsDoc', () => {
 	it('should render Markdown', () => {
-		const renderer = createRenderer();
-		renderer.render(<JsDoc {...tags} />);
+		const { container, getByText, getAllByRole } = render(<JsDoc {...tags} />);
 
-		expect(renderer.getRenderOutput()).toMatchSnapshot();
+		expect(getByText('Deprecated:').tagName).toBe('STRONG');
+		expect(getByText('another').tagName).toBe('EM');
+		expect(container).toHaveTextContent('Deprecated: Use another method');
+		expect(container).toHaveTextContent('Authors: Author 1, Author 2');
+		expect(container).toHaveTextContent('Version: 2.0.0');
+		expect(container).toHaveTextContent('Since: 1.0.0');
+		expect(
+			getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')])
+		).toEqual([
+			['See 1', '#TestLink'],
+			['See 2', '#TestLink2'],
+			['Link 1', '#TestLink'],
+			['Author 1', '#TestLink'],
+			['Author 2', '#TestLink2'],
+		]);
 	});
 
 	it('should render null for empty tags', () => {
-		const renderer = createRenderer();
-		renderer.render(<JsDoc />);
+		const { container } = render(<JsDoc />);
 
-		expect(renderer.getRenderOutput()).toBe(null);
+		expect(container).toBeEmptyDOMElement();
 	});
 });

@@ -1,24 +1,35 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import IsolateButton from './IsolateButton';
+import { render } from '@testing-library/react';
+import IsolateButton from './IsolateButton.js';
 
-it('should renderer a link to isolated mode', () => {
-	const renderer = createRenderer();
-	renderer.render(<IsolateButton name="Pizza" href="/#pizza" />);
+it('should render a link to isolated mode', () => {
+	const { getByTestId } = render(<IsolateButton name="Pizza" href="/#pizza" />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const link = getByTestId('Pizza-isolate-button');
+	expect(link.tagName).toBe('A');
+	expect(link).toHaveAttribute('href', '/#!/Pizza');
+	expect(link).toHaveAccessibleName('Open isolated');
+	expect(link.querySelector('svg')).toBeInTheDocument();
 });
 
-it('should renderer a link to example isolated mode', () => {
-	const renderer = createRenderer();
-	renderer.render(<IsolateButton name="Pizza" href="/#pizza" example={3} />);
+it('should render a link to example isolated mode', () => {
+	const { getByTestId } = render(<IsolateButton name="Pizza" href="/#pizza" example={3} />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const link = getByTestId('Pizza-3-isolate-button');
+	expect(link).toHaveAttribute('href', '/#!/Pizza/3');
+	expect(link).toHaveAccessibleName('Open isolated');
 });
 
-it('should renderer a link home in isolated mode', () => {
-	const renderer = createRenderer();
-	renderer.render(<IsolateButton name="Pizza" href="/#pizza" isolated />);
+it('should render a link home in isolated mode', () => {
+	const { getByTestId } = render(<IsolateButton name="Pizza" href="/#pizza" isolated />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const link = getByTestId('Pizza-isolate-button');
+	expect(link).toHaveAttribute('href', '/#pizza');
+	expect(link).toHaveAccessibleName('Show all components');
+});
+
+it('should render nothing in isolated mode without a link home', () => {
+	const { container } = render(<IsolateButton name="Pizza" href="" isolated />);
+
+	expect(container).toBeEmptyDOMElement();
 });

@@ -3,7 +3,7 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import { MdInfoOutline } from 'react-icons/md';
 import Text from 'rsg-components/Text';
 import Tooltip from 'rsg-components/Tooltip';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space }: Rsg.Theme) => ({
 	complexType: {

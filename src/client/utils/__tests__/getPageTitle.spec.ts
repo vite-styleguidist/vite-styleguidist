@@ -1,4 +1,4 @@
-import getPageTitle from '../getPageTitle';
+import getPageTitle from '../getPageTitle.js';
 
 const baseTitle = 'Styleguide';
 

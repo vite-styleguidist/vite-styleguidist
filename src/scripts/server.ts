@@ -1,16 +1,37 @@
-import WebpackDevServer from 'webpack-dev-server';
-import webpack from 'webpack';
-import createServer from './create-server';
-import * as Rsg from '../typings';
+import { createServer } from 'vite';
+import type { ViteDevServer } from 'vite';
+import makeViteConfig from './make-vite-config.js';
+import type * as Rsg from '../typings/index.js';
 
-export default function server(
+/**
+ * Start the style guide dev server.
+ *
+ * Returns a promise resolving to the Vite dev server (already listening); the
+ * optional Node-style callback is kept for API compatibility.
+ */
+export default async function server(
 	config: Rsg.SanitizedStyleguidistConfig,
-	callback: (error?: Error) => void
-): { app: WebpackDevServer; compiler: webpack.Compiler } {
-	const env = 'development';
-	const serverInfo = createServer(config, env);
-
-	serverInfo.app.startCallback(callback);
-
-	return serverInfo;
+	callback?: (err?: Error, server?: ViteDevServer) => void
+): Promise<ViteDevServer | undefined> {
+	try {
+		const viteConfig = await makeViteConfig(config, 'development');
+		const devServer = await createServer(viteConfig);
+		await devServer.listen();
+		if (callback) {
+			callback(undefined, devServer);
+		}
+		return devServer;
+	} catch (err) {
+		// Vite swallows the EADDRINUSE code behind a plain Error (strictPort is on);
+		// restore it so callers (the CLI) can show the “change serverPort” hint.
+		// The message is Vite’s untranslated text, pinned since Vite 8.
+		if (err instanceof Error && /is already in use/.test(err.message)) {
+			(err as NodeJS.ErrnoException).code = 'EADDRINUSE';
+		}
+		if (callback) {
+			callback(err as Error);
+			return undefined;
+		}
+		throw err;
+	}
 }

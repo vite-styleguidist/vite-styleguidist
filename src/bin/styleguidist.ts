@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+
+import mri from 'mri';
+import kleur from 'kleur';
+import open from 'open';
+import { stringify } from 'q-i';
+import glogg from 'glogg';
+import getConfig from '../scripts/config.js';
+import setupLogger from '../scripts/logger.js';
+import * as consts from '../scripts/consts.js';
+import StyleguidistError from '../scripts/utils/error.js';
+import type * as Rsg from '../typings/index.js';
+
+const logger = glogg('rsg');
+
+const argv = mri(process.argv.slice(2));
+const command = argv._[0];
+
+// Set environment before loading style guide config because user’s Vite config may use it
+const env: Rsg.StyleguidistEnv = command === 'build' ? 'production' : 'development';
+process.env.NODE_ENV = process.env.NODE_ENV || env;
+
+// Load style guide config
+let config: Rsg.SanitizedStyleguidistConfig;
+try {
+	config = getConfig(argv.config, updateConfig);
+} catch (err) {
+	if (err instanceof StyleguidistError) {
+		const link = consts.DOCS_CONFIG + (err.extra ? `#${err.extra.toLowerCase()}` : '');
+		printErrorWithLink(err.message, `Learn how to configure your style guide:`, link);
+		process.exit(1);
+	} else {
+		throw err;
+	}
+}
+
+// Do not show nasty stack traces for Styleguidist errors
+process.on('uncaughtException', (err) => {
+	printError(err);
+	process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+	printError(err);
+	process.exit(1);
+});
+
+verboseLog('Styleguidist config:', config);
+
+switch (command) {
+	case 'build':
+		commandBuild();
+		break;
+	case 'server':
+		commandServer();
+		break;
+	default:
+		commandHelp();
+}
+
+/**
+ * @param {object} prevConfig
+ * @return {object}
+ */
+function updateConfig(prevConfig: Rsg.StyleguidistConfig): Rsg.StyleguidistConfig {
+	// Set verbose mode from config option or command line switch
+	const verbose = prevConfig.verbose || argv.verbose;
+
+	// Set serverPort from from command line or config option
+	const serverPort = parseInt(argv.port) || prevConfig.serverPort;
+
+	// Setup logger *before* config validation (because validations may use logger to print warnings)
+	setupLogger(prevConfig.logger as Record<string, (message: string) => void>, verbose);
+
+	return {
+		...prevConfig,
+		verbose,
+		serverPort,
+	};
+}
+
+async function commandBuild() {
+	console.log('Building style guide...');
+
+	const { default: build } = await import('../scripts/build.js');
+	try {
+		await build(config);
+	} catch (err) {
+		printError(err);
+		process.exit(1);
+	}
+
+	if (config.printBuildInstructions) {
+		config.printBuildInstructions(config);
+	} else {
+		printBuildInstructions(config);
+	}
+}
+
+async function commandServer() {
+	const { default: server } = await import('../scripts/server.js');
+	let devServer;
+	try {
+		devServer = await server(config);
+	} catch (err: any) {
+		if (err && err.code === 'EADDRINUSE') {
+			printErrorWithLink(
+				`Another server is running at port ${config.serverPort} already. Please stop it or change the default port to continue.`,
+				'You can change the port using the `serverPort` option in your style guide config:',
+				consts.DOCS_CONFIG
+			);
+		} else {
+			printError(err, 'Failed to start the dev server');
+		}
+		process.exit(1);
+	}
+	if (!devServer) {
+		return;
+	}
+
+	verboseLog('Vite config:', devServer.config);
+
+	const isHttps = !!devServer.config.server.https;
+	const urls = {
+		local: devServer.resolvedUrls?.local ?? [],
+		network: devServer.resolvedUrls?.network ?? [],
+	};
+
+	if (config.printServerInstructions) {
+		config.printServerInstructions(config, { isHttps, urls });
+	} else {
+		printServerInstructions(urls);
+	}
+
+	if (argv.open && urls.local[0]) {
+		// A failed browser launch must not kill the dev server (the rejection would
+		// otherwise hit the global unhandledRejection handler and exit the process)
+		open(urls.local[0]).catch((err: Error) => {
+			logger.warn(`Cannot open the browser: ${err.message}`);
+		});
+	}
+}
+
+function commandHelp() {
+	console.log(
+		[
+			kleur.underline('Usage'),
+			'',
+			'    ' +
+				kleur.bold('styleguidist') +
+				' ' +
+				kleur.cyan('<command>') +
+				' ' +
+				kleur.yellow('[<options>]'),
+			'',
+			kleur.underline('Commands'),
+			'',
+			'    ' + kleur.cyan('build') + '           Build style guide',
+			'    ' + kleur.cyan('server') + '          Run development server',
+			'    ' + kleur.cyan('help') + '            Display React Styleguidist help',
+			'',
+			kleur.underline('Options'),
+			'',
+			'    ' + kleur.yellow('--config') + '        Config file path',
+			'    ' + kleur.yellow('--port') + '          Port to run development server on',
+			'    ' + kleur.yellow('--open') + '          Open Styleguidist in the default browser',
+			'    ' + kleur.yellow('--verbose') + '       Print debug information',
+		].join('\n')
+	);
+}
+
+/**
+ * @param {object} urls
+ */
+function printServerInstructions(urls: { local: string[]; network: string[] }) {
+	console.log(`You can now view your style guide in the browser:`);
+	console.log();
+	urls.local.forEach((url) => {
+		console.log(`  ${kleur.bold('Local:')}            ${kleur.cyan(url)}`);
+	});
+	urls.network.forEach((url) => {
+		console.log(`  ${kleur.bold('On your network:')}  ${kleur.cyan(url)}`);
+	});
+	console.log();
+}
+
+/**
+ * @param {object} config
+ */
+function printBuildInstructions({ styleguideDir }: Rsg.SanitizedStyleguidistConfig) {
+	console.log('Style guide published to:\n' + kleur.underline(styleguideDir));
+}
+
+/**
+ * @param {string} message
+ * @param {string} linkTitle
+ * @param {string} linkUrl
+ */
+function printErrorWithLink(message: string, linkTitle: string, linkUrl: string) {
+	console.error(`${kleur.bold().red(message)}\n\n${linkTitle}\n${kleur.underline(linkUrl)}\n`);
+}
+
+/**
+ * Print an error: Styleguidist errors without stack traces, Vite build errors
+ * (which aggregate several errors) one by one, anything else with its stack.
+ */
+function printError(err: unknown, banner = 'Failed to compile') {
+	if (err instanceof StyleguidistError) {
+		console.error(kleur.bold().red(err.message));
+		logger.debug(err.stack || '');
+		return;
+	}
+	const errors: unknown[] =
+		err && typeof err === 'object' && Array.isArray((err as { errors?: unknown[] }).errors)
+			? (err as { errors: unknown[] }).errors
+			: [err];
+	printStatus(banner, 'error');
+	console.error();
+	errors.forEach((error) => {
+		if (error instanceof Error) {
+			console.error(argv.verbose ? error.stack : error.message);
+		} else {
+			console.error(String(error));
+		}
+	});
+}
+
+/**
+ * @param {string} text
+ * @param {'success'|'error'|'warning'} type
+ */
+function printStatus(text: string, type: 'success' | 'error' | 'warning') {
+	if (type === 'success') {
+		console.log(kleur.inverse().bold().green(' DONE ') + ' ' + text);
+	} else if (type === 'error') {
+		console.error(kleur.inverse().bold().red(' FAIL ') + ' ' + kleur.red(text));
+	} else {
+		console.error(kleur.inverse().bold().yellow(' WARN ') + ' ' + kleur.yellow(text));
+	}
+}
+
+/**
+ * @param {string} header
+ * @param {object} object
+ */
+function verboseLog(header: string, object: unknown) {
+	logger.debug(kleur.bold(header) + '\n\n' + stringify(object));
+}

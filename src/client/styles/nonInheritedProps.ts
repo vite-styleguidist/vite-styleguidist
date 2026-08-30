@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * List of non-inheritable properties.
  *

@@ -1,33 +1,19 @@
 module.exports = {
 	components: 'src/components/**/[A-Z]*.js',
 	defaultExample: true,
-	webpackConfig: {
+	viteConfig: {
 		resolve: {
+			// Run everything (your components and Styleguidist’s own UI) on Preact
+			// through its React compatibility layer. A string alias also matches
+			// sub-paths (`react` matches `react/jsx-runtime`), so the more specific
+			// entries have to come first.
 			alias: {
-				react: 'preact-compat',
-				'react-dom': 'preact-compat',
+				'react/jsx-runtime': 'preact/jsx-runtime',
+				'react/jsx-dev-runtime': 'preact/jsx-dev-runtime',
+				'react-dom/client': 'preact/compat/client',
+				'react-dom': 'preact/compat',
+				react: 'preact/compat',
 			},
-		},
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: [
-						'style-loader',
-						{
-							loader: 'css-loader',
-							options: {
-								modules: true,
-							},
-						},
-					],
-				},
-			],
 		},
 	},
 };

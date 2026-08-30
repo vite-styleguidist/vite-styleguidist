@@ -1,16 +1,24 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import SimpleEditor from 'react-simple-code-editor';
+import * as SimpleEditorModule from 'react-simple-code-editor';
 import { highlight as prismHighlight, languages } from 'prismjs';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-clike.js';
+import 'prismjs/components/prism-markup.js';
+import 'prismjs/components/prism-javascript.js';
 import { Styles } from 'jss';
-import 'prismjs/components/prism-jsx';
-import { space } from '../../styles/theme';
-import prismTheme from '../../styles/prismTheme';
-import * as Rsg from '../../../typings';
+import 'prismjs/components/prism-jsx.js';
+import { space } from '../../styles/theme.js';
+import prismTheme from '../../styles/prismTheme.js';
+import type * as Rsg from '../../../typings/index.js';
+
+// react-simple-code-editor is CommonJS (`exports.default`). Rolldown applies Node-style
+// interop to imports from an ES module package, so in production builds the default
+// import is the whole `exports` object rather than the component; unwrap both shapes.
+type SimpleEditorType = typeof SimpleEditorModule.default;
+const SimpleEditor: SimpleEditorType =
+	(SimpleEditorModule as unknown as { default: { default?: SimpleEditorType } }).default.default ??
+	SimpleEditorModule.default;
 
 const highlight = (code: string) => prismHighlight(code, languages.jsx, 'jsx');
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import Text from 'rsg-components/Text';
 import Code from 'rsg-components/Code';
-import { showSpaces, unquote, PropDescriptor } from './util';
+import { showSpaces, unquote, PropDescriptor } from './util.js';
 
 const defaultValueBlacklist = ['null', 'undefined'];
 
@@ -14,8 +14,8 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 			const propName = prop.type
 				? prop.type.name
 				: prop.flowType
-				? prop.flowType.type
-				: prop.tsType && prop.tsType.type;
+					? prop.flowType.type
+					: prop.tsType && prop.tsType.type;
 
 			if (defaultValueBlacklist.indexOf(prop.defaultValue.value) > -1) {
 				return <Code>{defaultValueString}</Code>;
@@ -29,9 +29,10 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 				try {
 					// We eval source code to be able to format the defaultProp here. This
 					// can be considered safe, as it is the source code that is evaled,
-					// which is from a known source and safe by default
-					// eslint-disable-next-line no-eval
-					const object = eval(`(${prop.defaultValue.value})`);
+					// which is from a known source and safe by default.
+					// Indirect eval runs in the global scope (no local variables are needed)
+					// and keeps bundlers from having to preserve the surrounding scope.
+					const object = (0, eval)(`(${prop.defaultValue.value})`);
 					return (
 						<Text size="small" color="light" underlined title={JSON.stringify(object, null, 2)}>
 							Shape

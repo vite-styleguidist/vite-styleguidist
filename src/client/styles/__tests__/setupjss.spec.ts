@@ -1,5 +1,5 @@
 import jssBase from 'jss';
-import jss from '../setupjss';
+import jss from '../setupjss.js';
 
 describe('setupjss', () => {
 	it('should renerate prefixed class names', () => {

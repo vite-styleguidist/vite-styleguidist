@@ -1,4 +1,4 @@
-import * as Rsg from '../../typings';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Return a copy of the given component with the examples array filtered

@@ -1,22 +1,32 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import UsageTabButton from './UsageTabButton';
+import { render, fireEvent } from '@testing-library/react';
+import UsageTabButton from './UsageTabButton.js';
 
 const props = {
 	name: 'Pizza',
-	onClick: () => {},
+	onClick: vi.fn(),
 };
 
-it('should renderer a button', () => {
-	const renderer = createRenderer();
-	renderer.render(<UsageTabButton {...props} props={{ props: [{ name: 'foo' }] }} />);
+it('should render a button', () => {
+	const { getByRole } = render(<UsageTabButton {...props} props={{ props: [{ name: 'foo' }] }} />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const button = getByRole('button', { name: 'Props & methods' });
+	expect(button).toHaveAttribute('name', 'Pizza');
+
+	fireEvent.click(button);
+	expect(props.onClick).toHaveBeenCalledTimes(1);
 });
 
-it('should renderer null if there are not props or methods', () => {
-	const renderer = createRenderer();
-	renderer.render(<UsageTabButton {...props} props={{}} />);
+it('should render a button if there are only methods', () => {
+	const { getByRole } = render(
+		<UsageTabButton {...props} props={{ methods: [{ name: 'bar' }] }} />
+	);
 
-	expect(renderer.getRenderOutput()).toBe(null);
+	expect(getByRole('button', { name: 'Props & methods' })).toBeInTheDocument();
+});
+
+it('should render null if there are not props or methods', () => {
+	const { container } = render(<UsageTabButton {...props} props={{}} />);
+
+	expect(container).toBeEmptyDOMElement();
 });

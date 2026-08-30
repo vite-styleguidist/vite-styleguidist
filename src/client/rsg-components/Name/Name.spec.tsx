@@ -1,25 +1,25 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { NameRenderer, styles } from './NameRenderer';
+import { render } from '@testing-library/react';
+import { NameRenderer, styles } from './NameRenderer.js';
 
 const props = {
 	classes: classes(styles),
 };
 
 it('renderer should render argument name', () => {
-	const renderer = createRenderer();
-	renderer.render(<NameRenderer {...props}>Foo</NameRenderer>);
+	const { getByText } = render(<NameRenderer {...props}>Foo</NameRenderer>);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const name = getByText('Foo');
+	expect(name.tagName).toBe('CODE');
+	expect(name).toHaveClass('name', { exact: true });
 });
 
 it('renderer should render deprecated argument name', () => {
-	const renderer = createRenderer();
-	renderer.render(
+	const { getByText } = render(
 		<NameRenderer {...props} deprecated>
 			Foo
 		</NameRenderer>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(getByText('Foo')).toHaveClass('name isDeprecated', { exact: true });
 });

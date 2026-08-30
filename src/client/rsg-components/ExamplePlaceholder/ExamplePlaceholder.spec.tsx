@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import { ExamplePlaceholderRenderer } from './ExamplePlaceholderRenderer';
+import { ExamplePlaceholderRenderer } from './ExamplePlaceholderRenderer.js';
 
 test('should render an example placeholder after button click', () => {
 	const { getByText, queryByText } = render(

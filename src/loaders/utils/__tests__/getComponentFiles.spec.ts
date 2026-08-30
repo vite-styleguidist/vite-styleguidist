@@ -1,14 +1,15 @@
-import path from 'path';
-import deabsDeep from 'deabsdeep';
-import getComponentFiles from '../getComponentFiles';
+import path from 'node:path';
+import getComponentFiles from '../getComponentFiles.js';
 
-const configDir = path.resolve(__dirname, '../../../../test');
+const configDir = path.resolve(import.meta.dirname, '../../../../test');
 const components = ['components/Annotation/Annotation.js', 'components/Button/Button.js'];
-const processedComponents = components.map(c => `~/${c}`);
+const processedComponents = components.map((c) => `~/${c}`);
 const glob = 'components/**/[A-Z]*.js';
 const globArray = ['components/Annotation/[A-Z]*.js', 'components/Button/[A-Z]*.js'];
 
-const deabs = (x: string[]) => deabsDeep(x, { root: configDir });
+// Mask the absolute test directory as `~` (always with forward slashes) to keep the expectations portable
+const deabs = (files: string[]) =>
+	files.map((file) => `~/${path.relative(configDir, file).split(path.sep).join('/')}`);
 
 it('getComponentFiles() should return an empty array if components is null', () => {
 	const result = getComponentFiles();
@@ -21,7 +22,7 @@ it('getComponentFiles() should accept components as a function that returns file
 });
 
 it('getComponentFiles() should accept components as a function that returns absolute paths', () => {
-	const absolutize = (files: string[]) => files.map(file => path.join(configDir, file));
+	const absolutize = (files: string[]) => files.map((file) => path.join(configDir, file));
 	const result = getComponentFiles(() => absolutize(components), configDir);
 	expect(deabs(result)).toEqual(processedComponents);
 });
@@ -40,7 +41,7 @@ it('getComponentFiles() should accept components as an array of file names', () 
 });
 
 it('getComponentFiles() should accept components as an array of absolute paths', () => {
-	const absolutize = (files: string[]) => files.map(file => path.join(configDir, file));
+	const absolutize = (files: string[]) => files.map((file) => path.join(configDir, file));
 	const result = getComponentFiles(absolutize(components), configDir);
 	expect(deabs(result)).toEqual(processedComponents);
 });
@@ -62,6 +63,13 @@ it('getComponentFiles() should accept components as a glob', () => {
 		'~/components/Price/Price.js',
 		'~/components/RandomButton/RandomButton.js',
 	]);
+});
+
+it('getComponentFiles() should match globs case-sensitively (index.js is not [A-Z]*.js)', () => {
+	// glob >= 9 ignores case on macOS/Windows unless told otherwise
+	const result = getComponentFiles('components/**/*.js', configDir);
+	expect(deabs(result)).toContain('~/components/Label/index.js');
+	expect(deabs(getComponentFiles(glob, configDir))).not.toContain('~/components/Label/index.js');
 });
 
 it('getComponentFiles() should ignore specified patterns for globs', () => {

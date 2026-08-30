@@ -21,7 +21,6 @@ export default function evalInContext(
 	const body = `${header}
 {${code}}`;
 
-	// eslint-disable-next-line no-new-func
 	const func = new Function('require', 'state', 'setState', body);
 
 	// Bind the `require` function, other context arguments will be passed from

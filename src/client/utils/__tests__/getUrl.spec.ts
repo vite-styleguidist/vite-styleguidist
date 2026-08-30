@@ -1,4 +1,4 @@
-import getUrl from '../getUrl';
+import getUrl from '../getUrl.js';
 
 describe('getUrl', () => {
 	const loc = {

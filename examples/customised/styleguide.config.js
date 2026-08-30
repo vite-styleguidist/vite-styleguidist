@@ -4,12 +4,18 @@ module.exports = {
 	title: 'Style guide example',
 	components: './src/components/**/[A-Z]*.js',
 	showSidebar: false,
+	// Partial theme: it is deep-merged into Styleguidist’s default theme
+	// (see src/client/styles/theme.ts for all the keys)
 	theme: {
-		baseBackground: '#fdfdfc',
-		link: '#274e75',
-		linkHover: '#90a7bf',
-		border: '#e0d2de',
-		font: ['Helvetica', 'sans-serif'],
+		color: {
+			baseBackground: '#fdfdfc',
+			link: '#274e75',
+			linkHover: '#90a7bf',
+			border: '#e0d2de',
+		},
+		fontFamily: {
+			base: ['Helvetica', 'sans-serif'],
+		},
 	},
 	styles: function styles(theme) {
 		return {
@@ -39,45 +45,24 @@ module.exports = {
 	// Uncomment/edit the following `serverHost` entry to see in output
 	// serverHost: 'your-domain',
 	printServerInstructions(config) {
-		// eslint-disable-next-line no-console
 		console.log(`View your styleguide at: http://${config.serverHost}:${config.serverPort}`);
 	},
 
-	// Override Styleguidist components
+	// Override Styleguidist components. Paths may be extensionless: Vite resolves them
+	// the same way as imports, and JSX in these .js files is compiled by Styleguidist.
 	styleguideComponents: {
 		LogoRenderer: path.join(__dirname, 'styleguide/components/Logo'),
 		StyleGuideRenderer: path.join(__dirname, 'styleguide/components/StyleGuide'),
 		SectionsRenderer: path.join(__dirname, 'styleguide/components/SectionsRenderer'),
 	},
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: [
-						'style-loader',
-						{
-							loader: 'css-loader',
-							options: {
-								modules: true,
-							},
-						},
-					],
-				},
-				{
-					test: /\.svg$/,
-					loader: 'url-loader',
-				},
-			],
-		},
+
+	// Vite handles JSX, CSS Modules (`*.module.css`) and SVG imports natively, so
+	// the only thing left to configure is an import alias.
+	viteConfig: {
 		resolve: {
 			alias: {
 				// Make sure the example uses the local version of react-styleguidist
+				// (the custom SectionsRenderer imports the default one from it).
 				// This is only for the examples in this repo, you won't need it for your own project
 				'react-styleguidist': path.join(__dirname, '../../'),
 			},

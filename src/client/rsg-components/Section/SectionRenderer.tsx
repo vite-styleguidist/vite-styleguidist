@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import SectionHeading from 'rsg-components/SectionHeading';
 import Markdown from 'rsg-components/Markdown';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ space }: Rsg.Theme) => ({
 	root: {
@@ -25,17 +25,8 @@ interface SectionRendererProps extends JssInjectedProps {
 }
 
 export const SectionRenderer: React.FunctionComponent<SectionRendererProps> = (allProps) => {
-	const {
-		classes,
-		name,
-		slug,
-		content,
-		components,
-		sections,
-		depth,
-		description,
-		pagePerSection,
-	} = allProps;
+	const { classes, name, slug, content, components, sections, depth, description, pagePerSection } =
+		allProps;
 
 	return (
 		<section className={classes.root} data-testid={`section-${slug}`}>

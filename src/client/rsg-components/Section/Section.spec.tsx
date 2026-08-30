@@ -1,9 +1,9 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import Section from 'rsg-components/Section';
-import Context from '../Context';
-import slots from '../slots';
-import { DisplayModes } from '../../consts';
+import Context from '../Context/index.js';
+import slots from '../slots/index.js';
+import { DisplayModes } from '../../consts.js';
 
 const context = {
 	config: {

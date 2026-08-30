@@ -4,18 +4,21 @@ set -e
 
 # Deploy to Netlify
 
+ROOT_DIR=".."
 EXAMPLE_DIR="../examples/basic"
 STATIC_DIR="static"
 
 echo "Node $(node -v)"
 echo "npm $(npm -v)"
 
-# Build a basic example
+# Build the basic example with the version of Styleguidist from this repository
+# (the example is built from the repository root, with the root dependencies)
 echo
 echo "Building the basic example..."
-cd "$EXAMPLE_DIR"
-npm install
-npm run styleguide:build
+cd "$ROOT_DIR"
+npm ci
+npm run compile
+npm run build:basic
 cd -
 
 # Copy to the public folder

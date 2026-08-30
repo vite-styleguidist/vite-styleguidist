@@ -1,13 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { TagProps, TagObject } from 'react-docgen';
-import map from 'lodash/map';
+import type { TagProps, TagObject } from '../../../typings/index.js';
+import map from 'lodash/map.js';
 import Markdown from 'rsg-components/Markdown';
 
 const plural = (array: TagObject[], caption: string) =>
 	array.length === 1 ? caption : `${caption}s`;
-const list = (array: TagObject[]) => array.map(item => item.description).join(', ');
-const paragraphs = (array: TagObject[]) => array.map(item => item.description).join('\n\n');
+const list = (array: TagObject[]) => array.map((item) => item.description).join(', ');
+const paragraphs = (array: TagObject[]) => array.map((item) => item.description).join('\n\n');
 
 const fields = {
 	deprecated: (value: TagObject[]) => `**Deprecated:** ${value[0].description}`,

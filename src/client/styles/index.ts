@@ -1,2 +1,2 @@
-import './setupjss';
-import './styles';
+import './setupjss.js';
+import './styles.js';

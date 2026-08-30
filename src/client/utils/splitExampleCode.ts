@@ -1,5 +1,5 @@
-import find from 'lodash/find';
-import getAst from './getAst';
+import find from 'lodash/find.js';
+import getAst from './getAst.js';
 
 // Strip semicolon (;) at the end
 const unsemicolon = (s: string): string => s.replace(/;\s*$/, '');

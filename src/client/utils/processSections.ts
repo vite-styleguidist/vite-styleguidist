@@ -1,6 +1,6 @@
-import * as Rsg from '../../typings';
-import processComponents, { HrefOptions } from './processComponents';
-import getUrl from './getUrl';
+import type * as Rsg from '../../typings/index.js';
+import processComponents, { HrefOptions } from './processComponents.js';
+import getUrl from './getUrl.js';
 
 /**
  * Recursively process each component in all sections.

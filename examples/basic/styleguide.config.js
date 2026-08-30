@@ -1,6 +1,8 @@
 const path = require('path');
 const { version } = require('./package');
 
+// Styleguidist uses Vite: JSX in .js files, CSS imports and static assets work
+// out of the box, no bundler configuration needed.
 module.exports = {
 	components: 'src/components/**/[A-Z]*.js',
 	defaultExample: true,
@@ -11,19 +13,4 @@ module.exports = {
 		url: 'https://github.com/styleguidist/react-styleguidist',
 	},
 	version,
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: ['style-loader', 'css-loader'],
-				},
-			],
-		},
-	},
 };

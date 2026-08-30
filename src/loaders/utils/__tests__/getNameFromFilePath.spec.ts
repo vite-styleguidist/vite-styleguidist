@@ -1,5 +1,5 @@
 import path from 'path';
-import getNameFromFilePath from '../getNameFromFilePath';
+import getNameFromFilePath from '../getNameFromFilePath.js';
 
 it('should return the file name without extension', () => {
 	expect(

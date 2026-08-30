@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { MdFullscreen, MdFullscreenExit } from 'react-icons/md';
 import ToolbarButton from 'rsg-components/ToolbarButton';
-import getUrl from '../../utils/getUrl';
+import getUrl from '../../utils/getUrl.js';
 
 export interface IsolateButtonProps {
 	name: string;

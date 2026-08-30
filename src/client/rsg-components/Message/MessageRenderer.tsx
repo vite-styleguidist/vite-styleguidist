@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Markdown from 'rsg-components/Markdown';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ space }: Rsg.Theme) => ({
 	root: {
@@ -22,8 +22,8 @@ export const MessageRenderer: React.FunctionComponent<MessageProps> = ({ classes
 					Array.isArray(children)
 						? children.join('\n')
 						: typeof children === 'string'
-						? children
-						: ''
+							? children
+							: ''
 				}
 			/>
 		</div>

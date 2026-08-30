@@ -1,33 +1,33 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`getRouteData should return first section if pagePerSection and hash is empty 1`] = `
-Object {
+exports[`getRouteData > should return first section if pagePerSection and hash is empty 1`] = `
+{
   "displayMode": "all",
-  "sections": Array [
-    Object {
-      "components": Array [
-        Object {
+  "sections": [
+    {
+      "components": [
+        {
           "module": 1,
           "name": "Button",
-          "props": Object {
+          "props": {
             "displayName": "Button",
-            "examples": Array [
-              Object {
+            "examples": [
+              {
                 "content": "const a = 0",
                 "evalInContext": [Function],
                 "type": "code",
               },
-              Object {
+              {
                 "content": "# title",
                 "type": "markdown",
               },
             ],
           },
         },
-        Object {
+        {
           "module": 2,
           "name": "Image",
-          "props": Object {
+          "props": {
             "displayName": "Image",
           },
         },
@@ -35,7 +35,7 @@ Object {
       "exampleMode": "collapse",
       "name": "Components",
       "sectionDepth": 0,
-      "sections": Array [],
+      "sections": [],
       "slug": "components",
       "usageMode": "collapse",
     },
@@ -43,31 +43,31 @@ Object {
 }
 `;
 
-exports[`getRouteData should return not found if pagePerSection and hash is #/Buttons/Label/Not 1`] = `
-Object {
+exports[`getRouteData > should return not found if pagePerSection and hash is #/Buttons/Label/Not 1`] = `
+{
   "displayMode": "notFound",
-  "sections": Array [],
+  "sections": [],
 }
 `;
 
-exports[`getRouteData should return one component 1`] = `
-Object {
+exports[`getRouteData > should return one component 1`] = `
+{
   "displayMode": "component",
-  "sections": Array [
-    Object {
-      "components": Array [
-        Object {
+  "sections": [
+    {
+      "components": [
+        {
           "module": 1,
           "name": "Button",
-          "props": Object {
+          "props": {
             "displayName": "Button",
-            "examples": Array [
-              Object {
+            "examples": [
+              {
                 "content": "const a = 0",
                 "evalInContext": [Function],
                 "type": "code",
               },
-              Object {
+              {
                 "content": "# title",
                 "type": "markdown",
               },
@@ -83,13 +83,13 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one component if pagePerSection and hash is #/Buttons/Label 1`] = `
-Object {
+exports[`getRouteData > should return one component if pagePerSection and hash is #/Buttons/Label 1`] = `
+{
   "displayMode": "all",
-  "sections": Array [
-    Object {
-      "components": Array [
-        Object {
+  "sections": [
+    {
+      "components": [
+        {
           "module": 1,
           "name": "Label",
         },
@@ -102,19 +102,19 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one example from a component 1`] = `
-Object {
+exports[`getRouteData > should return one example from a component 1`] = `
+{
   "displayMode": "example",
-  "sections": Array [
-    Object {
-      "components": Array [
-        Object {
+  "sections": [
+    {
+      "components": [
+        {
           "module": 1,
           "name": "Button",
-          "props": Object {
+          "props": {
             "displayName": "Button",
-            "examples": Array [
-              Object {
+            "examples": [
+              {
                 "content": "# title",
                 "type": "markdown",
               },
@@ -130,14 +130,14 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one example from a section 1`] = `
-Object {
+exports[`getRouteData > should return one example from a section 1`] = `
+{
   "displayMode": "example",
-  "sections": Array [
-    Object {
-      "components": Array [],
-      "content": Array [
-        Object {
+  "sections": [
+    {
+      "components": [],
+      "content": [
+        {
           "content": "# title",
           "type": "markdown",
         },
@@ -145,7 +145,7 @@ Object {
       "exampleMode": "collapse",
       "name": "Section",
       "sectionDepth": 0,
-      "sections": Array [],
+      "sections": [],
       "slug": "section",
       "usageMode": "collapse",
     },
@@ -153,19 +153,19 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one section 1`] = `
-Object {
+exports[`getRouteData > should return one section 1`] = `
+{
   "displayMode": "section",
-  "sections": Array [
-    Object {
-      "components": Array [],
-      "content": Array [
-        Object {
+  "sections": [
+    {
+      "components": [],
+      "content": [
+        {
           "content": "const a = 0",
           "evalInContext": [Function],
           "type": "code",
         },
-        Object {
+        {
           "content": "# title",
           "type": "markdown",
         },
@@ -173,7 +173,7 @@ Object {
       "exampleMode": "collapse",
       "name": "Section",
       "sectionDepth": 0,
-      "sections": Array [],
+      "sections": [],
       "slug": "section",
       "usageMode": "collapse",
     },
@@ -181,19 +181,19 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one section if pagePerSection and hash is #/Section 1`] = `
-Object {
+exports[`getRouteData > should return one section if pagePerSection and hash is #/Section 1`] = `
+{
   "displayMode": "all",
-  "sections": Array [
-    Object {
-      "components": Array [],
-      "content": Array [
-        Object {
+  "sections": [
+    {
+      "components": [],
+      "content": [
+        {
           "content": "const a = 0",
           "evalInContext": [Function],
           "type": "code",
         },
-        Object {
+        {
           "content": "# title",
           "type": "markdown",
         },
@@ -201,7 +201,7 @@ Object {
       "exampleMode": "collapse",
       "name": "Section",
       "sectionDepth": 0,
-      "sections": Array [],
+      "sections": [],
       "slug": "section",
       "usageMode": "collapse",
     },
@@ -209,16 +209,16 @@ Object {
 }
 `;
 
-exports[`getRouteData should return one section without components if pagePerSection and hash is #/Buttons 1`] = `
-Object {
+exports[`getRouteData > should return one section without components if pagePerSection and hash is #/Buttons 1`] = `
+{
   "displayMode": "all",
-  "sections": Array [
-    Object {
-      "components": Array [],
+  "sections": [
+    {
+      "components": [],
       "exampleMode": "collapse",
       "name": "Buttons",
       "sectionDepth": 2,
-      "sections": Array [],
+      "sections": [],
       "slug": "buttons",
       "usageMode": "collapse",
     },

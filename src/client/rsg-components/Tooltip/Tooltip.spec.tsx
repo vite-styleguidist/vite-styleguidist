@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
-import Tooltip, { TooltipPlacement } from './TooltipRenderer';
+import Tooltip, { TooltipPlacement } from './TooltipRenderer.js';
 
 function renderComponent(content = 'tooltip', placement?: TooltipPlacement) {
 	return render(
@@ -48,7 +48,7 @@ describe('Tooltip', () => {
 
 	describe.each([['top'], ['right'], ['left'], ['bottom']])(
 		'Test placement attribute',
-		placement => {
+		(placement) => {
 			test(`should have ${placement} in data-placement attribute`, async () => {
 				// @ts-ignore
 				const { container, getByRole } = renderComponent(undefined, placement);

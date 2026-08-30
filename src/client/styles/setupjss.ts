@@ -5,7 +5,7 @@ import nested from 'jss-plugin-nested';
 import camelCase from 'jss-plugin-camel-case';
 import defaultUnit from 'jss-plugin-default-unit';
 import compose from 'jss-plugin-compose';
-import nonInheritedProps from './nonInheritedProps';
+import nonInheritedProps from './nonInheritedProps.js';
 
 const createGenerateId = () => {
 	let counter = 0;

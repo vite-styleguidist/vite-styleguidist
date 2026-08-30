@@ -1,14 +1,19 @@
-import fs from 'fs';
-import path from 'path';
-import findup from 'findup';
-import isString from 'lodash/isString';
-import isPlainObject from 'lodash/isPlainObject';
-import schema from './schemas/config';
-import StyleguidistError from './utils/error';
-import sanitizeConfig from './utils/sanitizeConfig';
-import * as Rsg from '../typings';
+import fs from 'node:fs';
+import path from 'node:path';
+import isString from 'lodash/isString.js';
+import isPlainObject from 'lodash/isPlainObject.js';
+import schema from './schemas/config.js';
+import StyleguidistError from './utils/error.js';
+import sanitizeConfig from './utils/sanitizeConfig.js';
+import loadModule from './utils/loadModule.js';
+import type * as Rsg from '../typings/index.js';
 
-const CONFIG_FILENAME = 'styleguide.config.js';
+// Config file names looked up (in this order) in the current directory and its parents.
+export const CONFIG_FILENAMES = [
+	'styleguide.config.js',
+	'styleguide.config.mjs',
+	'styleguide.config.cjs',
+];
 
 /**
  * Try to find config file up the file tree.
@@ -16,14 +21,20 @@ const CONFIG_FILENAME = 'styleguide.config.js';
  * @return {string|boolean} Config absolute file path.
  */
 function findConfigFile(): string | false {
-	let configDir;
-	try {
-		configDir = findup.sync(process.cwd(), CONFIG_FILENAME);
-	} catch (exception) {
-		return false;
+	let dir = process.cwd();
+	for (;;) {
+		for (const name of CONFIG_FILENAMES) {
+			const candidate = path.join(dir, name);
+			if (fs.existsSync(candidate)) {
+				return candidate;
+			}
+		}
+		const parent = path.dirname(dir);
+		if (parent === dir) {
+			return false;
+		}
+		dir = parent;
 	}
-
-	return path.join(configDir, CONFIG_FILENAME);
 }
 
 /**
@@ -52,7 +63,18 @@ function getConfig(
 	}
 
 	if (configFilepath) {
-		config = require(configFilepath);
+		config = loadModule<Rsg.StyleguidistConfig>(configFilepath);
+		// Anything but a config object would silently fall through to all defaults
+		if (typeof config === 'function' || typeof (config as any)?.then === 'function') {
+			throw new StyleguidistError(
+				`Styleguidist config must export a plain object; functions and promises (async configs) are not supported: ${configFilepath}`
+			);
+		}
+		if (!config || typeof config !== 'object') {
+			throw new StyleguidistError(
+				`Styleguidist config must export an object (did you forget \`export default\`?): ${configFilepath}`
+			);
+		}
 	}
 
 	if (!config || isString(config)) {

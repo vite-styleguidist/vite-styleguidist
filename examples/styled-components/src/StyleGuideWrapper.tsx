@@ -3,18 +3,18 @@ import ThemeProvider from './ThemeProvider';
 import GlobalStyle from './styles';
 
 interface Props {
-    children?: ReactNode
+	children?: ReactNode;
 }
 
-const StyleGuideWrapper = function({ children }: Props) {
-    return (
-        <ThemeProvider>
-            <>
-                <GlobalStyle />
-                {children}
-            </>
-        </ThemeProvider>
-    )
+const StyleGuideWrapper = function ({ children }: Props) {
+	return (
+		<ThemeProvider>
+			<>
+				<GlobalStyle />
+				{children}
+			</>
+		</ThemeProvider>
+	);
 };
 
 export default StyleGuideWrapper;

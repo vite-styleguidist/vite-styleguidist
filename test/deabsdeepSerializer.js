@@ -1,70 +1,38 @@
-const escape = require('escape-string-regexp');
-const isObject = require('is-plain-obj');
-const path = require('path');
+// Vitest/pretty-format snapshot serializer that recursively replaces the absolute
+// repository root in object keys, values and array items with `~`, so snapshots
+// containing file paths are portable between machines.
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import escapeRegExp from 'lodash/escapeRegExp.js';
+import isPlainObject from 'lodash/isPlainObject.js';
 
 const MASK = '~';
-const DIRNAME = getRootDir();
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT_REGEXP = new RegExp(escapeRegExp(ROOT), 'g');
+// Marker used to skip values we already processed (avoids infinite recursion).
+const KEY = '__SERIALIZER_DEABSDEEP__';
 
-/**
- * Recursively replace absolute paths in object keys and values or in array values with a “~”.
- *
- * @param {object} obj
- * @param {object} [options]
- * @param {string} [options.root]
- * @param {string} [options.mask]
- * @return {object}
- */
-function deabsDeep(obj, options) {
-	options = options || {};
-	const root = options.root || DIRNAME;
-	const mask = options.mask || MASK;
+const deabs = (value) => (typeof value === 'string' ? value.replace(ROOT_REGEXP, MASK) : value);
 
-	const regExp = new RegExp(escape(root), 'g');
-	const deabs = (s) => (typeof s === 'string' ? s.replace(regExp, mask) : s);
-
-	if (Array.isArray(obj)) {
-		return obj.map(deabs);
-	}
-
-	return mapObj(obj, (key, value) => [deabs(key), deabs(value)]);
-}
-
-function getRootDir(dir) {
-	dir = dir || __dirname;
-	const m = dir.match(/[\\/]node_modules[\\/]/);
-	return m ? dir.substring(0, m.index) : path.resolve(__dirname, '..');
-}
-
-/* istanbul ignore next */
-function mapObj(obj, fn, seen) {
-	seen = seen || new WeakMap();
+function mapObject(obj, seen = new WeakMap()) {
 	if (seen.has(obj)) {
 		return seen.get(obj);
 	}
 
 	const target = {};
-
 	seen.set(obj, target);
 
 	for (const key of Object.keys(obj)) {
-		const val = obj[key];
-		const res = fn(key, val, obj);
-		let newVal = res[1];
-
-		if (isObject(newVal)) {
-			if (Array.isArray(newVal)) {
-				newVal = newVal.map((x) => (isObject(x) ? mapObj(x, fn, seen) : x));
-			} else {
-				newVal = mapObj(newVal, fn, seen);
-			}
+		let value = deabs(obj[key]);
+		if (Array.isArray(value)) {
+			value = value.map((item) => (isPlainObject(item) ? mapObject(item, seen) : deabs(item)));
+		} else if (isPlainObject(value)) {
+			value = mapObject(value, seen);
 		}
-
-		target[res[0]] = newVal;
+		target[deabs(key)] = value;
 	}
 
-	// The $$typeof property is a React marker that's used for serialization.
-	// deabsdeep doesn't know about React Elements but since it's registered globally,
-	// it should keep this property on the object.
+	// The $$typeof property is a React marker used for serialization; keep it.
 	if (obj.$$typeof) {
 		target.$$typeof = obj.$$typeof;
 	}
@@ -72,21 +40,23 @@ function mapObj(obj, fn, seen) {
 	return target;
 }
 
-// Borrowed from https://github.com/eyolas/jest-serializer-supertest
-const KEY = '__JEST_SERIALIZER_DEABSDEEP__';
+function deabsDeep(value) {
+	if (Array.isArray(value)) {
+		return value.map(deabs);
+	}
+	return mapObject(value);
+}
 
-module.exports = {
-	test(val) {
-		return (Array.isArray(val) || isObject(val)) && !Object.prototype.hasOwnProperty.call(val, KEY);
+export default {
+	test(value) {
+		return (
+			(Array.isArray(value) || isPlainObject(value)) &&
+			!Object.prototype.hasOwnProperty.call(value, KEY)
+		);
 	},
-	print(val, serialize) {
-		const newVal = deabsDeep(val);
-
-		// To skip maximum call stack size exceeded
-		Object.defineProperty(newVal, KEY, {
-			enumerable: false,
-		});
-
-		return serialize(newVal);
+	serialize(value, config, indentation, depth, refs, printer) {
+		const next = deabsDeep(value);
+		Object.defineProperty(next, KEY, { enumerable: false, value: true });
+		return printer(next, config, indentation, depth, refs);
 	},
 };

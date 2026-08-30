@@ -1,9 +1,11 @@
 import React from 'react';
 import { render, within } from '@testing-library/react';
-import StyleGuide, { StyleGuideProps } from './StyleGuide';
-import slots from '../slots';
-import { DisplayModes } from '../../consts';
-import * as Rsg from '../../../typings';
+import StyleGuide, { StyleGuideProps } from './StyleGuide.js';
+import slots from '../slots/index.js';
+import { DisplayModes } from '../../consts.js';
+import type * as Rsg from '../../../typings/index.js';
+
+/* eslint-disable no-console */
 
 const sections: Rsg.Section[] = [
 	{
@@ -77,7 +79,7 @@ test('should render a sidebar if showSidebar is not set', () => {
 		'http://localhost/#foo',
 		'http://localhost/#bar',
 	]);
-	expect(links.map(node => node.textContent)).toEqual(['Foo', 'Bar']);
+	expect(links.map((node) => node.textContent)).toEqual(['Foo', 'Bar']);
 });
 
 test('should not render a sidebar if showSidebar is false', () => {
@@ -123,7 +125,7 @@ test('should render a sidebar if pagePerSection is true', () => {
 describe('error handling', () => {
 	const console$error = console.error;
 	beforeAll(() => {
-		console.error = jest.fn();
+		console.error = vi.fn();
 	});
 	afterAll(() => {
 		console.error = console$error;

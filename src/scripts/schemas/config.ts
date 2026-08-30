@@ -1,22 +1,23 @@
 // If you want to access any of these options in React, don’t forget to update CLIENT_CONFIG_OPTIONS array
-// in loaders/styleguide-loader.js
+// in src/vite/modules/styleguide.ts
 
+import path from 'node:path';
 import glogg from 'glogg';
-import path from 'path';
-import startCase from 'lodash/startCase';
+import startCase from 'lodash/startCase.js';
 import kleur from 'kleur';
-import * as reactDocgen from 'react-docgen';
-import { TransformOptions } from 'buble';
-import { createDisplayNameHandler } from 'react-docgen-displayname-handler';
-import annotationResolver from 'react-docgen-annotation-resolver';
-import { ASTNode } from 'ast-types';
-import { NodePath } from 'ast-types/lib/node-path';
-import findUserWebpackConfig from '../utils/findUserWebpackConfig';
-import getUserPackageJson from '../utils/getUserPackageJson';
-import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive';
-import StyleguidistError from '../utils/error';
-import * as consts from '../consts';
-import * as Rsg from '../../typings';
+import { builtinResolvers, defaultHandlers } from 'react-docgen';
+import type { Handler, Resolver } from 'react-docgen';
+import { DEFAULT_COMPILER_CONFIG } from '../../client/utils/compileCode.js';
+import FindAnnotatedExportsResolver from '../../loaders/utils/FindAnnotatedExportsResolver.js';
+import getUserPackageJson from '../utils/getUserPackageJson.js';
+import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive.js';
+import dirname from '../utils/dirname.js';
+import StyleguidistError from '../utils/error.js';
+import * as consts from '../consts.js';
+import type * as Rsg from '../../typings/index.js';
+
+const { ChainResolver, FindAnnotatedDefinitionsResolver, FindExportedDefinitionsResolver } =
+	builtinResolvers;
 
 const EXTENSIONS = 'js,jsx,ts,tsx';
 const DEFAULT_COMPONENTS_PATTERN =
@@ -43,6 +44,9 @@ export interface ConfigSchemaOptions<T> {
 	example?: any;
 }
 
+const removedWebpackOption = (replacement: string) =>
+	`Styleguidist now uses Vite instead of webpack. Use the "${replacement}" option instead:\n${consts.DOCS_VITE}`;
+
 const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.StyleguidistConfig>> = {
 	assetsDir: {
 		type: ['array', 'existing directory path'],
@@ -54,20 +58,9 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	compilerConfig: {
 		type: 'object',
-		default: {
-			// Don't include an Object.assign ponyfill, we have our own
-			objectAssign: 'Object.assign',
-			// Transpile only features needed for IE11
-			target: { ie: 11 },
-			transforms: {
-				// Don't throw on ESM imports, we transpile them ourselves
-				modules: false,
-				// Enable tagged template literals for styled-components
-				dangerousTaggedTemplateString: true,
-				// to make async/await work by default (no transformation)
-				asyncAwait: false,
-			},
-		} as TransformOptions,
+		// Options for sucrase’s transform(), used to compile examples in the browser
+		// (see src/client/utils/compileCode.ts for the rationale of each default)
+		default: DEFAULT_COMPILER_CONFIG,
 	},
 	// `components` is a shortcut for { sections: [{ components }] },
 	// see `sections` below
@@ -91,14 +84,20 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	configureServer: {
 		type: 'function',
 	},
+	dangerouslyUpdateViteConfig: {
+		type: 'function',
+	},
 	dangerouslyUpdateWebpackConfig: {
 		type: 'function',
+		removed: removedWebpackOption('dangerouslyUpdateViteConfig'),
 	},
 	defaultExample: {
 		type: ['boolean', 'existing file path'],
 		default: false,
 		process: (val: boolean | string): string | boolean =>
-			val === true ? path.resolve(__dirname, '../../../templates/DefaultExample.md') : val,
+			val === true
+				? path.resolve(dirname(import.meta.url), '../../../templates/DefaultExample.md')
+				: val,
 	},
 	exampleMode: {
 		type: 'string',
@@ -132,8 +131,9 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	handlers: {
 		type: 'function',
-		default: (componentPath: string): reactDocgen.Handler[] =>
-			reactDocgen.defaultHandlers.concat(createDisplayNameHandler(componentPath)),
+		// react-docgen’s default handlers already include displayNameHandler; when it
+		// can’t infer a name, Styleguidist falls back to the file name (see getProps).
+		default: (): Handler[] => defaultHandlers,
 	},
 	ignore: {
 		type: 'array',
@@ -164,6 +164,7 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	moduleAliases: {
 		type: 'object',
+		default: {},
 	},
 	mountPointId: {
 		type: 'string',
@@ -189,25 +190,21 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	require: {
 		type: 'array',
 		default: [],
-		example: ['babel-polyfill', 'path/to/styles.css'],
+		example: ['core-js/stable', 'path/to/styles.css'],
 	},
 	resolver: {
-		type: 'function',
-		default: (
-			ast: ASTNode,
-			recast: {
-				visit: (
-					node: NodePath,
-					handlers: { [handlerName: string]: () => boolean | undefined }
-				) => void;
-			}
-		) => {
-			const findAllExportedComponentDefinitions =
-				reactDocgen.resolver.findAllExportedComponentDefinitions;
-			const annotatedComponents = annotationResolver(ast, recast);
-			const exportedComponents = findAllExportedComponentDefinitions(ast, recast);
-			return annotatedComponents.concat(exportedComponents);
-		},
+		// react-docgen resolvers are either functions or class instances with a `resolve()` method
+		type: ['function', 'class instance'],
+		// Find all exported components plus anything marked with a `@component` annotation
+		// (react-docgen’s own annotated resolver ignores styled-components tagged templates)
+		default: new ChainResolver(
+			[
+				new FindAnnotatedExportsResolver(),
+				new FindAnnotatedDefinitionsResolver(),
+				new FindExportedDefinitionsResolver(),
+			],
+			{ chainingLogic: ChainResolver.Logic.ALL }
+		) as Resolver,
 	},
 	ribbon: {
 		type: 'object',
@@ -347,7 +344,7 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	updateWebpackConfig: {
 		type: 'function',
-		removed: `Use "webpackConfig" option instead:\n${consts.DOCS_WEBPACK}`,
+		removed: removedWebpackOption('viteConfig'),
 	},
 	usageMode: {
 		type: 'string',
@@ -363,39 +360,21 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	version: {
 		type: 'string',
 	},
-	webpackConfig: {
+	viteConfig: {
+		// When omitted, Styleguidist looks for vite.config.{js,mjs,ts,cjs,mts,cts}
+		// next to the style guide config (see src/scripts/make-vite-config.ts).
 		type: ['object', 'function'],
-		process: (val?: any) => {
-			if (val) {
-				return val;
-			}
-
-			const file = findUserWebpackConfig();
-			if (file) {
-				logger.info(`Loading webpack config from:\n${file}`);
-				// eslint-disable-next-line import/no-dynamic-require
-				return require(file);
-			}
-
-			logger.warn(
-				'No webpack config found. ' +
-					'You may need to specify "webpackConfig" option in your style guide config:\n' +
-					consts.DOCS_WEBPACK
-			);
-
-			return undefined;
-		},
 		example: {
-			module: {
-				rules: [
-					{
-						test: /\.jsx?$/,
-						exclude: /node_modules/,
-						loader: 'babel-loader',
-					},
-				],
+			resolve: {
+				alias: {
+					components: '/absolute/path/to/components',
+				},
 			},
 		},
+	},
+	webpackConfig: {
+		type: ['object', 'function'],
+		removed: removedWebpackOption('viteConfig'),
 	},
 };
 

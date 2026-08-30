@@ -1,36 +1,36 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`should skip components without example file 1`] = `
-Array [
-  Object {
-    "components": Array [],
+[
+  {
+    "components": [],
     "content": "Readme.md",
     "name": "Readme",
-    "sections": Array [],
+    "sections": [],
   },
-  Object {
-    "components": Array [
-      Object {
+  {
+    "components": [
+      {
         "filepath": "components/Button/Button.js",
         "hasExamples": "require()",
       },
     ],
     "name": "Components",
-    "sections": Array [],
+    "sections": [],
   },
-  Object {
-    "components": Array [],
+  {
+    "components": [],
     "name": "Nesting",
-    "sections": Array [
-      Object {
-        "components": Array [
-          Object {
+    "sections": [
+      {
+        "components": [
+          {
             "filepath": "components/Modal/Modal.js",
             "hasExamples": "require()",
           },
         ],
         "name": "Nested",
-        "sections": Array [],
+        "sections": [],
       },
     ],
   },

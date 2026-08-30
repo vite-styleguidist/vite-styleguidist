@@ -1,14 +1,15 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { TypeRenderer, styles } from './TypeRenderer';
+import { render } from '@testing-library/react';
+import { TypeRenderer, styles } from './TypeRenderer.js';
 
 const props = {
 	classes: classes(styles),
 };
 
 it('renderer should render type', () => {
-	const renderer = createRenderer();
-	renderer.render(<TypeRenderer {...props}>Array</TypeRenderer>);
+	const { getByText } = render(<TypeRenderer {...props}>Array</TypeRenderer>);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const type = getByText('Array');
+	expect(type.tagName).toBe('SPAN');
+	expect(type).toHaveClass('type', { exact: true });
 });

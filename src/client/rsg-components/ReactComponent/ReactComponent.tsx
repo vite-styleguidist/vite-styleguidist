@@ -8,9 +8,9 @@ import Slot from 'rsg-components/Slot';
 import ReactComponentRenderer from 'rsg-components/ReactComponent/ReactComponentRenderer';
 import Context, { StyleGuideContextContents } from 'rsg-components/Context';
 import ExamplePlaceholderDefault from 'rsg-components/ExamplePlaceholder';
-import { DOCS_TAB_USAGE } from '../slots';
-import { DisplayModes, UsageModes } from '../../consts';
-import * as Rsg from '../../../typings';
+import { DOCS_TAB_USAGE } from '../slots/index.js';
+import { DisplayModes, UsageModes } from '../../consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const ExamplePlaceholder =
 	process.env.STYLEGUIDIST_ENV !== 'production' ? ExamplePlaceholderDefault : () => <div />;

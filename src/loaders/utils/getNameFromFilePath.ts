@@ -1,5 +1,5 @@
 import path from 'path';
-import startCase from 'lodash/startCase';
+import startCase from 'lodash/startCase.js';
 
 /**
  * your-buttonTS -> YourButtonTS

@@ -1,4 +1,4 @@
-import * as Rsg from '../../typings';
+import type * as Rsg from '../../typings/index.js';
 
 const prismTheme = ({ color }: Pick<Rsg.Theme, 'color'>) => ({
 	'&': {

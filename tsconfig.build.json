@@ -1,0 +1,24 @@
+{
+  // Publishable build: emits ESM JavaScript + declaration files into lib/.
+  // Tests, mocks and ambient test typings are excluded.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "lib",
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "lib",
+    "**/__tests__/**",
+    "**/__mocks__/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.spec.js",
+    "src/typings/test.Classes.d.ts",
+    "src/typings/test.deps.d.ts"
+  ]
+}

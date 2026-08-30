@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
 	para: {

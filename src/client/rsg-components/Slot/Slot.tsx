@@ -34,7 +34,6 @@ export default function Slot({ name, active, onlyActive, className, props = {} }
 				return null;
 			}
 
-			// eslint-disable-next-line react/prop-types
 			const { onClick } = props;
 			fillProps = {
 				...props,

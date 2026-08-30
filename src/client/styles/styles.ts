@@ -1,4 +1,4 @@
-import jss from './setupjss';
+import jss from './setupjss.js';
 
 const styles = {
 	// Global styles

@@ -1,36 +1,12 @@
-/* eslint-disable no-console */
+// Starts the basic example with the compiled package; used by the Cypress tests (see package.json).
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import styleguidist from '../lib/scripts/index.js';
 
-const path = require('path');
-const styleguidist = require('../lib/scripts');
-
-const dir = path.resolve(__dirname, '../examples/basic/src');
+const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../examples/basic/src');
 
 styleguidist({
 	components: path.resolve(dir, 'components/**/[A-Z]*.js'),
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					include: dir,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					include: dir,
-					use: [
-						'style-loader',
-						{
-							loader: 'css-loader',
-							options: {
-								modules: true,
-							},
-						},
-					],
-				},
-			],
-		},
-	},
 	moduleAliases: {
 		'rsg-example': dir,
 	},

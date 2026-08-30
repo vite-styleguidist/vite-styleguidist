@@ -1,5 +1,5 @@
-import sortBy from 'lodash/sortBy';
-import { PropDescriptor } from 'react-docgen';
+import sortBy from 'lodash/sortBy.js';
+import type { PropDescriptor } from '../../typings/index.js';
 
 /**
  * Sorts an array of properties by their 'required' property first and 'name'
@@ -9,8 +9,14 @@ import { PropDescriptor } from 'react-docgen';
  * @return {array} Sorted properties
  */
 function sortProps(props: PropDescriptor[]) {
-	const requiredPropNames = sortBy(props.filter(prop => prop.required), 'name');
-	const optionalPropNames = sortBy(props.filter(prop => !prop.required), 'name');
+	const requiredPropNames = sortBy(
+		props.filter((prop) => prop.required),
+		'name'
+	);
+	const optionalPropNames = sortBy(
+		props.filter((prop) => !prop.required),
+		'name'
+	);
 	const sortedProps = requiredPropNames.concat(optionalPropNames);
 	return sortedProps;
 }

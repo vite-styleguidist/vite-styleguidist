@@ -18,7 +18,7 @@ const Components: React.FunctionComponent<ComponentsProps> = ({
 }) => {
 	return (
 		<ComponentsRenderer>
-			{components.map(component => (
+			{components.map((component) => (
 				<ReactComponent
 					key={component.filepath}
 					component={component}

@@ -7,10 +7,10 @@ import Markdown from 'rsg-components/Markdown';
 import Name from 'rsg-components/Name';
 import Para from 'rsg-components/Para';
 import Table from 'rsg-components/Table';
-import renderTypeColumn from './renderType';
-import renderExtra from './renderExtra';
-import renderDefault from './renderDefault';
-import { PropDescriptor } from './util';
+import renderTypeColumn from './renderType.js';
+import renderExtra from './renderExtra.js';
+import renderDefault from './renderDefault.js';
+import { PropDescriptor } from './util.js';
 
 function renderDescription(prop: PropDescriptor) {
 	const { description, tags = {} } = prop;

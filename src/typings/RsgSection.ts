@@ -1,6 +1,6 @@
-import { RequireItResult } from './RsgRequireItResult';
-import { MarkdownExample, Example } from './RsgExample';
-import { LoaderComponent, ExpandMode, Component } from './RsgComponent';
+import type { ImportMarker } from './RsgImportMarker.js';
+import type { MarkdownExample, Example } from './RsgExample.js';
+import type { LoaderComponent, ExpandMode, Component } from './RsgComponent.js';
 
 export interface BaseSection {
 	name?: string;
@@ -56,16 +56,16 @@ export interface TOCItem extends ProcessedSection {
 export interface ConfigSection extends BaseSection {
 	components?: string | string[] | (() => string[]);
 	sections?: ConfigSection[];
-	content?: string;
+	content?: string | (() => string);
 }
 
 /**
- * Type returned when sections are transformed to their webpack
- * loadable equivalents
+ * Section as produced on the Node side: file references are import markers
+ * that the virtual-module serializer turns into `import` statements.
  */
 export interface LoaderSection extends BaseSection {
 	slug?: string;
-	content?: RequireItResult | MarkdownExample;
+	content?: ImportMarker | MarkdownExample;
 	components: LoaderComponent[];
 	sections: LoaderSection[];
 }

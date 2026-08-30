@@ -1,39 +1,43 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { ArgumentsRenderer, styles } from './ArgumentsRenderer';
+import { render } from '@testing-library/react';
+import { ArgumentsRenderer, styles } from './ArgumentsRenderer.js';
 
 const props = {
 	classes: classes(styles),
 };
 
+// Arguments are keyed by name, so the fixtures need distinct names.
 const args = [
 	{
 		name: 'Foo',
 		description: 'Converts foo to bar',
-		type: { name: 'Array' },
+		type: { type: 'NameExpression', name: 'Array' },
 	},
 	{
-		name: 'Foo',
+		name: 'Bar',
 	},
 ];
 
 it('renderer should render arguments', () => {
-	const renderer = createRenderer();
-	renderer.render(<ArgumentsRenderer {...props} args={args} />);
+	const { container, getByText, queryByRole } = render(
+		<ArgumentsRenderer {...props} args={args} />
+	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(container.firstChild).toHaveClass('root');
+	expect(container).toHaveTextContent('Foo: Array — Converts foo to bar');
+	expect(getByText('Foo').tagName).toBe('CODE');
+	expect(getByText('Bar').tagName).toBe('CODE');
+	expect(queryByRole('heading')).not.toBeInTheDocument();
 });
 
 it('renderer should render heading', () => {
-	const renderer = createRenderer();
-	renderer.render(<ArgumentsRenderer {...props} args={[args[1]]} heading />);
+	const { getByRole } = render(<ArgumentsRenderer {...props} args={[args[1]]} heading />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(getByRole('heading', { level: 5 })).toHaveTextContent('Arguments');
 });
 
 it('renderer should render nothing for empty array', () => {
-	const renderer = createRenderer();
-	renderer.render(<ArgumentsRenderer {...props} args={[]} />);
+	const { container } = render(<ArgumentsRenderer {...props} args={[]} />);
 
-	expect(renderer.getRenderOutput()).toBe(null);
+	expect(container).toBeEmptyDOMElement();
 });

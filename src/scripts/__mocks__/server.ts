@@ -1,9 +1,14 @@
-import * as Rsg from '../../typings';
+// Manual mock of ../server.js, see build.ts for how specs use it.
+import type * as Rsg from '../../typings/index.js';
 
-export default function server(
+export const MOCK_SERVER = { listening: true };
+
+export default async function server(
 	config: Rsg.SanitizedStyleguidistConfig,
-	callback: (err: Error | null) => void
+	callback?: (err?: Error, server?: typeof MOCK_SERVER) => void
 ) {
-	callback(null);
-	return {};
+	if (callback) {
+		callback(undefined, MOCK_SERVER);
+	}
+	return MOCK_SERVER;
 }

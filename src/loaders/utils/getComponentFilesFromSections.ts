@@ -1,5 +1,5 @@
-import getComponentFiles from './getComponentFiles';
-import * as Rsg from '../../typings';
+import getComponentFiles from './getComponentFiles.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Return absolute paths of all components in sections.

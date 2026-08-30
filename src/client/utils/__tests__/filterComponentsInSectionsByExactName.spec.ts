@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import filterComponentsInSectionsByExactName from '../filterComponentsInSectionsByExactName';
+import filterComponentsInSectionsByExactName from '../filterComponentsInSectionsByExactName.js';
 
 const sections = deepfreeze([
 	{
@@ -23,6 +23,6 @@ const sections = deepfreeze([
 describe('filterComponentsInSectionsByExactName', () => {
 	it('should return components at any level with exact name', () => {
 		const result = filterComponentsInSectionsByExactName(sections, 'Image', true)[0];
-		expect(result.components && result.components.map(x => x.name)).toEqual(['Image']);
+		expect(result.components && result.components.map((x) => x.name)).toEqual(['Image']);
 	});
 });

@@ -6,14 +6,15 @@ import Styled from 'rsg-components/Styled';
 
 const xsmall = '@media (max-width: 600px)';
 
-const styles = ({ font, base, light, link, baseBackground, mq }) => ({
+// Theme keys are grouped (`color.*`, `fontFamily.*`), see src/client/styles/theme.ts
+const styles = ({ fontFamily, color, mq }) => ({
 	root: {
-		color: base,
-		backgroundColor: baseBackground,
+		color: color.base,
+		backgroundColor: color.baseBackground,
 	},
 	header: {
 		color: '#fff',
-		backgroundColor: link,
+		backgroundColor: color.link,
 	},
 	bar: {
 		display: 'flex',
@@ -34,7 +35,7 @@ const styles = ({ font, base, light, link, baseBackground, mq }) => ({
 		'&, &:link, &:visited': {
 			marginLeft: '0.5em',
 			marginRight: '0.5em',
-			fontFamily: font,
+			fontFamily: fontFamily.base,
 			color: '#efefef',
 		},
 		'&:hover, &:active': {
@@ -56,8 +57,8 @@ const styles = ({ font, base, light, link, baseBackground, mq }) => ({
 	},
 	footer: {
 		display: 'block',
-		color: light,
-		fontFamily: font,
+		color: color.light,
+		fontFamily: fontFamily.base,
 		fontSize: 12,
 	},
 });

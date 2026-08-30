@@ -1,11 +1,11 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import { parse, MethodDescriptor } from 'react-docgen';
-import { createRenderer } from 'react-test-renderer/shallow';
-import MethodsRenderer, { columns } from './MethodsRenderer';
+import { render } from '@testing-library/react';
+import MethodsRenderer, { columns } from './MethodsRenderer.js';
+import type { MethodDescriptor } from '../../../typings/index.js';
 
-// Test renderers with clean readable snapshot diffs
-export default function ColumnsRenderer({ methods }: { methods: MethodDescriptor[] }) {
+// Renders every column of every method into plain markup so the assertions
+// don't depend on the Table renderer.
+function ColumnsRenderer({ methods }: { methods: MethodDescriptor[] }) {
 	return (
 		<ul>
 			{methods.map((row, rowIdx) => (
@@ -19,82 +19,87 @@ export default function ColumnsRenderer({ methods }: { methods: MethodDescriptor
 	);
 }
 
-ColumnsRenderer.propTypes = {
-	methods: PropTypes.array,
-};
-
-function render(methods: string[]) {
-	const parsed = parse(
-		`
-		import { Component } from 'react';
-		export default class Cmpnt extends Component {
-			${methods.join('\n')}
-			render() {
-			}
-		}
-	`,
-		undefined,
-		undefined,
-		{ filename: '' }
-	);
-	const renderer = createRenderer();
-	if (Array.isArray(parsed) || !parsed.methods) {
-		renderer.render(<div />);
-	} else {
-		renderer.render(<ColumnsRenderer methods={parsed.methods} />);
-	}
-	return renderer.getRenderOutput();
-}
+// The client never sees raw react-docgen output: src/loaders/utils/getProps.ts merges it
+// with the doctrine-parsed JSDoc tags, so parameter and return types are doctrine type
+// expressions (`{ type: 'NameExpression', name: 'Number' }`), which is what Argument renders.
+const method = (overrides: Partial<MethodDescriptor>): MethodDescriptor => ({
+	name: 'method',
+	docblock: null,
+	modifiers: [],
+	params: [],
+	returns: null,
+	...overrides,
+});
 
 describe('MethodsRenderer', () => {
 	it('should render a table', () => {
-		const renderer = createRenderer();
-		renderer.render(
-			<MethodsRenderer
+		const { getByRole, getAllByRole, getByText } = render(
+			<MethodsRenderer methods={[method({ description: 'Public' })]} />
+		);
+
+		expect(getByRole('table')).toBeInTheDocument();
+		expect(getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+			'Method name',
+			'Parameters',
+			'Description',
+		]);
+		expect(getByText('method()').tagName).toBe('CODE');
+		expect(getByText('Public')).toBeInTheDocument();
+	});
+});
+
+describe('columns', () => {
+	it('should render public method', () => {
+		const { getByText } = render(<ColumnsRenderer methods={[method({ description: 'Public' })]} />);
+
+		expect(getByText('method()').className).not.toMatch(/isDeprecated/);
+		expect(getByText('Public')).toBeInTheDocument();
+	});
+
+	it('should render parameters', () => {
+		const { container } = render(
+			<ColumnsRenderer
 				methods={[
-					{
-						name: 'method',
-						modifiers: [],
-						params: [],
+					method({
 						description: 'Public',
-					},
+						params: [
+							{
+								name: 'value',
+								description: 'Description',
+								optional: false,
+								type: { type: 'NameExpression', name: 'Number' },
+							},
+						],
+					}),
 				]}
 			/>
 		);
 
-		expect(renderer.getRenderOutput()).toMatchSnapshot();
-	});
-});
-
-describe('PropsRenderer', () => {
-	it('should render public method', () => {
-		const actual = render(['/**\n * Public\n * @public\n */\nmethod() {}']);
-
-		expect(actual).toMatchSnapshot();
-	});
-
-	it('should render parameters', () => {
-		const actual = render([
-			'/**\n * Public\n * @public\n * @param {Number} value - Description\n */\nmethod(value) {}',
-		]);
-
-		expect(actual).toMatchSnapshot();
+		expect(container).toHaveTextContent('value: Number — Description');
 	});
 
 	it('should render returns', () => {
-		const actual = render([
-			'/**\n * @public\n * @returns {Number} - Description\n */\nmethod() {}',
-		]);
+		const { container } = render(
+			<ColumnsRenderer
+				methods={[
+					method({
+						returns: {
+							description: 'Description',
+							type: { type: 'NameExpression', name: 'Number' },
+						},
+					}),
+				]}
+			/>
+		);
 
-		expect(actual).toMatchSnapshot();
+		expect(container).toHaveTextContent('Returns Number — Description');
 	});
 
 	it('should render JsDoc tags', () => {
-		const renderer = createRenderer();
-		renderer.render(
+		const { container } = render(
 			<ColumnsRenderer
 				methods={[
-					{
+					method({
 						name: 'Foo',
 						tags: {
 							since: [
@@ -104,20 +109,19 @@ describe('PropsRenderer', () => {
 								},
 							],
 						},
-					},
+					}),
 				]}
 			/>
 		);
 
-		expect(renderer.getRenderOutput()).toMatchSnapshot();
+		expect(container).toHaveTextContent('Since: 1.0.0');
 	});
 
 	it('should render deprecated JsDoc tags', () => {
-		const renderer = createRenderer();
-		renderer.render(
+		const { container, getByText } = render(
 			<ColumnsRenderer
 				methods={[
-					{
+					method({
 						name: 'Foo',
 						tags: {
 							deprecated: [
@@ -127,11 +131,14 @@ describe('PropsRenderer', () => {
 								},
 							],
 						},
-					},
+					}),
 				]}
 			/>
 		);
 
-		expect(renderer.getRenderOutput()).toMatchSnapshot();
+		// Deprecated methods get a struck-through name and a “Deprecated:” note
+		expect(getByText('Foo()').className).toMatch(/rsg--isDeprecated-\d+/);
+		expect(container).toHaveTextContent('Deprecated: Use another method');
+		expect(getByText('another').tagName).toBe('EM');
 	});
 });

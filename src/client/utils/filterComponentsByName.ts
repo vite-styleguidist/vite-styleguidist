@@ -1,5 +1,5 @@
-import getFilterRegExp from './getFilterRegExp';
-import * as Rsg from '../../typings';
+import getFilterRegExp from './getFilterRegExp.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Fuzzy filters components list by component name.

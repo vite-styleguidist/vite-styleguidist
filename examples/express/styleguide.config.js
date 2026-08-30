@@ -1,32 +1,19 @@
 module.exports = {
 	title: 'Style guide example',
 	components: './src/components/**/[A-Z]*.js',
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: [
-						'style-loader',
-						{
-							loader: 'css-loader',
-							options: {
-								modules: true,
-							},
-						},
-					],
-				},
-			],
-		},
-	},
 	configureServer(app) {
-		app.get('/custom', (req, res) => {
-			res.status(200).send({ response: 'Server invoked' });
+		// `app` is the connect middleware stack of Vite’s dev server, not an Express
+		// app: there is no `app.get()` or `res.send()`. Match the path with `use()`
+		// (it also matches sub-paths, hence the method check) and write the response
+		// with Node’s plain http API.
+		app.use('/custom', (req, res, next) => {
+			if (req.method !== 'GET') {
+				next();
+				return;
+			}
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ response: 'Server invoked' }));
 		});
 	},
 };

@@ -1,6 +1,4 @@
-import removeDoclets from '../removeDoclets';
-
-/* eslint-disable quotes */
+import removeDoclets from '../removeDoclets.js';
 
 it('should find calls to require in code', () => {
 	const text = `

@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import cx from 'clsx';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space, color }: Rsg.Theme) => ({
 	button: {

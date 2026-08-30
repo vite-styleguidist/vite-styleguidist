@@ -1,45 +1,75 @@
-import deabsDeep from 'deabsdeep';
-import { vol } from 'memfs';
-import getExamples from '../getExamples';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import getExamples from '../getExamples.js';
+import { EXAMPLES_PREFIX, NULL, parseExamplesId, toPosix } from '../../../vite/ids.js';
 
-jest.mock('fs', () => {
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
-	return require('memfs').fs;
-});
-
-const file = '../pizza.js';
 const displayName = 'Pizza';
-const examplesFile = './Pizza.md';
-const defaultExample = './Default.md';
+// The default example is never read from disk by getExamples(), so it needs no fixture
+const defaultExample = path.join(path.sep, 'styleguide', 'DefaultExample.md');
+
+// Real temp directory instead of a mocked `fs`: getExamples() only calls `fs.existsSync()`
+let dir: string;
+let file: string;
+let examplesFile: string;
+
+beforeEach(() => {
+	dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-getExamples-'));
+	file = path.join(dir, 'pizza.js');
+	examplesFile = path.join(dir, 'Pizza.md');
+});
 
 afterEach(() => {
-	vol.reset();
+	fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('require an example file if component has example file', () => {
-	vol.fromJSON({ [examplesFile]: 'pizza' });
+// Round-trip the id through the plugin’s parser to check the module options
+// without duplicating the id format in the expectations
+const parseId = (id: string) => parseExamplesId(NULL + id);
 
-	const result = getExamples(file, displayName, examplesFile);
-	expect(result && deabsDeep(result).require).toMatchInlineSnapshot(
-		`"!!~/src/loaders/examples-loader.js?displayName=Pizza&file=.%2F..%2Fpizza.js&shouldShowDefaultExample=false!./Pizza.md"`
-	);
-});
+it('should import the examples file if it exists', () => {
+	fs.writeFileSync(examplesFile, 'pizza');
 
-test('require default example file if component has no example in the file system', () => {
 	const result = getExamples(file, displayName, examplesFile, defaultExample);
-	expect(result && deabsDeep(result).require).toMatchInlineSnapshot(
-		`"!!~/src/loaders/examples-loader.js?displayName=Pizza&file=.%2F..%2Fpizza.js&shouldShowDefaultExample=false!./Default.md"`
-	);
+
+	expect(result).toEqual({ __rsgImport: expect.any(String), __rsgDefault: true });
+	expect(result?.__rsgImport.startsWith(`${EXAMPLES_PREFIX}${toPosix(examplesFile)}?`)).toBe(true);
+	expect(parseId(result?.__rsgImport ?? '')).toEqual({
+		file: toPosix(examplesFile),
+		displayName,
+		componentPath: toPosix(file),
+		shouldShowDefaultExample: false,
+	});
 });
 
-test('require default example has no example file', () => {
+it('should import the default example if the examples file does not exist', () => {
+	const result = getExamples(file, displayName, examplesFile, defaultExample);
+
+	expect(result?.__rsgDefault).toBe(true);
+	expect(parseId(result?.__rsgImport ?? '')).toEqual({
+		file: toPosix(defaultExample),
+		displayName,
+		componentPath: toPosix(file),
+		// The default example template contains __COMPONENT__ placeholders to expand
+		shouldShowDefaultExample: true,
+	});
+});
+
+it('should import the default example if the component has no examples file', () => {
 	const result = getExamples(file, displayName, false, defaultExample);
-	expect(result && deabsDeep(result).require).toMatchInlineSnapshot(
-		`"!!~/src/loaders/examples-loader.js?displayName=Pizza&file=.%2F..%2Fpizza.js&shouldShowDefaultExample=true!./Default.md"`
-	);
+
+	expect(result?.__rsgDefault).toBe(true);
+	expect(parseId(result?.__rsgImport ?? '')).toEqual({
+		file: toPosix(defaultExample),
+		displayName,
+		componentPath: toPosix(file),
+		shouldShowDefaultExample: true,
+	});
 });
 
-test('return null if component has no example file or default example', () => {
-	const result = getExamples(file, displayName);
-	expect(result).toEqual(null);
+it('should return null if the component has no examples file and no default example', () => {
+	expect(getExamples(file, displayName)).toBeNull();
+	expect(getExamples(file, displayName, false, false)).toBeNull();
+	// Examples file configured but missing on disk
+	expect(getExamples(file, displayName, examplesFile)).toBeNull();
 });

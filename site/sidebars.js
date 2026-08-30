@@ -5,9 +5,9 @@ module.exports = {
 			'documenting',
 			'components',
 			'thirdparties',
-			'webpack',
+			'vite',
 			'cookbook',
 		],
-		Advanced: ['configuration', 'cli', 'api', 'development', 'maintenance'],
+		Advanced: ['configuration', 'cli', 'api', 'migration', 'development', 'maintenance'],
 	},
 };

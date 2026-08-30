@@ -1,20 +1,20 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Markdown Table should render a table 1`] = `
+exports[`Markdown Table > should render a table 1`] = `
 <table
-  className="rsg--table-0"
+  class="rsg--table-0"
 >
   <thead
-    className="rsg--thead-2"
+    class="rsg--thead-2"
   >
     <tr>
       <th
-        className="rsg--th-4 rsg--td-3"
+        class="rsg--th-4 rsg--td-3"
       >
         1st header
       </th>
       <th
-        className="rsg--th-4 rsg--td-3"
+        class="rsg--th-4 rsg--td-3"
       >
         2nd header
       </th>
@@ -23,12 +23,12 @@ exports[`Markdown Table should render a table 1`] = `
   <tbody>
     <tr>
       <td
-        className="rsg--td-3"
+        class="rsg--td-3"
       >
         1st cell
       </td>
       <td
-        className="rsg--td-3"
+        class="rsg--td-3"
       >
         2nd cell
       </td>

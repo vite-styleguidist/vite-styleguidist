@@ -1,11 +1,10 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-
-import { Table, TableHead, TableBody, TableRow, TableCell } from './index';
+import { render } from '@testing-library/react';
+import { Table, TableHead, TableBody, TableRow, TableCell } from './index.js';
 
 describe('Markdown Table', () => {
 	it('should render a table', () => {
-		const actual = renderer.create(
+		const { container, getAllByRole } = render(
 			<Table>
 				<TableHead>
 					<TableRow>
@@ -22,6 +21,11 @@ describe('Markdown Table', () => {
 			</Table>
 		);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		expect(getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+			'1st header',
+			'2nd header',
+		]);
+		expect(getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['1st cell', '2nd cell']);
+		expect(container.firstChild).toMatchSnapshot();
 	});
 });

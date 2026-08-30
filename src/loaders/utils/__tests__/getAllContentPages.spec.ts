@@ -1,5 +1,5 @@
-import getAllContentPages from '../getAllContentPages';
-import * as Rsg from '../../../typings';
+import getAllContentPages from '../getAllContentPages.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const readmeContent: Rsg.MarkdownExample = {
 	type: 'markdown',

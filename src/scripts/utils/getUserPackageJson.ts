@@ -1,14 +1,15 @@
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Return user’s package.json.
  *
  * @return {object}
  */
-export default function getUserPackageJson() {
+export default function getUserPackageJson(): Record<string, any> {
 	try {
-		return require(path.resolve(process.cwd(), 'package.json'));
-	} catch (err) {
+		return JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
+	} catch {
 		return {};
 	}
 }

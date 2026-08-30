@@ -1,31 +1,31 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`filterSectionsByName should recursively filter sections and components by name 1`] = `
-Array [
-  Object {
-    "components": Array [],
+exports[`filterSectionsByName > should recursively filter sections and components by name 1`] = `
+[
+  {
+    "components": [],
     "name": "General",
-    "sections": Array [
-      Object {
-        "components": Array [
-          Object {
+    "sections": [
+      {
+        "components": [
+          {
             "name": "Button",
           },
         ],
         "name": "Particles",
-        "sections": Array [],
+        "sections": [],
       },
     ],
   },
 ]
 `;
 
-exports[`filterSectionsByName should skip sections without matches inside 1`] = `
-Array [
-  Object {
-    "components": Array [],
+exports[`filterSectionsByName > should skip sections without matches inside 1`] = `
+[
+  {
+    "components": [],
     "name": "General",
-    "sections": Array [],
+    "sections": [],
   },
 ]
 `;

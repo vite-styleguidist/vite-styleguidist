@@ -1,21 +1,24 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-import Blockquote from './index';
+import { render } from '@testing-library/react';
+import Blockquote from './index.js';
 
 describe('Markdown Blockquote', () => {
 	it('should render a blockquote', () => {
-		const actual = renderer.create(
+		const { getByText } = render(
 			<Blockquote>To be, or not to be: that is the question</Blockquote>
 		);
 
-		expect(actual).toMatchSnapshot();
+		const blockquote = getByText('To be, or not to be: that is the question');
+		expect(blockquote.tagName).toBe('BLOCKQUOTE');
+		expect(blockquote.className).toMatch(/^rsg--blockquote-\d+$/);
 	});
 
 	it('should preserve custom css class', () => {
-		const actual = renderer.create(
+		const { getByText } = render(
 			<Blockquote className="test-class">To be, or not to be: that is the question</Blockquote>
 		);
 
-		expect(actual).toMatchSnapshot();
+		const blockquote = getByText('To be, or not to be: that is the question');
+		expect(blockquote.className).toMatch(/^rsg--blockquote-\d+ test-class$/);
 	});
 });

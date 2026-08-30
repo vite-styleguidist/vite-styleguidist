@@ -1,19 +1,24 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-
-import Pre from './index';
+import { render } from '@testing-library/react';
+import Pre from './index.js';
 
 describe('Markdown Pre', () => {
 	it('should render a pre', () => {
-		const actual = renderer.create(<Pre>This is pre-formatted text.</Pre>);
+		const { getByText } = render(<Pre>This is pre-formatted text.</Pre>);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		const pre = getByText('This is pre-formatted text.');
+		expect(pre.tagName).toBe('PRE');
+		expect(pre.className).toMatch(/^rsg--pre-\d+$/);
 	});
 
 	it('should render highlighted code', () => {
 		const code = '<button>OK</button>';
-		const actual = renderer.create(<Pre className="lang-html">{code}</Pre>);
+		const { container } = render(<Pre className="lang-html">{code}</Pre>);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		// A `lang-*` class marks children as pre-highlighted HTML, injected as is
+		const pre = container.firstChild as HTMLElement;
+		expect(pre.className).toMatch(/^lang-html rsg--pre-\d+$/);
+		expect(pre.innerHTML).toBe(code);
+		expect(pre.querySelector('button')).toHaveTextContent('OK');
 	});
 });

@@ -1,7 +1,5 @@
-import chunkify from '../chunkify';
-import * as Rsg from '../../../typings';
-
-/* eslint-disable max-len */
+import chunkify from '../chunkify.js';
+import type * as Rsg from '../../../typings/index.js';
 
 it('should separate Markdown and component examples', () => {
 	const markdown = `

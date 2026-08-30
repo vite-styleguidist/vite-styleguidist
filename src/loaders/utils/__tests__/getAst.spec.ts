@@ -1,5 +1,5 @@
 import acornJsx from 'acorn-jsx';
-import getAst from '../getAst';
+import getAst from '../getAst.js';
 
 describe('getAst', () => {
 	test('return AST', () => {

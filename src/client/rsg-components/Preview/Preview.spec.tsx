@@ -1,22 +1,31 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
-import Preview from '.';
-import Context, { StyleGuideContextContents } from '../Context';
+import Preview from './index.js';
+import Context, { StyleGuideContextContents } from '../Context/index.js';
+import { DEFAULT_COMPILER_CONFIG } from '../../utils/compileCode.js';
 
 /* eslint-disable no-console */
 
-const evalInContext = (a: string) =>
-	// eslint-disable-next-line no-new-func
-	new Function('require', 'state', 'setState', 'const React = require("react");' + a).bind(
+// Examples are evaluated as plain functions with a `require` that only knows React,
+// the way the real evalInContext (src/loaders/utils/client/evalInContext.ts) works with
+// the modules bundled for the style guide
+const requireInExample = (name: string) => {
+	if (name === 'react') {
+		return React;
+	}
+	throw new Error(`Cannot find module '${name}'`);
+};
+const evalInContext = (code: string) =>
+	new Function('require', 'state', 'setState', `const React = require("react");${code}`).bind(
 		null,
-		require
+		requireInExample
 	);
 const code = '<button>Code: OK</button>';
 const newCode = '<button>Code: Cancel</button>';
 
 const context = {
 	config: {
-		compilerConfig: {},
+		compilerConfig: DEFAULT_COMPILER_CONFIG,
 	},
 	codeRevision: 0,
 } as StyleGuideContextContents;
@@ -42,11 +51,12 @@ it('should unmount Wrapper component', async () => {
 
 	expect(node.innerHTML).toMatch('<button');
 	unmount();
+	// The example root is unmounted in a setTimeout
 	await waitFor(() => expect(node.innerHTML).toBe(''));
 });
 
-it('should not fail when Wrapper wasn’t mounted', () => {
-	const consoleError = jest.fn();
+it('should not fail when Wrapper wasn’t mounted', async () => {
+	const consoleError = vi.fn();
 	console.error = consoleError;
 
 	const { unmount, getByTestId } = render(
@@ -63,13 +73,13 @@ it('should not fail when Wrapper wasn’t mounted', () => {
 		)
 	).toBeTruthy();
 
-	expect(node.innerHTML).toBe('');
+	await waitFor(() => expect(node.innerHTML).toBe(''));
 	unmount();
 	expect(node.innerHTML).toBe('');
 });
 
 it('should wrap code in Fragment when it starts with <', () => {
-	console.error = jest.fn();
+	console.error = vi.fn();
 
 	const { queryAllByRole } = render(
 		<Provider>
@@ -101,7 +111,7 @@ it('should update', () => {
 });
 
 it('should handle no code', () => {
-	console.error = jest.fn();
+	console.error = vi.fn();
 	render(
 		<Provider>
 			<Preview code="" evalInContext={evalInContext} />
@@ -112,24 +122,25 @@ it('should handle no code', () => {
 });
 
 it('should handle errors', () => {
-	const consoleError = jest.fn();
+	const consoleError = vi.fn();
 
 	console.error = consoleError;
-	render(
+	const { getByText } = render(
 		<Provider>
 			<Preview code={'<invalid code'} evalInContext={evalInContext} />
 		</Provider>
 	);
 
+	// Sucrase reports the location of the error after the message, e.g. `(1:14)`
 	expect(
-		consoleError.mock.calls.find((call) =>
-			call[0].toString().includes('SyntaxError: Unexpected token')
-		)
+		consoleError.mock.calls.find((call) => /^SyntaxError: .+ \(\d+:\d+\)$/.test(String(call[0])))
 	).toBeTruthy();
+	// The compiler error is shown to the user in place of the example
+	expect(getByText(/^SyntaxError: /)).toBeInTheDocument();
 });
 
 it('should not clear console on initial mount', () => {
-	console.clear = jest.fn();
+	console.clear = vi.fn();
 	render(
 		<Provider>
 			<Preview code={code} evalInContext={evalInContext} />
@@ -139,7 +150,7 @@ it('should not clear console on initial mount', () => {
 });
 
 it('should clear console on second mount', () => {
-	console.clear = jest.fn();
+	console.clear = vi.fn();
 	render(
 		<Provider value={{ ...context, codeRevision: 1 }}>
 			<Preview code={code} evalInContext={evalInContext} />

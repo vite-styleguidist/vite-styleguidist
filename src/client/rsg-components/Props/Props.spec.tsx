@@ -1,11 +1,17 @@
-/* eslint-disable react/prop-types */
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { parse } from 'react-docgen';
-import PropsRenderer, { columns, getRowKey } from './PropsRenderer';
-import { unquote, getType, showSpaces, PropDescriptor } from './util';
+import PropsRenderer, { columns, getRowKey } from './PropsRenderer.js';
+import { unquote, getType, showSpaces, PropDescriptor } from './util.js';
 
-const propsToArray = (props: any) => Object.keys(props).map(name => ({ ...props[name], name }));
+const propsToArray = (props: any) => Object.keys(props).map((name) => ({ ...props[name], name }));
+
+// react-docgen returns one Documentation per component found (the default resolver stops at
+// the first exported one); `filename` selects the Babel syntax plugins (Flow vs TypeScript)
+function parseProps(code: string, filename: string) {
+	const [doc] = parse(code, { filename });
+	return propsToArray(doc.props ?? {});
+}
 
 const getText = (node: { innerHTML: string }): string =>
 	node.innerHTML
@@ -33,7 +39,7 @@ export default function ColumnsRenderer({ props }: { props: PropDescriptor[] }) 
 }
 
 function renderJs(propTypes: string[], defaultProps: string[] = []) {
-	const props = parse(
+	const props = parseProps(
 		`
 		import { Component } from 'react';
 		import PropTypes from 'prop-types';
@@ -48,18 +54,13 @@ function renderJs(propTypes: string[], defaultProps: string[] = []) {
 			}
 		}
 	`,
-		undefined,
-		undefined,
-		{ filename: '' }
+		'Component.js'
 	);
-	if (Array.isArray(props)) {
-		return render(<div />);
-	}
-	return render(<ColumnsRenderer props={propsToArray(props.props)} />);
+	return render(<ColumnsRenderer props={props} />);
 }
 
 function renderFlow(propsType: string[], defaultProps: string[] = [], preparations: string[] = []) {
-	const props = parse(
+	const props = parseProps(
 		`
 		// @flow
 		import * as React from 'react';
@@ -75,14 +76,9 @@ function renderFlow(propsType: string[], defaultProps: string[] = [], preparatio
 			}
 		}
 	`,
-		undefined,
-		undefined,
-		{ filename: '' }
+		'Component.js'
 	);
-	if (Array.isArray(props)) {
-		return render(<div />);
-	}
-	return render(<ColumnsRenderer props={propsToArray(props.props)} />);
+	return render(<ColumnsRenderer props={props} />);
 }
 
 function renderTypeScript(
@@ -90,7 +86,7 @@ function renderTypeScript(
 	defaultProps: string[] = [],
 	preparations: string[] = []
 ) {
-	const props = parse(
+	const props = parseProps(
 		`
 		import * as React from 'react';
 		${preparations.join(';')}
@@ -105,14 +101,9 @@ function renderTypeScript(
 			}
 		}
 	`,
-		undefined,
-		undefined,
-		{ filename: 'Component.tsx' }
+		'Component.tsx'
 	);
-	if (Array.isArray(props)) {
-		return render(<div />);
-	}
-	return render(<ColumnsRenderer props={propsToArray(props.props)} />);
+	return render(<ColumnsRenderer props={props} />);
 }
 
 describe('PropsRenderer', () => {
@@ -130,13 +121,13 @@ describe('PropsRenderer', () => {
 				]}
 			/>
 		);
-		expect((await findAllByRole('columnheader')).map(node => node.textContent)).toEqual([
+		expect((await findAllByRole('columnheader')).map((node) => node.textContent)).toEqual([
 			'Prop name',
 			'Type',
 			'Default',
 			'Description',
 		]);
-		expect((await findAllByRole('cell')).map(node => node.textContent)).toEqual([
+		expect((await findAllByRole('cell')).map((node) => node.textContent)).toEqual([
 			'color',
 			'string',
 			'tomato',
@@ -288,13 +279,13 @@ describe('props columns', () => {
 		);
 
 		expect(getByText('Shape').title).toMatchInlineSnapshot(`
-		"{
-		  \\"bar\\": 123,
-		  \\"qwarc\\": {
-		    \\"si\\": \\"señor\\"
-		  }
-		}"
-	`);
+			"{
+			  "bar": 123,
+			  "qwarc": {
+			    "si": "señor"
+			  }
+			}"
+		`);
 	});
 
 	test('should render PropTypes.shape defaultProps, falling back to Object', () => {

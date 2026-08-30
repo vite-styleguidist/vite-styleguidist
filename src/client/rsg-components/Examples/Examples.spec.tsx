@@ -1,13 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import Examples from '.';
-import Context from '../Context';
-import slots from '../slots';
-import { DisplayModes } from '../../consts';
-import * as Rsg from '../../../typings';
+import Examples from './index.js';
+import Context from '../Context/index.js';
+import slots from '../slots/index.js';
+import { DisplayModes } from '../../consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const evalInContext = (a: string): (() => any) =>
-	// eslint-disable-next-line no-new-func
 	new Function('require', 'const React = require("react");' + a).bind(null, require);
 
 const examples: Rsg.Example[] = [

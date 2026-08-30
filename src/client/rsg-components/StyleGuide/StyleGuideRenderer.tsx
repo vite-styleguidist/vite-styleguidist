@@ -6,7 +6,7 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import cx from 'clsx';
 import Ribbon from 'rsg-components/Ribbon';
 import Version from 'rsg-components/Version';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ color, fontFamily, fontSize, sidebarWidth, mq, space, maxWidth }: Rsg.Theme) => ({
 	root: {

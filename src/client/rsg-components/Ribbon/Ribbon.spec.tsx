@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import Ribbon from './Ribbon';
-import Context from '../Context';
+import Ribbon from './Ribbon.js';
+import Context from '../Context/index.js';
 
 const url = 'http://example.com/';
 const text = 'Share the repo';

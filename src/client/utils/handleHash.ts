@@ -1,4 +1,4 @@
-import escapeRegExp from 'lodash/escapeRegExp';
+import escapeRegExp from 'lodash/escapeRegExp.js';
 
 // We’re using this file to handle the hash to develop the routes, there are two types of hash '#/' and '#!/'
 // However, it is a temporal solution because is necessary using a library third-party that it is his focus
@@ -51,9 +51,7 @@ export const getHash = (hash: string, prependHash?: string) => {
  * @return {Array.<string>}
  */
 export const getHashAsArray = (hash: string, prependHash?: string): string[] => {
-	return trimParams(trimHash(hash, prependHash))
-		.split(separator)
-		.map(decodeURIComponent);
+	return trimParams(trimHash(hash, prependHash)).split(separator).map(decodeURIComponent);
 };
 
 /**

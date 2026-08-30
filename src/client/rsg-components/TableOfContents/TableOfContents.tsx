@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
 import ComponentsList from 'rsg-components/ComponentsList';
 import TableOfContentsRenderer from 'rsg-components/TableOfContents/TableOfContentsRenderer';
-import filterSectionsByName from '../../utils/filterSectionsByName';
-import { getHash } from '../../utils/handleHash';
-import * as Rsg from '../../../typings';
+import filterSectionsByName from '../../utils/filterSectionsByName.js';
+import { getHash } from '../../utils/handleHash.js';
+import type * as Rsg from '../../../typings/index.js';
 
 interface TableOfContentsProps {
 	sections: Rsg.Section[];
@@ -75,7 +75,7 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 		const firstLevel =
 			sections.length === 1
 				? // only use subsections if there actually are subsections
-				  sections[0].sections && sections[0].sections.length
+					sections[0].sections && sections[0].sections.length
 					? sections[0].sections
 					: sections[0].components
 				: sections;

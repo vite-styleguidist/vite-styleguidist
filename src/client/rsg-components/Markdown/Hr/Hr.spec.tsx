@@ -1,12 +1,13 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-
-import Hr from './index';
+import { render } from '@testing-library/react';
+import Hr from './index.js';
 
 describe('Markdown Hr', () => {
 	it('should render a horizontal rule', () => {
-		const actual = renderer.create(<Hr />);
+		const { getByRole } = render(<Hr />);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		const hr = getByRole('separator');
+		expect(hr.tagName).toBe('HR');
+		expect(hr.className).toMatch(/^rsg--hr-\d+$/);
 	});
 });

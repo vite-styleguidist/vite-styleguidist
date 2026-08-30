@@ -1,6 +1,6 @@
-import getFilterRegExp from './getFilterRegExp';
-import filterComponentsByName from './filterComponentsByName';
-import * as Rsg from '../../typings';
+import getFilterRegExp from './getFilterRegExp.js';
+import filterComponentsByName from './filterComponentsByName.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Fuzzy filters sections by section or component name.
@@ -16,7 +16,7 @@ export default function filterSectionsByName(
 	const regExp = getFilterRegExp(query);
 
 	return sections
-		.map(section => {
+		.map((section) => {
 			return {
 				...section,
 				sections: section.sections ? filterSectionsByName(section.sections, query) : [],
@@ -24,7 +24,7 @@ export default function filterSectionsByName(
 			};
 		})
 		.filter(
-			section =>
+			(section) =>
 				section.components.length > 0 ||
 				section.sections.length > 0 ||
 				regExp.test(section.name || '-')

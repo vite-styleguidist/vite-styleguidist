@@ -14,38 +14,46 @@ If you want to contribute but don’t know what to do, take a look at these two 
 
 ## Development workflow
 
-Run Babel in watch mode:
+Compile the TypeScript sources to `lib/` in watch mode:
 
 ```bash
 npm run compile:watch
 ```
 
-Then open a new terminal and start an example style guide:
+Then open a new terminal and start an example style guide (it runs the compiled `lib/bin/styleguidist.js`):
 
 ```bash
 npm start
 ```
 
-Open [localhost:6060](http://localhost:6060) in a browser.
+Open [localhost:6060](http://localhost:6060) in a browser. The style guide runs from the compiled `lib/` folder: changes to the UI components (`src/client`) are hot reloaded by Vite as soon as `tsc` has recompiled them, changes to the Node side (`src/scripts`, `src/vite`, `src/loaders`) need a restart of the style guide.
 
 (There are other example style guides to test particular features too, run `npm run` to see a list.)
 
-Run linters and tests:
+Run linters, the type checker and tests:
 
 ```bash
 npm test
 ```
 
-Or run tests in watch mode:
+Or run tests ([Vitest](https://vitest.dev/)) in watch mode:
 
 ```bash
 npm run test:watch
 ```
 
-To update Jest snapshots:
+To update snapshots:
 
 ```bash
-npx jest -u
+npx vitest -u
+```
+
+To build the example style guides and check that they work in a real browser (no JavaScript errors on load):
+
+```bash
+npm run build:basic
+npm run test:browser:pre
+npm run test:browser:basic
 ```
 
 **Don’t forget to add tests and update documentation for your changes.**
@@ -60,10 +68,10 @@ First install dependencies:
 npm run test:cypress:pre
 ```
 
-Then run Babel in watch mode:
+Then compile the sources:
 
 ```bash
-npm run compile:watch
+npm run compile
 ```
 
 Then open a new terminal and start Styleguidist server:
@@ -97,12 +105,10 @@ npm run start:customised # if making changes to examples/customised
 npm run start:sections # if making changes to examples/sections
 ```
 
-See the `scripts` section of the top level [package.json](https://github.com/styleguidist/react-styleguidist/blob/master/package.json#L135)
-
-. If an example doesn't have a script just point to its config:
+See the `scripts` section of the top level [package.json](https://github.com/styleguidist/react-styleguidist/blob/master/package.json). If an example doesn't have a script just point to its config:
 
 ```bash
-node bin/styleguidist.js server --config examples/path/to/example/styleguide.config.js
+node lib/bin/styleguidist.js server --config examples/path/to/example/styleguide.config.js
 ```
 
 ## Need help?

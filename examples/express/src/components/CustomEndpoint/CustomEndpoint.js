@@ -1,13 +1,19 @@
 import React, { Component } from 'react';
 
-/* eslint-disable compat/compat */
-
 export default class CustomEndpoint extends Component {
 	state = { response: 'No Server Response' };
 
 	handleInvokeEndpoint = () => {
-		fetch('http://localhost:6060/custom', { method: 'GET' })
-			.then((responseObj) => responseObj.json())
+		// The endpoint is added to the style guide dev server in styleguide.config.js
+		// (`configureServer`), so a relative URL works whatever host/port the server uses.
+		// It doesn’t exist in a static build (`styleguidist build`).
+		fetch('/custom', { method: 'GET' })
+			.then((responseObj) => {
+				if (!responseObj.ok) {
+					throw new Error(`Server responded with ${responseObj.status}`);
+				}
+				return responseObj.json();
+			})
 			.then(({ response } = {}) => this.setState({ response, error: null }))
 			.catch(() =>
 				this.setState({

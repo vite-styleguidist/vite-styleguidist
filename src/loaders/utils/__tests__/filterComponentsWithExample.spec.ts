@@ -1,4 +1,4 @@
-import filterComponentsWithExample from '../filterComponentsWithExample';
+import filterComponentsWithExample from '../filterComponentsWithExample.js';
 
 const sections = [
 	{

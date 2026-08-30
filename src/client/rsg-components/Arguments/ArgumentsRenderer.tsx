@@ -2,7 +2,7 @@ import React from 'react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import Argument, { ArgumentProps } from 'rsg-components/Argument';
 import Heading from 'rsg-components/Heading';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space }: Rsg.Theme) => ({
 	root: {

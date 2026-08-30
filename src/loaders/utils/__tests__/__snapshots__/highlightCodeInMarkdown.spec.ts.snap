@@ -1,10 +1,10 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`should highlight code with specified language 1`] = `
 "The only true button.
 
 \`\`\`html
-<span class=\\"token tag\\"><span class=\\"token tag\\"><span class=\\"token punctuation\\">&lt;</span>p</span><span class=\\"token punctuation\\">></span></span>Hello React<span class=\\"token tag\\"><span class=\\"token tag\\"><span class=\\"token punctuation\\">&lt;/</span>p</span><span class=\\"token punctuation\\">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>p</span><span class="token punctuation">></span></span>Hello React<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>p</span><span class="token punctuation">></span></span>
 \`\`\`
 "
 `;
@@ -12,6 +12,8 @@ exports[`should highlight code with specified language 1`] = `
 exports[`should not highlight code without language 1`] = `
 "The only \`true\` button.
 
-    <p>Hello React</p>
+\`\`\`
+<p>Hello React</p>
+\`\`\`
 "
 `;

@@ -6,7 +6,7 @@ import Name from 'rsg-components/Name';
 import Type from 'rsg-components/Type';
 import Group from 'react-group';
 import doctrine from 'doctrine';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space }: Rsg.Theme) => ({
 	block: {
@@ -18,7 +18,7 @@ export interface ArgumentProps {
 	name?: string;
 	type?: any;
 	default?: string;
-	description?: string;
+	description?: string | null;
 	returns?: boolean;
 	block?: boolean;
 }

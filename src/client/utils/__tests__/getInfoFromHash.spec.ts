@@ -1,4 +1,4 @@
-import getInfoFromHash from '../getInfoFromHash';
+import getInfoFromHash from '../getInfoFromHash.js';
 
 describe('getInfoFromHash', () => {
 	it('should return important part of hash if it contains component name', () => {

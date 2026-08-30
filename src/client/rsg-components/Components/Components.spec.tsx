@@ -1,15 +1,18 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import ReactComponent from '../ReactComponent';
-import Components from './Components';
-import ComponentsRenderer from './ComponentsRenderer';
-import { ExampleModes, UsageModes } from '../../consts';
+import { render } from '@testing-library/react';
+import Components from './Components.js';
+import ComponentsRenderer from './ComponentsRenderer.js';
+import Context from '../Context/index.js';
+import slots from '../slots/index.js';
+import { DisplayModes, ExampleModes, UsageModes } from '../../consts.js';
 
 const exampleMode = ExampleModes.collapse;
 const usageMode = UsageModes.collapse;
 const components = [
 	{
 		name: 'Foo',
+		visibleName: 'Foo',
+		slug: 'foo',
 		pathLine: 'components/foo.js',
 		filepath: 'components/foo.js',
 		props: {
@@ -18,6 +21,8 @@ const components = [
 	},
 	{
 		name: 'Bar',
+		visibleName: 'Bar',
+		slug: 'bar',
 		pathLine: 'components/bar.js',
 		filepath: 'components/bar.js',
 		props: {
@@ -26,35 +31,46 @@ const components = [
 	},
 ];
 
+// ReactComponent renders toolbar and tab slots, so the default slots must be in the context
+const context = {
+	config: {},
+	codeRevision: 0,
+	cssRevision: '0',
+	displayMode: DisplayModes.all,
+	slots: slots(),
+};
+
+const Provider = (props: any) => <Context.Provider value={context as any} {...props} />;
+
 it('should render components list', () => {
-	const renderer = createRenderer();
-	renderer.render(
-		<Components components={components} exampleMode={exampleMode} usageMode={usageMode} depth={3} />
+	const { getAllByRole, getByText } = render(
+		<Provider>
+			<Components
+				components={components}
+				exampleMode={exampleMode}
+				usageMode={usageMode}
+				depth={3}
+			/>
+		</Provider>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	// One section heading per component, at the requested depth
+	expect(getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual([
+		'Foo',
+		'Bar',
+	]);
+	expect(getByText('Foo foo')).toBeInTheDocument();
+	expect(getByText('Bar bar')).toBeInTheDocument();
 });
 
 it('renderer should render components list layout', () => {
-	const renderer = createRenderer();
-	renderer.render(
+	const { container, getByTestId } = render(
 		<ComponentsRenderer>
-			<ReactComponent
-				key={0}
-				component={components[0]}
-				exampleMode={exampleMode}
-				usageMode={usageMode}
-				depth={3}
-			/>
-			<ReactComponent
-				key={1}
-				component={components[1]}
-				exampleMode={exampleMode}
-				usageMode={usageMode}
-				depth={3}
-			/>
+			<div data-testid="first" />
+			<div data-testid="second" />
 		</ComponentsRenderer>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(container.firstChild).toContainElement(getByTestId('first'));
+	expect(container.firstChild).toContainElement(getByTestId('second'));
 });

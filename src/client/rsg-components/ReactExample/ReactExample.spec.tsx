@@ -1,42 +1,46 @@
 import { fireEvent, render } from '@testing-library/react';
 import React from 'react';
-import noop from 'lodash/noop';
-import renderer from 'react-test-renderer';
-import { createRenderer } from 'react-test-renderer/shallow';
-import ReactExample from '.';
+import noop from 'lodash/noop.js';
+import ReactExample from './index.js';
 
-const evalInContext = (a: string): (() => any) =>
-	// eslint-disable-next-line no-new-func
-	new Function('require', 'const React = require("react");' + a).bind(null, require);
+// Examples are evaluated as plain functions with a `require` that only knows React,
+// the way the real evalInContext (src/loaders/utils/client/evalInContext.ts) works with
+// the modules bundled for the style guide
+const requireInExample = (name: string) => {
+	if (name === 'react') {
+		return React;
+	}
+	throw new Error(`Cannot find module '${name}'`);
+};
+const evalInContext = (code: string): (() => any) =>
+	new Function('require', `const React = require("react");${code}`).bind(null, requireInExample);
 
 it('should render code', () => {
-	const testRenderer = createRenderer();
-	testRenderer.render(
-		<ReactExample code={'<button>OK</button>'} evalInContext={evalInContext} onError={noop} />
+	const { getByRole } = render(
+		<ReactExample code="<button>OK</button>" evalInContext={evalInContext} onError={noop} />
 	);
 
-	expect(testRenderer.getRenderOutput()).toMatchSnapshot();
+	expect(getByRole('button')).toHaveTextContent('OK');
 });
 
 it('should wrap code in Fragment when it starts with <', () => {
-	const actual = renderer.create(
-		<div>
-			<ReactExample code="<span /><span />" evalInContext={evalInContext} onError={noop} />
-		</div>
+	const { container } = render(
+		<ReactExample code="<span /><span />" evalInContext={evalInContext} onError={noop} />
 	);
 
-	expect(actual.toJSON()).toMatchSnapshot();
+	expect(container.querySelectorAll('span')).toHaveLength(2);
 });
 
 it('should handle errors', () => {
-	const onError = jest.fn();
+	const onError = vi.fn();
 
-	const testRenderer = createRenderer();
-	testRenderer.render(
-		<ReactExample code={'<invalid code'} evalInContext={evalInContext} onError={onError} />
+	const { container } = render(
+		<ReactExample code="<invalid code" evalInContext={evalInContext} onError={onError} />
 	);
 
 	expect(onError).toHaveBeenCalledTimes(1);
+	expect(onError).toHaveBeenCalledWith(expect.any(SyntaxError));
+	expect(container).toBeEmptyDOMElement();
 });
 
 it('should set initial state with hooks', () => {

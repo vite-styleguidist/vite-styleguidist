@@ -1,17 +1,24 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-
-import { Details, DetailsSummary } from './index';
+import { render } from '@testing-library/react';
+import { Details, DetailsSummary } from './index.js';
 
 describe('Markdown Details', () => {
 	it('should render a Details', () => {
-		const actual = renderer.create(
+		const { container, getByText } = render(
 			<Details>
 				<DetailsSummary>Solution</DetailsSummary>
 				This is a hidden text.
 			</Details>
 		);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		const details = container.firstChild as HTMLElement;
+		expect(details.tagName).toBe('DETAILS');
+		expect(details.className).toMatch(/^rsg--details-\d+$/);
+		expect(details).toHaveTextContent('This is a hidden text.');
+
+		const summary = getByText('Solution');
+		expect(summary.tagName).toBe('SUMMARY');
+		expect(summary.className).toMatch(/^rsg--summary-\d+$/);
+		expect(details).toContainElement(summary);
 	});
 });

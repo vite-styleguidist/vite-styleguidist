@@ -1,9 +1,9 @@
-import { Theme } from './RsgTheme';
+import type { Theme } from './RsgTheme.js';
 
 declare global {
 	/**
-	 * function used in react tests to generate
-	 * mocks of JSS Class names
+	 * Function used in component tests to generate mocks of JSS class names
+	 * (defined in test/setup.ts).
 	 */
-	const classes: (styles: (theme: Theme) => Record<string, any>) => Record<string, string>;
+	var classes: (styles: (theme: Theme) => Record<string, any>) => Record<string, string>;
 }

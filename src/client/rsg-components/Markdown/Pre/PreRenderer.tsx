@@ -2,8 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import prismTheme from '../../../styles/prismTheme';
-import * as Rsg from '../../../../typings';
+import prismTheme from '../../../styles/prismTheme.js';
+import type * as Rsg from '../../../../typings/index.js';
 
 const styles = ({ space, color, fontSize, fontFamily, borderRadius }: Rsg.Theme) => ({
 	pre: {

@@ -1,18 +1,5 @@
-module.exports = {
-	components: 'src/client/rsg-components/**/[A-Z]*.js',
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: ['style-loader', 'css-loader'],
-				},
-			],
-		},
-	},
+// Style guide of Styleguidist’s own UI components (`npm run start:ui`), mostly useful
+// when working on the components themselves. Vite compiles the TypeScript sources.
+export default {
+	components: 'src/client/rsg-components/**/[A-Z]*Renderer.tsx',
 };

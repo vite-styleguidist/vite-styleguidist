@@ -2,7 +2,8 @@
 // https://github.com/lukeed/rewrite-imports/issues/10
 
 const UNNAMED = /import\s*['"]([^'"]+)['"];?/gi;
-const NAMED = /import\s*(\*\s*as)?\s*(\w*?)\s*,?\s*(?:\{([\s\S]*?)\})?\s*from\s*['"]([^'"]+)['"];?/gi;
+const NAMED =
+	/import\s*(\*\s*as)?\s*(\w*?)\s*,?\s*(?:\{([\s\S]*?)\})?\s*from\s*['"]([^'"]+)['"];?/gi;
 
 function alias(key: string): { key: string; name: string } {
 	key = key.trim();
@@ -27,7 +28,7 @@ function generate(keys: string[], dep: string, base: string, fn: string): string
 		out += `\nconst ${base} = ${tmp}.default || ${tmp};`;
 	}
 
-	keys.forEach(key => {
+	keys.forEach((key) => {
 		obj = alias(key);
 		out += `\nconst ${obj.name} = ${tmp}.${obj.key};`;
 	});
@@ -35,11 +36,11 @@ function generate(keys: string[], dep: string, base: string, fn: string): string
 	return out;
 }
 
-export default function(str: string, fn = 'require'): string {
+export default function (str: string, fn = 'require'): string {
 	num = 0;
 	return str
 		.replace(NAMED, (_, asterisk, base, req: string | undefined, dep: string) =>
-			generate(req ? req.split(',').filter(d => d.trim()) : [], dep, base, fn)
+			generate(req ? req.split(',').filter((d) => d.trim()) : [], dep, base, fn)
 		)
 		.replace(UNNAMED, (_, dep) => `${fn}('${dep}');`);
 }

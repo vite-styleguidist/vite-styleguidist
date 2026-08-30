@@ -1,7 +1,6 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { Editor } from './Editor';
+import { Editor } from './Editor.js';
 
 const code = '<button>MyAwesomeCode</button>';
 const newCode = '<button>MyNewAwesomeCode</button>';
@@ -10,29 +9,30 @@ const props = {
 	onChange() {},
 	code,
 };
-describe('Editor', () => {
-	it('should renderer and editor', () => {
-		const renderer = createRenderer();
-		renderer.render(<Editor {...props} />);
 
-		expect(renderer.getRenderOutput()).toMatchSnapshot();
+describe('Editor', () => {
+	it('should render an editor with highlighted code', () => {
+		const { container, getByRole } = render(<Editor {...props} />);
+
+		// react-simple-code-editor renders a textarea for input and a <pre> with the highlighted copy
+		expect(getByRole('textbox')).toHaveValue(code);
+		expect(container.querySelector('pre .token')).not.toBeNull();
 	});
 
 	it('should update code', () => {
-		const { rerender, getByText } = render(<Editor {...props} />);
+		const { rerender, getByRole } = render(<Editor {...props} />);
 
 		rerender(<Editor {...props} code={newCode} />);
 
-		expect(getByText(newCode));
+		expect(getByRole('textbox')).toHaveValue(newCode);
 	});
 
 	it('should call onChange when textarea value changes', () => {
-		const onChange = jest.fn();
-		const { getByText } = render(<Editor {...props} onChange={onChange} />);
+		const onChange = vi.fn();
+		const { getByRole } = render(<Editor {...props} onChange={onChange} />);
 
-		const textarea = getByText(code);
-		fireEvent.change(textarea, { target: { value: newCode } });
+		fireEvent.change(getByRole('textbox'), { target: { value: newCode } });
 
-		expect(onChange).toBeCalledWith(newCode);
+		expect(onChange).toHaveBeenCalledWith(newCode);
 	});
 });

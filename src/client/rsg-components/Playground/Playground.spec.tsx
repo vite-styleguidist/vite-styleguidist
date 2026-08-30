@@ -1,12 +1,20 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import Playground from './Playground';
-import slots from '../slots';
-import Context from '../Context';
+import Playground from './Playground.js';
+import slots from '../slots/index.js';
+import Context from '../Context/index.js';
 
-const evalInContext = (a: string) =>
-	// eslint-disable-next-line no-new-func
-	new Function('require', 'const React = require("react");' + a).bind(null, require);
+// Examples are evaluated as plain functions with a `require` that only knows React,
+// the way the real evalInContext (src/loaders/utils/client/evalInContext.ts) works with
+// the modules bundled for the style guide
+const requireInExample = (name: string) => {
+	if (name === 'react') {
+		return React;
+	}
+	throw new Error(`Cannot find module '${name}'`);
+};
+const evalInContext = (code: string) =>
+	new Function('require', `const React = require("react");${code}`).bind(null, requireInExample);
 const code = '<button>Code: OK</button>';
 const newCode = '<button>Code: Not OK</button>';
 const defaultProps = {

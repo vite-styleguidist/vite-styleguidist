@@ -1,4 +1,7 @@
-import { PropDescriptor as BasePropDescriptor, PropTypeDescriptor } from 'react-docgen';
+import type {
+	PropDescriptor as BasePropDescriptor,
+	PropTypeDescriptor,
+} from '../../../typings/index.js';
 
 /**
  * Remove quotes around given string.
@@ -7,7 +10,7 @@ export function unquote(string?: string): string | undefined {
 	return string && string.replace(/^['"]|['"]$/g, '');
 }
 
-export interface PropDescriptor extends BasePropDescriptor {
+export interface PropDescriptor extends Omit<BasePropDescriptor, 'flowType' | 'tsType'> {
 	flowType?: TypeDescriptor;
 	tsType?: TypeDescriptor;
 }
@@ -73,7 +76,4 @@ interface TypeUnionDescriptor {
 }
 
 export type TypeDescriptor =
-	| TypeEnumDescriptor
-	| TypeLiteralDescriptor
-	| TypeSignatureDescriptor
-	| TypeUnionDescriptor;
+	TypeEnumDescriptor | TypeLiteralDescriptor | TypeSignatureDescriptor | TypeUnionDescriptor;

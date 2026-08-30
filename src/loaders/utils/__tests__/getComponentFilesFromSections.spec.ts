@@ -1,8 +1,7 @@
-import path from 'path';
-import deabsDeep from 'deabsdeep';
-import getComponentFilesFromSections from '../getComponentFilesFromSections';
+import path from 'node:path';
+import getComponentFilesFromSections from '../getComponentFilesFromSections.js';
 
-const configDir = path.resolve(__dirname, '../../../../test');
+const configDir = path.resolve(import.meta.dirname, '../../../../test');
 const sections = [
 	{
 		name: 'Readme',
@@ -23,7 +22,9 @@ const sections = [
 	},
 ];
 
-const deabs = (x: string[]) => deabsDeep(x, { root: configDir });
+// Mask the absolute test directory as `~` (always with forward slashes) to keep the expectations portable
+const deabs = (files: string[]) =>
+	files.map((file) => `~/${path.relative(configDir, file).split(path.sep).join('/')}`);
 
 it('getComponentFilesFromSections() should return a list of files', () => {
 	const result = getComponentFilesFromSections(sections, configDir);

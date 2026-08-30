@@ -1,4 +1,4 @@
-import evalInContext from '../evalInContext';
+import evalInContext from '../evalInContext.js';
 
 describe('evalInContext', () => {
 	test('return a function', () => {

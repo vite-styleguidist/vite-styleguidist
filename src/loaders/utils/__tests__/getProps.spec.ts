@@ -1,5 +1,10 @@
-import path from 'path';
-import getProps from '../getProps';
+import path from 'node:path';
+import glogg from 'glogg';
+import getProps from '../getProps.js';
+import { importDefault } from '../importIt.js';
+import { examplesId } from '../../../vite/ids.js';
+
+const logger = glogg('rsg');
 
 it('should return an object for props', () => {
 	const result = getProps({
@@ -8,7 +13,6 @@ it('should return an object for props', () => {
 		methods: [],
 		props: {
 			children: {
-				name: 'children',
 				type: {
 					name: 'object',
 				},
@@ -16,7 +20,6 @@ it('should return an object for props', () => {
 				description: 'Button label.',
 			},
 			color: {
-				name: 'color',
 				type: {
 					name: 'string',
 				},
@@ -34,7 +37,6 @@ it('should return an object for props without description', () => {
 		displayName: 'Button',
 		props: {
 			children: {
-				name: 'children',
 				type: {
 					name: 'object',
 				},
@@ -65,7 +67,7 @@ it('should remove non-public methods', () => {
 				},
 			] as any,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	expect(result).toMatchSnapshot();
@@ -86,7 +88,7 @@ Baz method with foo param
 				},
 			] as any,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	expect(result.methods).toMatchSnapshot();
@@ -107,7 +109,7 @@ Baz method with foo param
 				},
 			] as any,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	expect(result.methods).toMatchSnapshot();
@@ -142,7 +144,7 @@ Foo method with baz param
 				},
 			] as any,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	expect(result.methods).toMatchSnapshot();
@@ -159,29 +161,46 @@ The only true button.
 @bar Bar
 `,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	expect(result).toMatchSnapshot();
 });
 
-it('should return require statement for @example doclet', () => {
+it('should return an import marker for the @example doclet', () => {
 	const result = getProps(
 		{
 			displayName: 'Button',
 			description: `
 The only true button.
 
-@example ../../../test/components/Placeholder/examples.md
+@example ../../../../test/components/Placeholder/examples.md
 `,
 		},
-		__filename
+		import.meta.filename
 	);
 
+	// The path in the doclet is relative to the component file
+	expect(result.example).toEqual(
+		importDefault(
+			examplesId({
+				file: path.resolve(
+					import.meta.dirname,
+					'../../../../test/components/Placeholder/examples.md'
+				),
+			})
+		)
+	);
+	// The doclet is consumed: it must not show up in the rendered description
+	expect(result.doclets).not.toHaveProperty('example');
+	expect(result.description).not.toContain('@example');
 	expect(result).toMatchSnapshot();
 });
 
-it('should return require statement for @example doclet only when the file exists', () => {
+it('should not return an import marker for the @example doclet when the file does not exist', () => {
+	const warn = vi.fn();
+	logger.once('warn', warn);
+
 	const result = getProps(
 		{
 			displayName: 'Button',
@@ -191,9 +210,15 @@ The only true button.
 @example example.md
 `,
 		},
-		__filename
+		import.meta.filename
 	);
 
+	expect(result.example).toBeUndefined();
+	expect(warn).toHaveBeenCalledWith(
+		expect.stringMatching(
+			/^An example file example\.md defined in .*getProps\.spec\.ts component not found\.$/
+		)
+	);
 	expect(result).toMatchSnapshot();
 });
 
@@ -244,7 +269,7 @@ Public Method
 				},
 			] as any,
 		},
-		__filename
+		import.meta.filename
 	);
 
 	// @ts-ignore

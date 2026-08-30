@@ -15,7 +15,7 @@ In many cases you may trick Styleguidist and react-docgen by exporting both comp
 ```javascript
 import React from 'react'
 import CSSModules from 'react-css-modules'
-import styles from './Button.css'
+import styles from './Button.module.css'
 
 // Base component will be used by react-docgen to generate documentation
 export function Button({ color, size, children }) {
@@ -120,9 +120,8 @@ export default class Wrapper extends Component {
 ```js
 // styleguide.config.js
 const path = require('path')
-const merge = require('webpack-merge')
 module.exports = {
-  webpackConfig: merge(require('./webpack.config'), {
+  viteConfig: {
     resolve: {
       alias: {
         'react-relay': path.join(
@@ -132,9 +131,11 @@ module.exports = {
         'real-react-relay': require.resolve('react-relay')
       }
     }
-  })
+  }
 }
 ```
+
+> **Tip:** When your project has a `vite.config.js`, Styleguidist stops loading it as soon as you set `viteConfig`; merge them with Vite’s `mergeConfig`, see [Configuring Vite](Vite.md#reusing-your-projects-vite-config).
 
 ```js
 // src/styleguide/FakeRelay.js
@@ -155,7 +156,7 @@ module.exports = {
 
 ```js
 // src/styleguide/sample_data.js
-module.exports = {
+export default {
   object: {
     // Something similar to your GraphQL results
   }
@@ -257,6 +258,19 @@ The usage is similar to [Adding styled-components `ThemeProvider`](#adding-style
 
 Check out the [official example](https://github.com/rofrischmann/fela/tree/master/examples/example-with-styleguidist).
 
+### CSS Modules
+
+Vite treats every `*.module.css` file (and `*.module.scss`, etc.) as a [CSS module](https://vite.dev/guide/features#css-modules), nothing to configure:
+
+```javascript
+import React from 'react'
+import styles from './Button.module.css'
+
+export default function Button({ children }) {
+  return <button className={styles.button}>{children}</button>
+}
+```
+
 ### CSS Modules with react-css-modules
 
 You need to export two components: (1) unstyled React component as named export and (2) enhanced component as a default export:
@@ -264,7 +278,7 @@ You need to export two components: (1) unstyled React component as named export 
 ```javascript
 import React from 'react'
 import CSSModules from 'react-css-modules'
-import styles from './Button.css'
+import styles from './Button.module.css'
 
 export function Button({ color, size, children }) {
   /* ... */

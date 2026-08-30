@@ -1,22 +1,22 @@
-import path from 'path';
-import fs from 'fs';
-import { TagProps, TagParamObject, DocumentationObject, utils, TagObject } from 'react-docgen';
+import path from 'node:path';
+import fs from 'node:fs';
+import { utils } from 'react-docgen';
 import _ from 'lodash';
-import doctrine, { Annotation } from 'doctrine';
+import doctrine from 'doctrine';
+import type { Annotation } from 'doctrine';
 import createLogger from 'glogg';
-import highlightCodeInMarkdown from './highlightCodeInMarkdown';
-import removeDoclets from './removeDoclets';
-import requireIt from './requireIt';
-import getNameFromFilePath from './getNameFromFilePath';
-import * as Rsg from '../../typings';
+import highlightCodeInMarkdown from './highlightCodeInMarkdown.js';
+import removeDoclets from './removeDoclets.js';
+import { importDefault } from './importIt.js';
+import getNameFromFilePath from './getNameFromFilePath.js';
+import { examplesId } from '../../vite/ids.js';
+import type * as Rsg from '../../typings/index.js';
 
 const logger = createLogger('rsg');
 
-const examplesLoader = path.resolve(__dirname, '../examples-loader.js');
-
-const JS_DOC_METHOD_PARAM_TAG_SYNONYMS: (keyof TagProps)[] = ['param', 'arg', 'argument'];
-const JS_DOC_METHOD_RETURN_TAG_SYNONYMS: (keyof TagProps)[] = ['return', 'returns'];
-const JS_DOC_ALL_SYNONYMS: (keyof TagProps)[] = [
+const JS_DOC_METHOD_PARAM_TAG_SYNONYMS: (keyof Rsg.TagProps)[] = ['param', 'arg', 'argument'];
+const JS_DOC_METHOD_RETURN_TAG_SYNONYMS: (keyof Rsg.TagProps)[] = ['return', 'returns'];
+const JS_DOC_ALL_SYNONYMS: (keyof Rsg.TagProps)[] = [
 	...JS_DOC_METHOD_PARAM_TAG_SYNONYMS,
 	...JS_DOC_METHOD_RETURN_TAG_SYNONYMS,
 ];
@@ -25,7 +25,13 @@ const JS_DOC_ALL_SYNONYMS: (keyof TagProps)[] = [
 // work around an issue in react-docgen that breaks the build if a component has JSDoc tags
 // like @see in its description, see https://github.com/reactjs/react-docgen/issues/155
 // and https://github.com/styleguidist/react-styleguidist/issues/298
-const getDocletsObject = (str?: string) => ({ ...utils.docblock.getDoclets(str) });
+//
+// react-docgen returns an empty string for bare tags (`@public`), we normalize them
+// to `true` so that `doclets.public` works as a boolean and the value is serializable.
+const getDocletsObject = (str?: string): Record<string, string | true> =>
+	_.mapValues({ ...utils.docblock.getDoclets(str || '') }, (value) =>
+		value === '' ? true : value
+	);
 
 const getDoctrineTags = (documentation: Annotation) => {
 	return _.groupBy(documentation.tags, 'title');
@@ -41,8 +47,18 @@ const doesExternalExampleFileExist = (componentPath: string, exampleFile: string
 	return doesFileExist;
 };
 
-const getMergedTag = (tags: TagProps, names: (keyof TagProps)[]): TagObject[] => {
-	return names.reduce((params: TagObject[], name) => [...params, ...(tags[name] || [])], []);
+/**
+ * react-docgen describes types as `{ name: 'number' }` or `{ name: 'signature', type: 'function', raw }`,
+ * while JSDoc tags parsed by doctrine use type expressions (`{ type: 'NameExpression', name }`).
+ * The client stringifies types with doctrine, so react-docgen types are converted here.
+ */
+const toDoctrineType = (type: any): any =>
+	type && (typeof type.type !== 'string' || /^[a-z]/.test(type.type))
+		? { type: 'NameExpression', name: type.raw || type.name }
+		: type;
+
+const getMergedTag = (tags: Rsg.TagProps, names: (keyof Rsg.TagProps)[]): Rsg.TagObject[] => {
+	return names.reduce((params: Rsg.TagObject[], name) => [...params, ...(tags[name] || [])], []);
 };
 
 /**
@@ -55,19 +71,25 @@ const getMergedTag = (tags: TagProps, names: (keyof TagProps)[]): TagObject[] =>
  * @param {string} filepath
  * @returns {object}
  */
-export default function getProps(doc: DocumentationObject, filepath?: string): Rsg.TempPropsObject {
-	const outDocs: Rsg.TempPropsObject = { doclets: {}, displayName: '', ...doc, methods: undefined };
+export default function getProps(doc: Rsg.Documentation, filepath?: string): Rsg.TempPropsObject {
+	const outDocs: Rsg.TempPropsObject = {
+		doclets: {},
+		displayName: '',
+		// Props get their `name` when they are turned into an array (see src/vite/modules/props.ts)
+		...(doc as Rsg.DocumentationObject),
+		methods: undefined,
+	};
 
 	// Keep only public methods
-	outDocs.methods = (doc.methods || []).filter(method => {
+	outDocs.methods = (doc.methods || []).filter((method) => {
 		const doclets = method.docblock && utils.docblock.getDoclets(method.docblock);
-		return doclets && doclets.public;
+		return doclets && 'public' in doclets;
 	}) as Rsg.MethodWithDocblock[];
 
 	// Parse the docblock of the remaining methods with doctrine to retrieve
 	// the JSDoc tags
 	// if a method is visible it must have a docblock
-	outDocs.methods = outDocs.methods.map(method => {
+	outDocs.methods = outDocs.methods.map((method) => {
 		const allTags = getDoctrineTags(
 			doctrine.parse(method.docblock, { sloppy: true, unwrap: true })
 		);
@@ -76,14 +98,15 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 		// with information from JSDoc
 
 		const paramTags = getMergedTag(
-			allTags as TagProps,
+			allTags as Rsg.TagProps,
 			JS_DOC_METHOD_PARAM_TAG_SYNONYMS
-		) as TagParamObject[];
+		) as Rsg.TagParamObject[];
 		const params =
 			method.params &&
-			method.params.map(param => ({
+			method.params.map((param) => ({
 				...param,
-				...paramTags.find(tagParam => tagParam.name === param.name),
+				type: toDoctrineType(param.type),
+				...paramTags.find((tagParam) => tagParam.name === param.name),
 			}));
 
 		if (params) {
@@ -91,25 +114,19 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 		}
 
 		const returnTags = getMergedTag(
-			allTags as TagProps,
+			allTags as Rsg.TagProps,
 			JS_DOC_METHOD_RETURN_TAG_SYNONYMS
-		) as TagParamObject[];
+		) as Rsg.TagParamObject[];
 		const returns = method.returns
-			? {
-					...method.returns,
-					type: {
-						type: 'NameExpression',
-						...method.returns.type,
-					},
-			  }
+			? { ...method.returns, type: toDoctrineType(method.returns.type) }
 			: returnTags[0];
 
 		if (returns) {
-			method.returns = returns;
+			method.returns = returns as Rsg.MethodDescriptor['returns'];
 		}
 
 		// Remove tag synonyms
-		method.tags = _.omit(allTags, JS_DOC_ALL_SYNONYMS);
+		method.tags = _.omit(allTags, JS_DOC_ALL_SYNONYMS) as Rsg.TagProps;
 
 		return method;
 	});
@@ -119,7 +136,7 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 		outDocs.doclets = getDocletsObject(doc.description);
 
 		const documentation = doctrine.parse(doc.description);
-		outDocs.tags = getDoctrineTags(documentation) as TagProps;
+		outDocs.tags = getDoctrineTags(documentation) as Rsg.TagProps;
 
 		outDocs.description = highlightCodeInMarkdown(removeDoclets(doc.description));
 
@@ -132,8 +149,11 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 			exampleFileExists = doesExternalExampleFileExist(filepath, exampleFile);
 		}
 
-		if (exampleFileExists) {
-			outDocs.example = requireIt(`!!${examplesLoader}!${exampleFile}`);
+		if (exampleFileExists && filepath && typeof exampleFile === 'string') {
+			// The path in the doclet is relative to the component file
+			outDocs.example = importDefault(
+				examplesId({ file: path.resolve(path.dirname(filepath), exampleFile) })
+			);
 			delete outDocs.doclets.example;
 		}
 	} else {
@@ -142,11 +162,11 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 
 	if (doc.props) {
 		// Read doclets of props
-		Object.keys(doc.props).forEach(propName => {
+		Object.keys(doc.props).forEach((propName) => {
 			if (!doc.props) {
 				return;
 			}
-			const prop = doc.props[propName];
+			const prop = doc.props[propName] as Rsg.PropDescriptor;
 			const doclets = getDocletsObject(prop.description);
 
 			// When a prop is listed in defaultProps but not in props the prop.description is undefined
@@ -154,7 +174,7 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 
 			// documentation.description is the description without tags
 			prop.description = documentation.description;
-			prop.tags = getDoctrineTags(documentation) as TagProps;
+			prop.tags = getDoctrineTags(documentation) as Rsg.TagProps;
 
 			// Remove ignored props
 			if (doclets && doclets.ignore && outDocs.props) {
@@ -171,7 +191,7 @@ export default function getProps(doc: DocumentationObject, filepath?: string): R
 	}
 
 	if (outDocs.doclets && outDocs.doclets.visibleName) {
-		outDocs.visibleName = outDocs.doclets.visibleName;
+		outDocs.visibleName = String(outDocs.doclets.visibleName);
 
 		// Custom tag is added both to doclets and tags
 		// Removing from both locations

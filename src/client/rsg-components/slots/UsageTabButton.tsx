@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import TabButton from 'rsg-components/TabButton';
-import isEmpty from 'lodash/isEmpty';
+import isEmpty from 'lodash/isEmpty.js';
 
 export interface UsageTabButtonProps {
 	name: string;

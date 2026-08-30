@@ -1,4 +1,4 @@
-import parseExample from '../parseExample';
+import parseExample from '../parseExample.js';
 
 const content = '<h1>Hello Markdown!</h1>';
 
@@ -56,7 +56,7 @@ it('should accept language as null', () => {
 });
 
 it('should apply an update function', () => {
-	const actual = parseExample(content, 'js', 'coffee', a => ({ ...a, lang: 'pizza' }));
+	const actual = parseExample(content, 'js', 'coffee', (a) => ({ ...a, lang: 'pizza' }));
 	expect(actual).toEqual({
 		lang: 'pizza',
 		settings: { coffee: true },

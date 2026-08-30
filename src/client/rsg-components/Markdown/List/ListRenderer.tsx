@@ -1,7 +1,7 @@
 import React, { cloneElement, Children } from 'react';
 import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../../typings';
+import type * as Rsg from '../../../../typings/index.js';
 
 const styles = ({ space, color, fontFamily }: Rsg.Theme) => ({
 	list: {
@@ -39,7 +39,9 @@ export const ListRenderer: React.FunctionComponent<ListProps> = ({
 	return (
 		<Tag className={classNames}>
 			{Children.map(children, (li) =>
-				React.isValidElement(li) ? cloneElement(li, { className: classes.li }) : li
+				React.isValidElement<{ className?: string }>(li)
+					? cloneElement(li, { className: classes.li })
+					: li
 			)}
 		</Tag>
 	);

@@ -1,4 +1,4 @@
-import * as Rsg from '../../typings';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Filter out components without an example file.
@@ -10,12 +10,12 @@ export default function filterComponentsWithExample(
 	sections: Rsg.LoaderSection[]
 ): Rsg.LoaderSection[] {
 	return sections
-		.map(section => ({
+		.map((section) => ({
 			...section,
 			sections: filterComponentsWithExample(section.sections),
-			components: section.components.filter(component => component.hasExamples),
+			components: section.components.filter((component) => component.hasExamples),
 		}))
 		.filter(
-			section => section.components.length > 0 || section.sections.length > 0 || section.content
+			(section) => section.components.length > 0 || section.sections.length > 0 || section.content
 		);
 }

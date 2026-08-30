@@ -1,8 +1,8 @@
-import remark from 'remark';
-import visit from 'unist-util-visit';
-import highlightCode from './highlightCode';
-import parseExample, { ExampleError } from './parseExample';
-import * as Rsg from '../../typings';
+import { remark } from 'remark';
+import { visit } from 'unist-util-visit';
+import highlightCode from './highlightCode.js';
+import parseExample, { ExampleError } from './parseExample.js';
+import type * as Rsg from '../../typings/index.js';
 
 const PLAYGROUND_LANGS = ['javascript', 'js', 'jsx', 'typescript', 'ts', 'tsx'];
 const CODE_PLACEHOLDER = '<%{#code#}%>';

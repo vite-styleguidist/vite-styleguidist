@@ -1,4 +1,4 @@
-import getFilterRegExp from '../getFilterRegExp';
+import getFilterRegExp from '../getFilterRegExp.js';
 
 describe('getFilterRegExp', () => {
 	it('should return a RegExp', () => {

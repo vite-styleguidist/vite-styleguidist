@@ -1,4 +1,4 @@
-import getImports from '../getImports';
+import getImports from '../getImports.js';
 
 test('find calls to require() in code', () => {
 	expect(getImports(`require('foo')`)).toEqual(['foo']);

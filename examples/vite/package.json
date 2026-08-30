@@ -1,0 +1,33 @@
+{
+  "name": "react-styleguidist-example-vite",
+  "description": "React styleguidist example in a Vite app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "homepage": "https://github.com/styleguidist/react-styleguidist",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/styleguidist/react-styleguidist.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "styleguide": "styleguidist server",
+    "styleguide:build": "styleguidist build"
+  },
+  "dependencies": {
+    "prop-types": "^15.8.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.0",
+    "react-styleguidist": "file:../../",
+    "vite": "^8.0.0"
+  }
+}

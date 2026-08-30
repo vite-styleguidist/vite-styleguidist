@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { render } from '@testing-library/react';
-import '@testing-library/jest-dom/extend-expect';
-import Styled, { JssInjectedProps } from './Styled';
-import Context from '../Context';
+import Styled, { JssInjectedProps } from './Styled.js';
+import Context from '../Context/index.js';
 
 const context = {
 	config: {
@@ -12,8 +11,6 @@ const context = {
 };
 
 const Provider = (props: any) => <Context.Provider value={context} {...props} />;
-
-/* eslint-disable react/prefer-stateless-function, react/prop-types */
 
 const styles = () => ({
 	foo: {

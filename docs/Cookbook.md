@@ -72,14 +72,14 @@ import ColorPalette from './components/ColorPalette'
 
 ## How to dynamically load other components in an example?
 
-Although examples don’t have direct access to webpack’s `require.context` feature, you _can_ use it in a separate helper file which you require in your example code. If you wanted to create an example to load and show all your icon components, you could do this:
+Although examples don’t have direct access to Vite’s [import.meta.glob](https://vite.dev/guide/features#glob-import) feature, you _can_ use it in a separate helper file which you import in your example code. If you wanted to create an example to load and show all your icon components, you could do this:
 
 ```js
 // load-icons.js
-const iconsContext = require.context('./icons/', true, /js$/)
-const icons = iconsContext.keys().reduce((icons, file) => {
-  const Icon = iconsContext(file).default
-  const label = file.slice(2, -3) // strip './' and '.js'
+const modules = import.meta.glob('./icons/**/*.js', { eager: true })
+const icons = Object.keys(modules).reduce((icons, file) => {
+  const Icon = modules[file].default
+  const label = file.slice(8, -3) // strip './icons/' and '.js'
   icons[label] = Icon
   return icons
 }, {})
@@ -110,7 +110,7 @@ First, code examples can receive [props and settings](Documenting.md#usage-examp
 
 The above example adds a setting called `file` with the **relative path** to the file we want to display as value.
 
-Second, use the [updateExample](Configuration#updateexample) config option, to detect the setting and change the content of a fenced code block:
+Second, use the [updateExample](Configuration.md#updateexample) config option, to detect the setting and change the content of a fenced code block:
 
 ```javascript
 module.exports = {
@@ -120,7 +120,10 @@ module.exports = {
     // "../mySourceCode.js"
     if (typeof settings.file === 'string') {
       // "absolute path to mySourceCode.js"
-      const filepath = path.resolve(exampleFilePath, settings.file)
+      const filepath = path.resolve(
+        path.dirname(exampleFilePath),
+        settings.file
+      )
       // displays the block as static code
       settings.static = true
       // no longer needed
@@ -165,29 +168,33 @@ In your style guide config:
 const path = require('path')
 module.exports = {
   require: [
-    'babel-polyfill',
+    'core-js/stable',
     path.join(__dirname, 'path/to/script.js'),
     path.join(__dirname, 'path/to/styles.css')
   ]
 }
 ```
 
+CSS, Sass and other files Vite understands don’t need any extra configuration.
+
 ## How to use React Styleguidist with Preact?
 
-You need to alias `react` and `react-dom` to `preact-compat`:
+You need to alias `react` and `react-dom` to `preact/compat`:
 
 ```javascript
 module.exports = {
-  webpackConfig: {
+  viteConfig: {
     resolve: {
       alias: {
-        react: 'preact-compat',
-        'react-dom': 'preact-compat'
+        react: 'preact/compat',
+        'react-dom': 'preact/compat'
       }
     }
   }
 }
 ```
+
+The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`.
 
 See the [Preact example style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/preact).
 
@@ -239,20 +246,20 @@ You can store all styles in a separate file to allow hot module replacement (HMR
 
 The same example above would then translate as:
 
-In `styleguide.config,js`, objects are replaced with file paths
+In `styleguide.config.js`, objects are replaced with file paths
 
 ```javascript
 module.exports = {
   // ...
   styles: './styleguide/styles.js',
-  theme: './styleguide/themes.js'
+  theme: './styleguide/theme.js'
 }
 ```
 
 then in `./styleguide/theme.js`
 
 ```javascript
-module.exports = {
+export default {
   color: {
     link: 'firebrick',
     linkHover: 'salmon'
@@ -266,7 +273,7 @@ module.exports = {
 and in `./styleguide/styles.js`
 
 ```javascript
-module.exports = {
+export default {
   Logo: {
     // We're changing the LogoRenderer component
     logo: {
@@ -281,6 +288,8 @@ module.exports = {
 ```
 
 Each modification of `theme.js` or `styles.js` will trigger a hot module replacement, updating the styleguide in the browser.
+
+> **Caution:** These files are bundled for the browser and must be ES modules (`export default`), `module.exports` won’t work.
 
 Check out the [themed example](https://github.com/styleguidist/react-styleguidist/tree/master/examples/themed) on the github repo to learn more and try it out.
 
@@ -408,24 +417,22 @@ module.exports = {
 
 ## How to change style guide dev server logs output?
 
-You can modify webpack dev server logs format changing `stats` option of webpack config:
+You can change the amount of logs the Vite dev server prints with the `logLevel` option of the Vite config (`'info'`, `'warn'`, `'error'` or `'silent'`):
 
 ```javascript
 module.exports = {
-  webpackConfig(env) {
+  viteConfig(env) {
     if (env === 'development') {
       return {
-        stats: {
-          chunks: false,
-          chunkModules: false,
-          chunkOrigins: false
-        }
+        logLevel: 'warn'
       }
     }
     return {}
   }
 }
 ```
+
+Styleguidist’s own messages are controlled by the [logger](Configuration.md#logger) option.
 
 ## How to debug my components and examples?
 
@@ -461,7 +468,7 @@ If you use code like the example above, you might see a `Cannot read property 'i
 ```json
 {
   "scripts": {
-    "build": "cross-env NODE_ENV=development react-styleguidist build"
+    "build": "cross-env NODE_ENV=development styleguidist build"
   }
 }
 ```
@@ -470,12 +477,16 @@ If you use code like the example above, you might see a `Cannot read property 'i
 
 ## How to use Vagrant with Styleguidist?
 
-First, read [Vagrant guide](https://webpack.js.org/guides/development-vagrant/) from the webpack documentation. Then enable polling in your webpack config:
+File system events don’t always reach the guest machine, enable polling in your Vite config (see Vite’s [server.watch](https://vite.dev/config/server-options#server-watch) option):
 
-```js
-devServer: {
-  watchOptions: {
-    poll: true
+```javascript
+module.exports = {
+  viteConfig: {
+    server: {
+      watch: {
+        usePolling: true
+      }
+    }
   }
 }
 ```
@@ -512,8 +523,7 @@ module.exports = {
       links: [
         {
           rel: 'stylesheet',
-          href:
-            'https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css'
+          href: 'https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css'
         }
       ]
     }
@@ -521,7 +531,7 @@ module.exports = {
 }
 ```
 
-In comparison to [require](Configuration.md#require) option, these scripts and links are run in the browser, not during webpack build process. It can be useful for side effect-causing scripts in which your components, or in this case Babel output, need to function properly.
+In comparison to [require](Configuration.md#require) option, these scripts and links are loaded by the browser as they are, they aren’t bundled by Vite. It can be useful for side effect-causing scripts, like analytics or polyfill services, that your components need to function properly.
 
 ## How to add fonts from Google Fonts?
 
@@ -547,9 +557,9 @@ module.exports = {
 }
 ```
 
-## How to reuse project’s webpack config?
+## How to reuse project’s Vite config?
 
-See in [configuring webpack](Webpack.md#reusing-your-projects-webpack-config).
+Styleguidist uses the `vite.config.js` next to your style guide config automatically, see [configuring Vite](Vite.md#reusing-your-projects-vite-config) for other cases.
 
 ## How to use React Styleguidist with Redux, Relay or Styled Components?
 
@@ -557,9 +567,9 @@ See [working with third-party libraries](Thirdparties.md).
 
 ## How to use React-axe to test accessibility of components?
 
-1. Install [react-axe](https://github.com/dequelabs/react-axe).
+1. Install [@axe-core/react](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/react) (formerly react-axe).
 
-2. Load React-axe with the style guide and run checks for each example:
+2. Load it with the style guide and run checks for each example:
 
 ```jsx
 // styleguide.config.js
@@ -570,14 +580,17 @@ module.exports = {
 // styleguide/setup.js
 import React from 'react'
 import ReactDOM from 'react-dom'
-var context = {
+const context = {
   include: [['[data-preview]']]
 }
-if (process.env.NODE_ENV !== 'production') {
-  var axe = require('react-axe')
-  axe(React, ReactDOM, 1000, undefined, context)
+if (import.meta.env.DEV) {
+  import('@axe-core/react').then(({ default: axe }) => {
+    axe(React, ReactDOM, 1000, undefined, context)
+  })
 }
 ```
+
+> **Info:** `import.meta.env.DEV` is `true` in the dev server and `false` in `styleguidist build`, so the check (and the library) never ends up in the static style guide.
 
 3. [Start your style guide server](https://react-styleguidist.js.org/docs/getting-started#3-start-your-style-guide) and open your browser’s developer tools console.
 
@@ -610,7 +623,7 @@ It allows the maintainers to catch type mismatch before execution and gives them
 
 It also allows you to write customized style guide components using TypeScript TSX instead of JavaScript JSX.
 
-**NOTE:** Since all files in `src/client/rsg-components` are aliased to `rsg-components` using webpack, you will have to add this alias to your `tsconfig.json` file:
+**NOTE:** Since all files in `src/client/rsg-components` are aliased to `rsg-components` using a Vite alias, you will have to add this alias to your `tsconfig.json` file:
 
 ```json
 {

@@ -1,4 +1,4 @@
-import * as Rsg from '../../typings';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Get all section content pages.
@@ -8,8 +8,8 @@ import * as Rsg from '../../typings';
  */
 export default function getAllContentPages(
 	sections: Rsg.LoaderSection[]
-): (Rsg.MarkdownExample | Rsg.RequireItResult)[] {
-	return sections.reduce((pages: (Rsg.MarkdownExample | Rsg.RequireItResult)[], section) => {
+): (Rsg.MarkdownExample | Rsg.ImportMarker)[] {
+	return sections.reduce((pages: (Rsg.MarkdownExample | Rsg.ImportMarker)[], section) => {
 		if (section.content) {
 			pages = pages.concat([section.content]);
 		}

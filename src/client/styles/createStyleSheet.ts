@@ -1,10 +1,10 @@
-import merge from 'lodash/merge';
-import memoize from 'lodash/memoize';
+import merge from 'lodash/merge.js';
+import memoize from 'lodash/memoize.js';
 import { Styles, StyleSheet } from 'jss';
-import jss from './setupjss';
-import * as theme from './theme';
-import { RecursivePartial } from '../../typings/RecursivePartial';
-import * as Rsg from '../../typings';
+import jss from './setupjss.js';
+import * as theme from './theme.js';
+import { RecursivePartial } from '../../typings/RecursivePartial.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * By default lodash/memoize only uses the first argument

@@ -1,6 +1,6 @@
-import { MethodDescriptor, PropDescriptor, TagProps } from 'react-docgen';
-import { RequireItResult } from './RsgRequireItResult';
-import { Example } from './RsgExample';
+import type { ImportMarker } from './RsgImportMarker.js';
+import type { MethodDescriptor, PropDescriptor, TagProps } from './RsgDocgen.js';
+import type { Example } from './RsgExample.js';
 
 export type ExpandMode = 'expand' | 'collapse' | 'hide';
 
@@ -16,6 +16,7 @@ export interface BaseComponent {
 	usageMode?: ExpandMode;
 }
 
+/** Component as seen by the client (after the virtual modules were evaluated). */
 export interface Component extends BaseComponent {
 	visibleName?: string;
 	props?: {
@@ -28,14 +29,15 @@ export interface Component extends BaseComponent {
 		example?: Example[];
 		examples?: Example[];
 	};
-	module?: number;
+	module?: unknown;
 	metadata?: {
 		tags?: string[];
 	};
 }
 
+/** Component as produced on the Node side, before serialization into a virtual module. */
 export interface LoaderComponent extends BaseComponent {
-	module: RequireItResult;
-	props: RequireItResult;
-	metadata: RequireItResult | Record<string, unknown>;
+	module: ImportMarker;
+	props: ImportMarker;
+	metadata: ImportMarker | Record<string, unknown>;
 }

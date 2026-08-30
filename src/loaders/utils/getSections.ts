@@ -1,30 +1,29 @@
 // This two functions should be in the same file because of cyclic imports
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import _ from 'lodash';
-import requireIt from './requireIt';
-import getComponentFiles from './getComponentFiles';
-import getComponents from './getComponents';
-import slugger from './slugger';
-import * as Rsg from '../../typings';
-
-const examplesLoader = path.resolve(__dirname, '../examples-loader.js');
+import { importDefault } from './importIt.js';
+import getComponentFiles from './getComponentFiles.js';
+import getComponents from './getComponents.js';
+import slugger from './slugger.js';
+import { examplesId } from '../../vite/ids.js';
+import type * as Rsg from '../../typings/index.js';
 
 function processSectionContent(
 	section: Rsg.ConfigSection,
 	config: Rsg.SanitizedStyleguidistConfig
-): Rsg.RequireItResult | Rsg.MarkdownExample | undefined {
+): Rsg.ImportMarker | Rsg.MarkdownExample | undefined {
 	if (!section.content) {
 		return undefined;
 	}
 
 	const contentRelativePath = section.content;
 
-	if (_.isFunction(section.content)) {
+	if (_.isFunction(contentRelativePath)) {
 		return {
 			type: 'markdown',
-			content: section.content(),
+			content: contentRelativePath(),
 		};
 	}
 
@@ -33,7 +32,7 @@ function processSectionContent(
 	if (!fs.existsSync(contentAbsolutePath)) {
 		throw new Error(`Styleguidist: Section content file not found: ${contentAbsolutePath}`);
 	}
-	return requireIt(`!!${examplesLoader}!${contentAbsolutePath}`);
+	return importDefault(examplesId({ file: contentAbsolutePath }));
 }
 
 const getSectionComponents = (
@@ -61,8 +60,7 @@ export default function getSections(
 	config: Rsg.SanitizedStyleguidistConfig,
 	parentDepth?: number
 ): Rsg.LoaderSection[] {
-	// eslint-disable-next-line @typescript-eslint/no-use-before-define
-	return sections.map(section => processSection(section, config, parentDepth));
+	return sections.map((section) => processSection(section, config, parentDepth));
 }
 
 /**

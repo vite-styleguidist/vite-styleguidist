@@ -1,4 +1,4 @@
-import requireInRuntime from '../requireInRuntime';
+import requireInRuntime from '../requireInRuntime.js';
 
 const map = {
 	a: () => 'a',

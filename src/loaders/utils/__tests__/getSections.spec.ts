@@ -1,8 +1,8 @@
-import path from 'path';
-import getSections, { processSection } from '../getSections';
-import * as Rsg from '../../../typings';
+import path from 'node:path';
+import getSections, { processSection } from '../getSections.js';
+import type * as Rsg from '../../../typings/index.js';
 
-const configDir = path.resolve(__dirname, '../../../../test');
+const configDir = path.resolve(import.meta.dirname, '../../../../test');
 const config = {
 	configDir,
 	exampleMode: 'collapse',
@@ -151,7 +151,7 @@ it('getSections() should return an array of sectionsWithDepth with sectionDepth 
 
 it('getSections() should make custom options by user available', () => {
 	const result = getSections(sectionsWithDepth, config);
-	const expandSection = result.find(section => section.name === 'Components');
+	const expandSection = result.find((section) => section.name === 'Components');
 	expect(expandSection).toHaveProperty('expand');
 });
 

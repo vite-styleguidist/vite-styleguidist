@@ -1,9 +1,8 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import TableOfContents from './TableOfContents';
-import { TableOfContentsRenderer } from './TableOfContentsRenderer';
-import Context from '../Context';
+import TableOfContents from './TableOfContents.js';
+import { TableOfContentsRenderer } from './TableOfContentsRenderer.js';
+import Context from '../Context/index.js';
 
 const components = [
 	{
@@ -102,7 +101,7 @@ it('should filter section names', () => {
 });
 
 it('should call a callback when input value changed', () => {
-	const onSearchTermChange = jest.fn();
+	const onSearchTermChange = vi.fn();
 	const searchTerm = 'foo';
 	const newSearchTerm = 'bar';
 	const { getByRole } = render(
@@ -117,164 +116,73 @@ it('should call a callback when input value changed', () => {
 
 	fireEvent.change(getByRole('textbox'), { target: { value: newSearchTerm } });
 
-	expect(onSearchTermChange).toBeCalledWith(newSearchTerm);
+	expect(onSearchTermChange).toHaveBeenCalledWith(newSearchTerm);
 });
 
-it('should render content of subsections of a section that has no components', () => {
-	const renderer = createRenderer();
-	renderer.render(
-		<TableOfContents
-			sections={[{ sections: [{ content: 'intro.md' }, { content: 'chapter.md' }] }]}
-		/>
-	);
-
-	expect(renderer.getRenderOutput()).toMatchInlineSnapshot(`
-		<Styled(TableOfContents)
-		  onSearchTermChange={[Function]}
-		  searchTerm=""
-		>
-		  <ComponentsList
-		    items={
-		      Array [
-		        Object {
-		          "components": Array [],
-		          "content": undefined,
-		          "forcedOpen": false,
-		          "heading": false,
-		          "initialOpen": true,
-		          "sections": Array [],
-		          "selected": false,
-		          "shouldOpenInNewTab": false,
-		        },
-		        Object {
-		          "components": Array [],
-		          "content": undefined,
-		          "forcedOpen": false,
-		          "heading": false,
-		          "initialOpen": true,
-		          "sections": Array [],
-		          "selected": false,
-		          "shouldOpenInNewTab": false,
-		        },
-		      ]
-		    }
-		  />
-		</Styled(TableOfContents)>
-	`);
-});
-
-it('should render components of a single top section as root', () => {
-	const renderer = createRenderer();
-	renderer.render(<TableOfContents sections={[{ components }]} />);
-
-	expect(renderer.getRenderOutput()).toMatchInlineSnapshot(`
-<Styled(TableOfContents)
-  onSearchTermChange={[Function]}
-  searchTerm=""
->
-  <ComponentsList
-    items={
-      Array [
-        Object {
-          "components": Array [],
-          "content": undefined,
-          "forcedOpen": false,
-          "heading": false,
-          "href": "#button",
-          "initialOpen": true,
-          "name": "Button",
-          "sections": Array [],
-          "selected": false,
-          "shouldOpenInNewTab": false,
-          "slug": "button",
-          "visibleName": "Button",
-        },
-        Object {
-          "components": Array [],
-          "content": undefined,
-          "forcedOpen": false,
-          "heading": false,
-          "href": "#input",
-          "initialOpen": true,
-          "name": "Input",
-          "sections": Array [],
-          "selected": false,
-          "shouldOpenInNewTab": false,
-          "slug": "input",
-          "visibleName": "Input",
-        },
-        Object {
-          "components": Array [],
-          "content": undefined,
-          "forcedOpen": false,
-          "heading": false,
-          "href": "#textarea",
-          "initialOpen": true,
-          "name": "Textarea",
-          "sections": Array [],
-          "selected": false,
-          "shouldOpenInNewTab": false,
-          "slug": "textarea",
-          "visibleName": "Textarea",
-        },
-      ]
-    }
-  />
-</Styled(TableOfContents)>
-`);
-});
-
-it('should render as the link will open in a new window only if external presents as true', () => {
-	const renderer = createRenderer();
-	renderer.render(
+it('should render subsections of a single root section as the top level', () => {
+	const { getAllByTestId } = render(
 		<TableOfContents
 			sections={[
 				{
 					sections: [
-						{ content: 'intro.md', href: 'http://example.com' },
-						{ content: 'chapter.md', href: 'http://example.com', external: true },
+						{ visibleName: 'Intro', slug: 'intro', href: '#intro', content: 'intro.md' },
+						{ visibleName: 'Chapter', slug: 'chapter', href: '#chapter', content: 'chapter.md' },
 					],
 				},
 			]}
 		/>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchInlineSnapshot(`
-<Styled(TableOfContents)
-  onSearchTermChange={[Function]}
-  searchTerm=""
->
-  <ComponentsList
-    items={
-      Array [
-        Object {
-          "components": Array [],
-          "content": undefined,
-          "forcedOpen": false,
-          "heading": false,
-          "href": "http://example.com",
-          "initialOpen": true,
-          "sections": Array [],
-          "selected": false,
-          "shouldOpenInNewTab": false,
-        },
-        Object {
-          "components": Array [],
-          "content": undefined,
-          "external": true,
-          "forcedOpen": false,
-          "heading": false,
-          "href": "http://example.com",
-          "initialOpen": true,
-          "sections": Array [],
-          "selected": false,
-          "shouldOpenInNewTab": false,
-        },
-      ]
-    }
-  />
-</Styled(TableOfContents)>
-`);
+	const links = getAllByTestId('rsg-toc-link');
+	expect(links.map((node) => node.textContent)).toEqual(['Intro', 'Chapter']);
+	// Both links belong to the same (root) list: the wrapping section isn't rendered
+	expect(links[0].closest('ul')).toBe(links[1].closest('ul'));
+});
+
+it('should render components of a single top section as root', () => {
+	const { getAllByTestId } = render(<TableOfContents sections={[{ components }]} />);
+
+	const links = getAllByTestId('rsg-toc-link');
+	expect(links.map((node) => node.textContent)).toEqual(['Button', 'Input', 'Textarea']);
+	expect(links.map((node) => node.getAttribute('href'))).toEqual([
+		'#button',
+		'#input',
+		'#textarea',
+	]);
+	expect(links[0].closest('ul')).toBe(links[2].closest('ul'));
+});
+
+it('should open the link in a new tab only for external links', () => {
+	const { getByText } = render(
+		<TableOfContents
+			sections={[
+				{
+					sections: [
+						{
+							visibleName: 'Intro',
+							slug: 'intro',
+							href: 'http://example.com',
+							content: 'intro.md',
+						},
+						// `external` alone isn't enough: the section must have been resolved to an
+						// external link by the loader (externalLink)
+						{ visibleName: 'Chapter', slug: 'chapter', href: 'http://example.com', external: true },
+						{
+							visibleName: 'Docs',
+							slug: 'docs',
+							href: 'http://example.com',
+							external: true,
+							externalLink: true,
+						},
+					],
+				},
+			]}
+		/>
+	);
+
+	expect(getByText('Intro')).not.toHaveAttribute('target');
+	expect(getByText('Chapter')).not.toHaveAttribute('target');
+	expect(getByText('Docs')).toHaveAttribute('target', '_blank');
 });
 
 /**

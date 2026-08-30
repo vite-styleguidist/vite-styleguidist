@@ -1,6 +1,6 @@
-import * as theme from '../theme';
-import createStyleSheet from '../createStyleSheet';
-import * as Rsg from '../../../typings';
+import * as theme from '../theme.js';
+import createStyleSheet from '../createStyleSheet.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const customThemeColor = '#123456';
 const customThemeBorderColor = '#654321';

@@ -1,10 +1,10 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import ReactComponent from './ReactComponent';
-import slots from '../slots';
-import Context from '../Context';
-import { DisplayModes } from '../../consts';
-import * as Rsg from '../../../typings';
+import ReactComponent from './ReactComponent.js';
+import slots from '../slots/index.js';
+import Context from '../Context/index.js';
+import { DisplayModes } from '../../consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const context = {
 	config: {
@@ -16,9 +16,17 @@ const context = {
 
 const Provider = (props: any) => <Context.Provider value={context} {...props} />;
 
-const evalInContext = (a: string) =>
-	// eslint-disable-next-line no-new-func
-	new Function('require', 'const React = require("react");' + a).bind(null, require);
+// Examples are evaluated as plain functions with a `require` that only knows React,
+// the way the real evalInContext (src/loaders/utils/client/evalInContext.ts) works with
+// the modules bundled for the style guide
+const requireInExample = (name: string) => {
+	if (name === 'react') {
+		return React;
+	}
+	throw new Error(`Cannot find module '${name}'`);
+};
+const evalInContext = (code: string) =>
+	new Function('require', `const React = require("react");${code}`).bind(null, requireInExample);
 
 const component = {
 	name: 'Foo',
@@ -47,12 +55,15 @@ const componentWithEverything: Rsg.Component = {
 				params: [
 					{
 						name: 'newValue',
+						optional: false,
 						description: 'New value for the counter.',
 						type: { type: 'NameExpression', name: 'Number' },
 					},
 				],
 				returns: null,
 				description: 'Sets the counter to a particular value.',
+				docblock: null,
+				modifiers: [],
 			},
 		],
 		examples: [

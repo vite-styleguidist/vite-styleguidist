@@ -1,4 +1,4 @@
-import * as Rsg from '../../typings';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Filters list of components by component name.
@@ -11,5 +11,5 @@ export default function filterComponentsByExactName(
 	components: Rsg.Component[],
 	name: string
 ): Rsg.Component[] {
-	return components.filter(component => component.name === name);
+	return components.filter((component) => component.name === name);
 }

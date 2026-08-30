@@ -6,7 +6,7 @@ daysUntilClose: 7
 
 # Issues with these labels will never be considered stale
 exemptLabels:
-  - "help wanted"
+  - 'help wanted'
 
 # Ignore issues with an assignee
 exemptAssignees: true
@@ -16,9 +16,7 @@ staleLabel: wontfix
 
 # Comment to post when marking an issue as stale. Set to `false` to disable
 markComment: >
-  😴 This issue has been automatically marked as stale because it has not had
-  recent activity. It will be closed in a week without any further activity.
-  Consider opening a pull request if you still have this issue or want this feature.
+  😴 This issue has been automatically marked as stale because it has not had recent activity. It will be closed in a week without any further activity. Consider opening a pull request if you still have this issue or want this feature.
 
 # Comment to post when closing a stale issue. Set to `false` to disable
 closeComment: false

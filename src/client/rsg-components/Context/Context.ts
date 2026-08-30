@@ -1,5 +1,5 @@
 import React from 'react';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const StyleGuideContext = React.createContext<StyleGuideContextContents>({
 	codeRevision: 0,

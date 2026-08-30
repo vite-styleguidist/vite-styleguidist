@@ -1,16 +1,16 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`getAst accept Acorn plugins 1`] = `
+exports[`getAst > accept Acorn plugins 1`] = `
 Node {
-  "body": Array [
+  "body": [
     Node {
       "end": 5,
       "expression": Node {
-        "children": Array [],
+        "children": [],
         "closingElement": null,
         "end": 5,
         "openingElement": Node {
-          "attributes": Array [],
+          "attributes": [],
           "end": 5,
           "name": Node {
             "end": 2,
@@ -36,9 +36,9 @@ Node {
 }
 `;
 
-exports[`getAst return AST 1`] = `
+exports[`getAst > return AST 1`] = `
 Node {
-  "body": Array [
+  "body": [
     Node {
       "end": 2,
       "expression": Node {

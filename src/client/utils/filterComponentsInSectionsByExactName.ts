@@ -1,5 +1,5 @@
-import filterComponentsByExactName from './filterComponentsByExactName';
-import * as Rsg from '../../typings';
+import filterComponentsByExactName from './filterComponentsByExactName.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Recursively filters all components in all sections by component name.
@@ -15,7 +15,7 @@ export default function filterComponentsInSectionsByExactName(
 	recursive: boolean
 ): Rsg.Section[] {
 	const filteredSections: Rsg.Section[] = [];
-	sections.forEach(section => {
+	sections.forEach((section) => {
 		if (section.components) {
 			const filteredComponents = filterComponentsByExactName(section.components, name);
 			if (filteredComponents.length) {

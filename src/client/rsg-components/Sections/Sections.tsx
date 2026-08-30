@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Section from 'rsg-components/Section';
 import SectionsRenderer from 'rsg-components/Sections/SectionsRenderer';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const Sections: React.FunctionComponent<{
 	sections: Rsg.Section[];
@@ -12,7 +12,7 @@ const Sections: React.FunctionComponent<{
 	return (
 		<SectionsRenderer>
 			{sections
-				.filter(section => !section.externalLink)
+				.filter((section) => !section.externalLink)
 				.map((section, idx) => (
 					<Section key={idx} section={section} depth={depth} />
 				))}

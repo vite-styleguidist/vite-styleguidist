@@ -36,15 +36,15 @@ export default class Placeholder extends Component {
 	getImageUrl() {
 		const { type, width, height } = this.props;
 		const types = {
-			animal: `http://placeimg.com/${width}/${height}/animals`,
-			bacon: `http://baconmockup.com/${width}/${height}`,
-			bear: `http://www.placebear.com/${width}/${height}`,
-			beard: `http://placebeard.it/${width}/${height}`,
-			cat: `http://lorempixel.com/${width}/${height}/cats`,
-			city: `http://lorempixel.com/${width}/${height}/city`,
-			food: `http://lorempixel.com/${width}/${height}/food`,
-			nature: `http://lorempixel.com/${width}/${height}/nature`,
-			people: `http://lorempixel.com/${width}/${height}/people`,
+			animal: `https://picsum.photos/seed/animal/${width}/${height}`,
+			bacon: `https://picsum.photos/seed/bacon/${width}/${height}`,
+			bear: `https://picsum.photos/seed/bear/${width}/${height}`,
+			beard: `https://picsum.photos/seed/beard/${width}/${height}`,
+			cat: `https://picsum.photos/seed/cats/${width}/${height}`,
+			city: `https://picsum.photos/seed/city/${width}/${height}`,
+			food: `https://picsum.photos/seed/food/${width}/${height}`,
+			nature: `https://picsum.photos/seed/nature/${width}/${height}`,
+			people: `https://picsum.photos/seed/people/${width}/${height}`,
 		};
 		return types[type];
 	}

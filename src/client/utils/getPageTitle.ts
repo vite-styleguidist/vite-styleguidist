@@ -1,6 +1,6 @@
-import get from 'lodash/get';
-import { DisplayModes } from '../consts';
-import * as Rsg from '../../typings';
+import get from 'lodash/get.js';
+import { DisplayModes } from '../consts.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Return page title:

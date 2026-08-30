@@ -1,7 +1,7 @@
 import React from 'react';
 import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
 	text: {

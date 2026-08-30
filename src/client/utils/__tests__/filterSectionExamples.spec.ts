@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import filterSectionExamples from '../filterSectionExamples';
+import filterSectionExamples from '../filterSectionExamples.js';
 
 const section = deepfreeze({
 	content: ['a', 'b', 'c', 'd'],

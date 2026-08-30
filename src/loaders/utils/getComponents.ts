@@ -1,5 +1,5 @@
-import processComponent from './processComponent';
-import * as Rsg from '../../typings';
+import processComponent from './processComponent.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Process each component in a list.
@@ -12,5 +12,5 @@ export default function getComponents(
 	components: string[],
 	config: Rsg.SanitizedStyleguidistConfig
 ) {
-	return components.map(filepath => processComponent(filepath, config));
+	return components.map((filepath) => processComponent(filepath, config));
 }

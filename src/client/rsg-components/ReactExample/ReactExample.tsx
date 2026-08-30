@@ -1,11 +1,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { TransformOptions } from 'buble';
+import type { Options as TransformOptions } from 'sucrase';
 import Wrapper from 'rsg-components/Wrapper';
-import compileCode from '../../utils/compileCode';
-import splitExampleCode from '../../utils/splitExampleCode';
-
-/* eslint-disable react/no-multi-comp */
+import compileCode, { DEFAULT_COMPILER_CONFIG } from '../../utils/compileCode.js';
+import splitExampleCode from '../../utils/splitExampleCode.js';
 
 interface ReactExampleProps {
 	code: string;
@@ -34,7 +32,7 @@ export default class ReactExample extends Component<ReactExampleProps> {
 	}
 
 	public render() {
-		const { code, compilerConfig = {}, onError } = this.props;
+		const { code, compilerConfig = DEFAULT_COMPILER_CONFIG, onError } = this.props;
 		const compiledCode = compileCode(code, compilerConfig, onError);
 		if (!compiledCode) {
 			return null;

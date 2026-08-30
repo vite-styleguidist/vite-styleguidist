@@ -1,11 +1,10 @@
-import fs from 'fs';
-import path from 'path';
-import getNameFromFilePath from './getNameFromFilePath';
-import requireIt from './requireIt';
-import slugger from './slugger';
-import * as Rsg from '../../typings';
-
-const propsLoader = path.resolve(__dirname, '../props-loader.js');
+import fs from 'node:fs';
+import path from 'node:path';
+import getNameFromFilePath from './getNameFromFilePath.js';
+import importIt, { importDefault } from './importIt.js';
+import slugger from './slugger.js';
+import { propsId } from '../../vite/ids.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * References the filepath of the metadata file.
@@ -37,9 +36,9 @@ export default function processComponent(
 		filepath: componentPath,
 		slug: slugger.slug(componentName),
 		pathLine: config.getComponentPathLine(componentPath),
-		module: requireIt(filepath),
-		props: requireIt(`!!${propsLoader}!${filepath}`),
+		module: importIt(filepath),
+		props: importDefault(propsId(filepath)),
 		hasExamples: !!(examplesFile && fs.existsSync(examplesFile)),
-		metadata: fs.existsSync(componentMetadataPath) ? requireIt(componentMetadataPath) : {},
+		metadata: fs.existsSync(componentMetadataPath) ? importDefault(componentMetadataPath) : {},
 	};
 }

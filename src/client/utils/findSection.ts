@@ -1,5 +1,5 @@
-import find from 'lodash/find';
-import * as Rsg from '../../typings';
+import find from 'lodash/find.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Recursively finds a section with a given name (exact match)

@@ -1,8 +1,8 @@
 import deepfreeze from 'deepfreeze';
-import filterComponentExamples from '../filterComponentExamples';
-import * as Rsg from '../../../typings';
+import filterComponentExamples from '../filterComponentExamples.js';
+import type * as Rsg from '../../../typings/index.js';
 
-const examples: Rsg.Example[] = ['a', 'b', 'c', 'd'].map(x => ({ type: 'markdown', content: x }));
+const examples: Rsg.Example[] = ['a', 'b', 'c', 'd'].map((x) => ({ type: 'markdown', content: x }));
 
 const component = deepfreeze({
 	props: {

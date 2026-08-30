@@ -1,4 +1,4 @@
-import { hasInHash, getHashAsArray } from './handleHash';
+import { hasInHash, getHashAsArray } from './handleHash.js';
 
 function hasDigitsOnly(item: string): boolean {
 	return item.match(/^\d+$/) !== null;
@@ -13,9 +13,7 @@ function hasDigitsOnly(item: string): boolean {
  * @param {string} hash
  * @returns {object}
  */
-export default function getInfoFromHash(
-	hash: string
-): {
+export default function getInfoFromHash(hash: string): {
 	isolate?: boolean;
 	hashArray?: string[];
 	targetName?: string;
@@ -27,7 +25,7 @@ export default function getInfoFromHash(
 		const targetHash = hashArray[hashArray.length - 1];
 		return {
 			isolate: shouldIsolate,
-			hashArray: hashArray.filter(item => !hasDigitsOnly(item)),
+			hashArray: hashArray.filter((item) => !hasDigitsOnly(item)),
 			targetName: hashArray[0],
 			targetIndex: hasDigitsOnly(targetHash) ? parseInt(targetHash, 10) : undefined,
 		};

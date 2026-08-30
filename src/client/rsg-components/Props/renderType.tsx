@@ -1,9 +1,9 @@
 import React from 'react';
-import { PropTypeDescriptor } from 'react-docgen';
+import type { PropTypeDescriptor } from '../../../typings/index.js';
 import Type from 'rsg-components/Type';
 import ComplexType from 'rsg-components/ComplexType';
 
-import { getType, PropDescriptor, TypeDescriptor } from './util';
+import { getType, PropDescriptor, TypeDescriptor } from './util.js';
 
 interface ExtendedPropTypeDescriptor extends Omit<PropTypeDescriptor, 'name'> {
 	name: string;
@@ -35,10 +35,10 @@ function renderAdvancedType(type: PropTypeDescriptor | TypeDescriptor): React.Re
 		case 'literal':
 			return <Type>{type.value}</Type>;
 		case 'signature':
-			return <ComplexType name={type.type} raw={type.raw} />;
+			return <ComplexType name={type.type} raw={type.raw ?? ''} />;
 		case 'union':
 		case 'tuple':
-			return <ComplexType name={type.name} raw={type.raw} />;
+			return <ComplexType name={type.name} raw={type.raw ?? ''} />;
 		default:
 			return <Type>{(type as any).raw || (type as any).name}</Type>;
 	}

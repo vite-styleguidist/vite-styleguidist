@@ -1,6 +1,6 @@
 import { walk } from 'estree-walker';
-import rewriteImports from './rewriteImports';
-import getAst from './getAst';
+import rewriteImports from './rewriteImports.js';
+import getAst from './getAst.js';
 
 const hasImports = (code: string): boolean => !!code.match(/import[\S\s]+?['"]([^'"]+)['"];?/m);
 
@@ -21,14 +21,14 @@ export default function transpileImports(code: string): string {
 
 	let offset = 0;
 	// estree walkers type is incompatible with acorns output
-	// it is working here out of luck and typescript is demonstrating it 
+	// it is working here out of luck and typescript is demonstrating it
 	// we have to go through the any part to keep the nodes with their `node.start`
 	// and `node.stop`
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any 
+
 	walk(ast as any, {
 		// import foo from 'foo'
 		// import 'foo'
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any 
+
 		enter: (node: any) => {
 			if (node.type === 'ImportDeclaration' && node.source) {
 				const start = node.start + offset;

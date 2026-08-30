@@ -1,7 +1,7 @@
-import glob from 'glob';
-import path from 'path';
-import isFunction from 'lodash/isFunction';
-import isString from 'lodash/isString';
+import { globSync } from 'glob';
+import path from 'node:path';
+import isFunction from 'lodash/isFunction.js';
+import isString from 'lodash/isString.js';
 
 const getComponentGlobs = (components: string | string[] | (() => string[])): string[] => {
 	if (isFunction(components)) {
@@ -19,12 +19,17 @@ const getComponentGlobs = (components: string | string[] | (() => string[])): st
 const getFilesMatchingGlobs = (components: string[], rootDir?: string, ignore?: string[]) => {
 	ignore = ignore || [];
 	return components
-		.map(listItem =>
-			glob.sync(listItem, {
+		.map((listItem) =>
+			// glob >= 9 no longer sorts results, but a deterministic order matters
+			// (component order in the style guide, snapshots), hence the sort()
+			globSync(listItem, {
 				cwd: rootDir,
 				ignore,
 				absolute: true,
-			})
+				// glob >= 9 ignores case on macOS/Windows by default, which would make the
+				// conventional `[A-Z]*.js` pattern match `index.js` too
+				nocase: false,
+			}).sort()
 		)
 		.reduce((accumulator, current) => accumulator.concat(current), []);
 };
@@ -53,7 +58,7 @@ export default function getComponentFiles(
 	const componentFiles = getFilesMatchingGlobs(componentGlobs, rootDir, ignore);
 
 	// Get absolute component file paths with correct slash separator format
-	const resolvedComponentFiles = componentFiles.map(file => path.resolve(file));
+	const resolvedComponentFiles = componentFiles.map((file) => path.resolve(file));
 
 	return resolvedComponentFiles;
 }

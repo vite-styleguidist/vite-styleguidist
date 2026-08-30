@@ -1,6 +1,6 @@
-import remark from 'remark';
-import visit from 'unist-util-visit';
-import highlightCode from './highlightCode';
+import { remark } from 'remark';
+import { visit } from 'unist-util-visit';
+import highlightCode from './highlightCode.js';
 
 function highlight() {
 	return (ast: any) => {

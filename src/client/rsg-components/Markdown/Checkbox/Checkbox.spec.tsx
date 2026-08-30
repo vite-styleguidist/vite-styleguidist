@@ -1,12 +1,13 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-
-import Checkbox from './index';
+import { render } from '@testing-library/react';
+import Checkbox from './index.js';
 
 describe('Markdown Checkbox', () => {
 	it('should render a checkbox input', () => {
-		const actual = renderer.create(<Checkbox />);
+		const { getByRole } = render(<Checkbox />);
 
-		expect(actual.toJSON()).toMatchSnapshot();
+		const checkbox = getByRole('checkbox');
+		expect(checkbox.tagName).toBe('INPUT');
+		expect(checkbox.className).toMatch(/^rsg--input-\d+$/);
 	});
 });

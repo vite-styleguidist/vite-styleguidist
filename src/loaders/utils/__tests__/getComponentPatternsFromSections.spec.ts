@@ -1,4 +1,4 @@
-import getComponentPatternsFromSections from '../getComponentPatternsFromSections';
+import getComponentPatternsFromSections from '../getComponentPatternsFromSections.js';
 
 const sections = [
 	{

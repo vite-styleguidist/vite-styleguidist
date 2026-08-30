@@ -178,4 +178,3 @@ Here’s a [good example of a changelog](https://github.com/styleguidist/react-s
 
 - Information about pull request authors:<br> `(#1040 by @rafaesc)`
 - Open Collective link at the very top:<br> `👋 **[Support Styleguidist](https://opencollective.com/styleguidist) on Open Collective** 👋`
-

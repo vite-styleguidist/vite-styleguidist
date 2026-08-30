@@ -2,8 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Markdown from 'rsg-components/Markdown';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import { DOCS_COMPONENTS } from '../../../scripts/consts';
-import * as Rsg from '../../../typings';
+import { DOCS_COMPONENTS } from '../../../scripts/consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ space, maxWidth }: Rsg.Theme) => ({
 	root: {
@@ -26,7 +26,7 @@ export const WelcomeRenderer: React.FunctionComponent<WelcomeProps> = ({ classes
 
 **We couldn’t find any components** using these patterns:
 
-${patterns.map(p => `- \`${p}\``).join('\n')}
+${patterns.map((p) => `- \`${p}\``).join('\n')}
 
 Create **styleguide.config.js** file in your project root directory like this:
 

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import memoize from 'lodash/memoize';
+import memoize from 'lodash/memoize.js';
 
 const readdirSync = memoize(fs.readdirSync);
 
@@ -14,7 +14,7 @@ export default function findFileCaseInsensitive(filepath: string): string | unde
 	const dir = path.dirname(filepath);
 	const fileNameLower = path.basename(filepath).toLowerCase();
 	const files = readdirSync(dir);
-	const found = files.find(file => file.toLowerCase() === fileNameLower);
+	const found = files.find((file) => file.toLowerCase() === fileNameLower);
 	return found && path.join(dir, found);
 }
 

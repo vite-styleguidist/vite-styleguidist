@@ -4,7 +4,7 @@ import cx from 'clsx';
 import Link from 'rsg-components/Link';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import { useStyleGuideContext } from 'rsg-components/Context';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ color, fontFamily, fontSize, space, mq }: Rsg.Theme) => ({
 	list: {
@@ -57,7 +57,9 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 		config: { tocMode },
 	} = useStyleGuideContext();
 
-	const [open, setOpen] = tocMode !== 'collapse' ? [true, () => {}] : React.useState(!!initialOpen);
+	// Hooks must be called unconditionally; sections only collapse in `tocMode: 'collapse'`
+	const [isOpen, setOpen] = React.useState(!!initialOpen);
+	const open = tocMode !== 'collapse' || isOpen;
 	return (
 		<li
 			className={cx(classes.item, {

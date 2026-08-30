@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import filterSectionsByName from '../filterSectionsByName';
+import filterSectionsByName from '../filterSectionsByName.js';
 
 const sections = deepfreeze([
 	{

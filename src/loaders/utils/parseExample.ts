@@ -1,6 +1,6 @@
 import lowercaseKeys from 'lowercase-keys';
-import { DOCS_DOCUMENTING } from '../../scripts/consts';
-import * as Rsg from '../../typings';
+import { DOCS_DOCUMENTING } from '../../scripts/consts.js';
+import type * as Rsg from '../../typings/index.js';
 
 const hasStringModifiers = (modifiers: string): boolean => !!modifiers.match(/^[ \w]+$/);
 
@@ -14,7 +14,8 @@ export default function parseExample(
 	content: string,
 	lang?: string | null,
 	modifiers?: string,
-	updateExample: (example: Omit<Rsg.CodeExample, 'type'>) => Omit<Rsg.CodeExample, 'type'> = x => x
+	updateExample: (example: Omit<Rsg.CodeExample, 'type'>) => Omit<Rsg.CodeExample, 'type'> = (x) =>
+		x
 ): Omit<Rsg.CodeExample, 'type'> | ExampleError {
 	const example: Omit<Rsg.CodeExample, 'type'> = {
 		content,

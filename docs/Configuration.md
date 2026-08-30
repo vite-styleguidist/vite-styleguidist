@@ -2,11 +2,15 @@
 
 By default, Styleguidist will look for `styleguide.config.js` file in your project’s root folder. You can change the location of the config file using `--config` [CLI](CLI.md) option.
 
+The config file may be a CommonJS module (`module.exports = {…}`) or an ES module (`export default {…}`), named `styleguide.config.js`, `styleguide.config.mjs` or `styleguide.config.cjs`.
+
+> **Caution:** Config files are loaded synchronously, top-level `await` isn’t supported in them.
+
 ## `assetsDir`
 
 Type: `String` or `Array`, optional
 
-Your application static assets folder will be accessible as `/` in the style guide dev server.
+Your application static assets folder will be accessible as `/` in the style guide dev server, and its files are copied into the [styleguideDir](#styleguidedir) folder by `styleguidist build`.
 
 ## `compilerConfig`
 
@@ -14,22 +18,22 @@ Type: `Object`, default:
 
 ```javascript
 {
-  // Don't include an Object.assign ponyfill, we have our own
-  objectAssign: 'Object.assign',
-  // Transpile only features needed for IE11
-  target: { ie: 11 },
-  transforms: {
-    // Don't throw on ESM imports, we transpile them ourselves
-    modules: false,
-    // Enable tagged template literals for styled-components
-    dangerousTaggedTemplateString: true,
-    // to make async/await work by default (no transformation)
-    asyncAwait: false,
-  },
+  transforms: ['jsx', 'typescript'],
+  // Examples get `React` injected, so the classic runtime just works
+  jsxRuntime: 'classic',
+  // Skip development-only __source/__self props (React 19 warns about them)
+  production: true,
+  // Leave modern syntax alone, all supported browsers understand it
+  disableESTransforms: true,
+  // Never strip imports: side-effect imports are common in examples and
+  // import statements are rewritten to require() calls by Styleguidist
+  keepUnusedImports: true
 }
 ```
 
-Styleguidist uses [Bublé](https://buble.surge.sh/guide/) to run ES6 code on the frontend. This config object will be added as the second argument for `buble.transform`.
+Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile examples (JSX and TypeScript) in the browser. This config object will be passed as the second argument for `sucrase.transform()`.
+
+> **Caution:** The option replaces the default value, it isn’t merged with it. Start from the defaults, which you can import from `react-styleguidist/lib/client/utils/compileCode.js` as `DEFAULT_COMPILER_CONFIG`.
 
 ## `components`
 
@@ -40,6 +44,8 @@ Type: `String`, `Function` or `Array`, default: `src/components/**/*.{js,jsx,ts,
 - when `Array`: an array of module paths.
 
 All paths are relative to config folder.
+
+> **Note:** Patterns are case-sensitive on every platform: `[A-Z]*.js` won’t match `index.js`.
 
 See examples in the [Components section](Components.md).
 
@@ -82,14 +88,16 @@ module.exports = {
 
 Type: `Function`, optional
 
-Function that allows you to add endpoints to the underlying Express server:
+Function that allows you to add endpoints to the underlying Vite dev server:
 
 ```javascript
 module.exports = {
-  configureServer(app) {
-    // `app` is the instance of the express server running Styleguidist
-    app.get('/custom-endpoint', (req, res) => {
-      res.status(200).send({ response: 'Server invoked' })
+  configureServer(app, env, server) {
+    // `app` is the Connect middleware stack of the Vite dev server
+    // running Styleguidist, `server` is the ViteDevServer instance
+    app.use('/custom-endpoint', (req, res) => {
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ response: 'Server invoked' }))
     })
   }
 }
@@ -97,23 +105,23 @@ module.exports = {
 
 Your components will be able to invoke the URL `http://localhost:6060/custom-endpoint` from their examples.
 
-## `dangerouslyUpdateWebpackConfig`
+The middleware stack is a [Connect](https://github.com/senchalabs/connect) instance (`app.use()`), not an Express app: `req` and `res` are plain Node.js request and response objects. Middlewares added here run before Vite’s own.
+
+## `dangerouslyUpdateViteConfig`
 
 Type: `Function`, optional
 
-> **Danger:** You may break Styleguidist by using this option, try to use [webpackConfig](#webpackconfig) option instead.
+> **Danger:** You may break Styleguidist by using this option, try to use [viteConfig](#viteconfig) option instead.
 
-Allows you to modify webpack config without any restrictions.
+Allows you to modify the final Vite config without any restrictions:
 
 ```javascript
 module.exports = {
-  dangerouslyUpdateWebpackConfig(webpackConfig, env) {
-    // WARNING: inspect Styleguidist Webpack config before modifying it, otherwise you may break Styleguidist
-    console.log(webpackConfig)
-    webpackConfig.externals = {
-      jquery: 'jQuery'
-    }
-    return webpackConfig
+  dangerouslyUpdateViteConfig(viteConfig, env) {
+    // WARNING: inspect Styleguidist Vite config before modifying it, otherwise you may break Styleguidist
+    console.log(viteConfig)
+    viteConfig.build.chunkSizeWarningLimit = 5000
+    return viteConfig
   }
 }
 ```
@@ -173,46 +181,26 @@ module.exports = {
 
 ## `handlers`
 
-Type: `Function`, optional, default: [[react-docgen-displayname-handler](https://github.com/nerdlabs/react-docgen-displayname-handler)]
+Type: `Function`, optional, default: react-docgen’s [defaultHandlers](https://github.com/reactjs/react-docgen#handlers)
 
-Function that returns functions used to process the discovered components and generate documentation objects. Default behaviors include discovering component documentation blocks, prop types, and defaults. If setting this property, it is best to build from the default [react-docgen](https://github.com/reactjs/react-docgen) handler list, such as in the example below. See the [react-docgen handler documentation](https://github.com/reactjs/react-docgen#handlers) for more information about handlers.
+Function that returns an array of [react-docgen](https://github.com/reactjs/react-docgen) handlers used to process the discovered components and generate documentation objects. Default behaviors include discovering component documentation blocks, prop types, defaults, methods and display names. If setting this property, it is best to build from the default handler list, such as in the example below.
 
-> **Note:** `react-docgen-displayname-handler` should be included.
+A handler is a function `(documentation, componentDefinition) => void`, see the [react-docgen handler documentation](https://github.com/reactjs/react-docgen#handlers).
 
 ```javascript
+const { defaultHandlers } = require('react-docgen')
 module.exports = {
-  handlers: componentPath =>
-    require('react-docgen').defaultHandlers.concat(
-      (documentation, path) => {
-        // Calculate a display name for components based upon the declared class name.
-        if (
-          path.value.type === 'ClassDeclaration' &&
-          path.value.id.type === 'Identifier'
-        ) {
-          documentation.set('displayName', path.value.id.name)
-
-          // Calculate the key required to find the component in the module exports
-          if (
-            path.parentPath.value.type === 'ExportNamedDeclaration'
-          ) {
-            documentation.set('path', path.value.id.name)
-          }
-        }
-
-        // The component is the default export
-        if (
-          path.parentPath.value.type === 'ExportDefaultDeclaration'
-        ) {
-          documentation.set('path', 'default')
-        }
-      },
-
-      require('react-docgen-displayname-handler').createDisplayNameHandler(
-        componentPath
-      )
-    )
+  handlers: componentPath => [
+    ...defaultHandlers,
+    // Record the source file of every component
+    (documentation, componentDefinition) => {
+      documentation.set('sourceFile', componentPath)
+    }
+  ]
 }
 ```
+
+> **Note:** When react-docgen can’t infer a display name, Styleguidist uses the file name (or the folder name for `index.js` files), so `react-docgen-displayname-handler` isn’t needed.
 
 ## `ignore`
 
@@ -268,7 +256,7 @@ import Button from 'rsg-example/components/Button'
 import Placeholder from 'rsg-example/components/Placeholder'
 ````
 
-Check out the [webpack resolve.alias documentation](https://webpack.js.org/configuration/resolve/#resolve-alias) for available syntax.
+Aliases are passed to Vite as [resolve.alias](https://vite.dev/config/shared-options#resolve-alias) entries: an alias matches the module name itself (`rsg-example`) and any path under it (`rsg-example/components/Button`).
 
 ## `mountPointId`
 
@@ -372,13 +360,13 @@ module.exports = {
 
 Type: `Function`, optional
 
-Function that allows you to override the printing of local dev server messages to console.log.
+Function that allows you to override the printing of local dev server messages to console.log. The second argument tells whether the server uses HTTPS and lists its URLs.
 
 ```javascript
 module.exports = {
-  serverHost: 'your-domain',
-  printServerInstructions(config, { isHttps }) {
-    console.log(`Local style guide: http://${config.serverHost}`)
+  printServerInstructions(config, { isHttps, urls }) {
+    // urls.local and urls.network are arrays of URLs
+    console.log(`Local style guide: ${urls.local[0]}`)
   }
 }
 ```
@@ -393,12 +381,13 @@ Debounce time in milliseconds used before rendering the changes from the editor.
 
 Type: `Function`, optional
 
-Function that allows you to override the mechanism used to parse props from a source file. The default mechanism is using [react-docgen](https://github.com/reactjs/react-docgen) to parse props.
+Function that allows you to override the mechanism used to parse props from a source file. The default mechanism is using [react-docgen](https://github.com/reactjs/react-docgen) to parse props. The function receives the file path, its source code, and the [resolver](#resolver) and [handlers](#handlers) from the config, and returns a react-docgen documentation object or an array of them (only the first one is used).
 
 ```javascript
+const { parse } = require('react-docgen')
 module.exports = {
   propsParser(filePath, source, resolver, handlers) {
-    return require('react-docgen').parse(source, resolver, handlers)
+    return parse(source, { resolver, handlers, filename: filePath })
   }
 }
 ```
@@ -412,45 +401,31 @@ Modules that are required for your style guide. Useful for third-party styles or
 ```javascript
 module.exports = {
   require: [
-    'babel-polyfill',
+    'core-js/stable',
     path.join(__dirname, 'styleguide/styles.css')
   ]
 }
 ```
 
-> **Note:** This will add a separate webpack entry for each array item.
+> **Note:** These modules are imported at the top of the style guide bundle, before Styleguidist’s own code. Installed packages and absolute paths work; CSS, Sass, images and other file types Vite understands don’t need any extra configuration.
 
-Don’t forget to add webpack loaders for each file you add here. For example, to require a CSS file you’ll need:
-
-```javascript
-module.exports = {
-  webpackConfig: {
-    module: {
-      rules: [
-        {
-          test: /\.css$/,
-          use: ['style-loader', 'css-loader']
-        }
-      ]
-    }
-  }
-}
-```
-
-See [Configuring webpack](Webpack.md) for mode details.
+See [Configuring Vite](Vite.md) for more details.
 
 ## `resolver`
 
-Type: `Function`, optional
+Type: `Object` (resolver instance) or `Function`, optional
 
-Function that allows you to override the mechanism used to identify classes/components to analyze. Default behavior is to find all exported components in each file. You can configure it to find all components or use a custom detection method. See the [react-docgen resolver documentation](https://github.com/reactjs/react-docgen#resolver) for more information about resolvers.
+A [react-docgen resolver](https://github.com/reactjs/react-docgen#resolver) that identifies the components to document in a file. Default behavior is to find all exported components in each file, plus anything exported with a `@component` JSDoc annotation (which makes [styled-components](Thirdparties.md#styled-components) and other non-standard components work). You can configure it to find all components or use a custom detection method.
 
 ```javascript
+const { builtinResolvers } = require('react-docgen')
 module.exports = {
-  resolver: require('react-docgen').resolver
-    .findAllComponentDefinitions
+  // Document all components found in a file, not only the exported ones
+  resolver: new builtinResolvers.FindAllDefinitionsResolver()
 }
 ```
+
+The default is a `ChainResolver` of Styleguidist’s own `FindAnnotatedExportsResolver` (available as `react-styleguidist/lib/loaders/utils/FindAnnotatedExportsResolver.js`) and react-docgen’s `FindAnnotatedDefinitionsResolver` and `FindExportedDefinitionsResolver`.
 
 ## `ribbon`
 
@@ -490,6 +465,8 @@ Dev server hostname.
 Type: `Number`, default: `process.env.NODE_PORT` or `6060`
 
 Dev server port. Can also be set via command line `--port=6060`.
+
+> **Note:** Styleguidist fails to start when the port is already in use instead of picking another one.
 
 ## `showSidebar`
 
@@ -535,9 +512,11 @@ module.exports = {
 }
 ```
 
+Paths may omit the extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.), Vite resolves them like any import. Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](https://github.com/styleguidist/react-styleguidist/tree/master/src/client/rsg-components) to see what components are available.
+
 See an example of [customized style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/customised).
 
-To wrap, rather than replace a component, make sure to import the default implementation using the full path to `react-styleguidist`. See an example of [wrapping a Styleguidist component](https://github.com/styleguidist/react-styleguidist/blob/master/examples/customised/styleguide/components/SectionsRenderer.js).
+To wrap, rather than replace a component, make sure to import the default implementation using the full path to `react-styleguidist`, for example `react-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer`. See an example of [wrapping a Styleguidist component](https://github.com/styleguidist/react-styleguidist/blob/master/examples/customised/styleguide/components/SectionsRenderer.js).
 
 **Note**: these components are not guaranteed to be safe from breaking changes in React Styleguidist updates.
 
@@ -545,7 +524,7 @@ To wrap, rather than replace a component, make sure to import the default implem
 
 Type: `String`, default: `styleguide`
 
-Folder for static HTML style guide generated with `styleguidist build` command.
+Folder for static HTML style guide generated with `styleguidist build` command. The page is written to `index.html` and the bundle to the `build` subfolder, which is the only thing cleaned before a build.
 
 ## `styles`
 
@@ -572,7 +551,7 @@ module.exports = {
 }
 ```
 
-**Note:** If using a file path, it has to be absolute or relative to the config file.
+**Note:** If using a file path, it has to be absolute or relative to the config file. The file is bundled for the browser and must be an ES module (`export default {…}` or `export default theme => ({…})`).
 
 ## `template`
 
@@ -580,17 +559,68 @@ Type: `Object` or `Function`, optional.
 
 Change HTML for the style guide app.
 
-An object with options to add a favicon, meta tags, inline JavaScript or CSS, etc. See [@vxna/mini-html-webpack-template docs](https://www.npmjs.com/package/@vxna/mini-html-webpack-template).
+An object with options to add a favicon, meta tags, inline JavaScript or CSS, etc.:
 
 ```javascript
 module.exports = {
   template: {
-    favicon: 'https://assets-cdn.github.com/favicon.ico'
+    lang: 'en',
+    favicon: 'https://assets-cdn.github.com/favicon.ico',
+    head: {
+      meta: [{ name: 'description', content: 'My style guide' }],
+      links: [
+        { rel: 'stylesheet', href: 'https://example.com/fonts.css' }
+      ],
+      scripts: [
+        { src: 'https://example.com/analytics.js', async: true }
+      ],
+      raw: '<style>body { margin: 0 }</style>'
+    },
+    body: {
+      raw: '<div id="modal"></div>',
+      scripts: [{ src: 'https://example.com/app.js' }]
+    },
+    // Extra attributes for the bundle’s <script> and <link> tags
+    attrs: {
+      js: { defer: true },
+      css: { media: 'all' }
+    },
+    trimWhitespace: true
   }
 }
 ```
 
-A function that returns an HTML string, see [mini-html-webpack-plugin docs](https://github.com/styleguidist/mini-html-webpack-plugin#custom-templates).
+All fields are optional. `head.meta`, `head.links`, `head.scripts` and `body.scripts` are arrays of attribute objects; `head.raw` and `body.raw` accept a string or an array of strings of raw HTML.
+
+A function that returns an HTML string. It receives `publicPath` (an empty string on the dev server, whose asset URLs are root-absolute, and `'./'` in static builds), `lang`, `title`, `container` (the [mountPointId](#mountpointid)), `js` and `css` (arrays of asset URLs):
+
+```javascript
+module.exports = {
+  template({ publicPath, lang, title, container, js, css }) {
+    return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+${css
+  .map(file => `<link rel="stylesheet" href="${publicPath}${file}">`)
+  .join('\n')}
+</head>
+<body>
+<div id="${container}"></div>
+${js
+  .map(
+    file =>
+      `<script type="module" src="${publicPath}${file}"></script>`
+  )
+  .join('\n')}
+</body>
+</html>`
+  }
+}
+```
+
+> **Caution:** Scripts must be loaded with `type="module"`: the bundle is an ES module.
 
 ## `theme`
 
@@ -598,7 +628,7 @@ Type: `Object` or `String`, optional
 
 Customize style guide UI fonts, colors, etc. using a theme object or the path to a file exporting such object.
 
-The path is relative to the config file or absolute.
+The path is relative to the config file or absolute. The file is bundled for the browser and must be an ES module (`export default {…}`).
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
@@ -732,31 +762,28 @@ Type: `String`, optional
 
 Style guide version, displayed under the title in the sidebar.
 
-## `webpackConfig`
+## `viteConfig`
 
 Type: `Object` or `Function`, optional
 
-Custom webpack config options: loaders, extensions, plugins, etc. required for your project.
+Custom [Vite config](https://vite.dev/config/) options: plugins, aliases, CSS preprocessor options, `define`s, etc. required for your project. Vite compiles JSX, TypeScript, CSS, CSS modules, JSON and static assets out of the box, so most projects don’t need this option at all.
 
 Can be an object:
 
 ```javascript
 module.exports = {
-  webpackConfig: {
-    module: {
-      resolve: {
-        extensions: ['.es6']
-      },
-      rules: [
-        {
-          test: /\.scss$/,
-          loaders: [
-            'style-loader',
-            'css-loader',
-            'sass-loader?precision=10'
-          ]
+  viteConfig: {
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src')
+      }
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "@/styles/variables" as *;'
         }
-      ]
+      }
     }
   }
 }
@@ -766,7 +793,7 @@ Or a function:
 
 ```javascript
 module.exports = {
-  webpackConfig(env) {
+  viteConfig(env) {
     if (env === 'development') {
       return {
         // custom options
@@ -777,12 +804,16 @@ module.exports = {
 }
 ```
 
-> **Caution:** This option disables config load from `webpack.config.js`, load your config [manually](Webpack.md#reusing-your-projects-webpack-config).
+> **Caution:** This option disables config load from `vite.config.js`, load your config [manually](Vite.md#reusing-your-projects-vite-config).
 
-> **Danger:** `entry`, `externals`, `output`, `watch`, and `stats` options will be ignored. For production builds, `devtool` will also be ignored.
+> **Danger:** `root`, `base`, `appType`, `configFile`, `build.outDir`, `build.emptyOutDir`, `build.rolldownOptions.input`, `build.rollupOptions.input`, `server.host`, `server.port`, `server.strictPort` and `server.middlewareMode` options will be ignored because Styleguidist controls them.
 
-> **Danger:** `CommonsChunkPlugins`, `HtmlWebpackPlugin`, `MiniHtmlWebpackPlugin`, `UglifyJsPlugin`, `TerserPlugin`, `HotModuleReplacementPlugin` plugins will be ignored because Styleguidist already includes them or they may break Styleguidist.
+> **Note:** Styleguidist adds [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) unless your `plugins` already include it.
 
-> **Tip:** Run style guide in verbose mode to see the actual webpack config used by Styleguidist: `npx styleguidist server --verbose`.
+> **Tip:** Run style guide in verbose mode to see the actual Vite config used by Styleguidist: `npx styleguidist server --verbose`.
 
-See [Configuring webpack](Webpack.md) for examples.
+See [Configuring Vite](Vite.md) for examples.
+
+## Removed options
+
+`webpackConfig`, `dangerouslyUpdateWebpackConfig` and `updateWebpackConfig` were removed together with webpack, Styleguidist throws an error when it finds them in a config. See the [migration guide](Migration.md).

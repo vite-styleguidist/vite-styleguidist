@@ -1,20 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import castArray from 'lodash/castArray';
-import isBoolean from 'lodash/isBoolean';
-import isFunction from 'lodash/isFunction';
-import isPlainObject from 'lodash/isPlainObject';
-import isString from 'lodash/isString';
-import isFinite from 'lodash/isFinite';
-import map from 'lodash/map';
+import castArray from 'lodash/castArray.js';
+import isBoolean from 'lodash/isBoolean.js';
+import isFunction from 'lodash/isFunction.js';
+import isPlainObject from 'lodash/isPlainObject.js';
+import isString from 'lodash/isString.js';
+import isFinite from 'lodash/isFinite.js';
+import map from 'lodash/map.js';
 import listify from 'listify';
 import kleur from 'kleur';
 import { distance } from 'fastest-levenshtein';
 import typeDetect from 'type-detect';
 import loggerMaker from 'glogg';
 import { stringify } from 'q-i';
-import StyleguidistError from './error';
-import { ConfigSchemaOptions } from '../schemas/config';
+import StyleguidistError from './error.js';
+import { ConfigSchemaOptions } from '../schemas/config.js';
 
 const logger = loggerMaker('rsg');
 
@@ -25,6 +25,9 @@ const typeCheckers: Record<string, (untypedObject: unknown) => boolean> = {
 	array: Array.isArray,
 	function: isFunction,
 	object: isPlainObject,
+	// Instances of classes (e.g. react-docgen resolvers): any object but arrays and null
+	'class instance': (value: unknown) =>
+		typeof value === 'object' && value !== null && !Array.isArray(value),
 	'file path': isString,
 	'existing file path': isString,
 	'directory path': isString,

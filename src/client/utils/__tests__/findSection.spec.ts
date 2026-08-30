@@ -1,4 +1,4 @@
-import findSection from '../findSection';
+import findSection from '../findSection.js';
 
 const sections = [
 	{

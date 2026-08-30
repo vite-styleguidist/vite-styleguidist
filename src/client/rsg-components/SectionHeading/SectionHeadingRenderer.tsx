@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import cx from 'clsx';
 import Heading from 'rsg-components/Heading';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ color, space }: Rsg.Theme) => ({
 	wrapper: {

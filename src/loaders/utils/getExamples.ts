@@ -1,32 +1,31 @@
-import path from 'path';
-import fs from 'fs';
-import { encode } from 'qss';
-import requireIt from './requireIt';
-import * as Rsg from '../../typings';
-
-const examplesLoader = path.resolve(__dirname, '../examples-loader.js');
+import fs from 'node:fs';
+import { importDefault } from './importIt.js';
+import { examplesId } from '../../vite/ids.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
- * Get require statement for examples file if it exists, or for default examples if it was defined.
+ * Get an import marker for the examples module of a component: its examples file
+ * if it exists, or the default example if one was configured, or null.
  */
 export default function getExamples(
 	file: string,
 	displayName: string,
 	examplesFile?: string | false,
 	defaultExample?: string | false
-): Rsg.RequireItResult | null {
-	const examplesFileToLoad =
-		(examplesFile && fs.existsSync(examplesFile) ? examplesFile : false) || defaultExample;
+): Rsg.ImportMarker | null {
+	const hasExamplesFile = !!(examplesFile && fs.existsSync(examplesFile));
+	const examplesFileToLoad = (hasExamplesFile && examplesFile) || defaultExample;
 	if (!examplesFileToLoad) {
 		return null;
 	}
 
-	const relativePath = `./${path.relative(path.dirname(examplesFileToLoad), file)}`;
-
-	const query = {
-		displayName,
-		file: relativePath,
-		shouldShowDefaultExample: !examplesFile && !!defaultExample,
-	};
-	return requireIt(`!!${examplesLoader}?${encode(query)}!${examplesFileToLoad}`);
+	return importDefault(
+		examplesId({
+			file: examplesFileToLoad,
+			displayName,
+			componentPath: file,
+			// Only the default example template contains `__COMPONENT__` placeholders
+			shouldShowDefaultExample: !hasExamplesFile && !!defaultExample,
+		})
+	);
 }

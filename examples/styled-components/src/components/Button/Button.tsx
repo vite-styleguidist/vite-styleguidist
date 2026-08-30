@@ -1,24 +1,33 @@
-import React, { ReactNode } from 'react'
-import styled from 'styled-components';
-import { themeGet } from 'styled-system';
+import styled, { DefaultTheme } from 'styled-components';
+// styled-system v5 moved themeGet to its own package
+import { themeGet } from '@styled-system/theme-get';
+import type { ReactNode } from 'react';
 
 interface ButtonProps {
 	/** Button label */
-	children: ReactNode,
+	children: ReactNode;
 	/** Button variation */
-	variant: 'primary' | 'secondary',
-	fullWidth: Boolean,
+	variant?: 'primary' | 'secondary';
+	fullWidth?: boolean;
 }
 
-const getColor = (variant: string) => ({ primary: 'bg', secondary: 'primary' }[variant]);
-const getBgColor = (variant: string) => ({ primary: 'primary' }[variant]);
+// Theme colors (see src/theme.ts and src/styled.d.ts) used by each variation
+type ColorName = keyof DefaultTheme['colors'];
+const textColors: Partial<Record<string, ColorName>> = { primary: 'bg', secondary: 'primary' };
+const bgColors: Partial<Record<string, ColorName>> = { primary: 'primary' };
+const themeColor = (theme: DefaultTheme, name?: ColorName) =>
+	name ? theme.colors[name] : undefined;
 
 /**
  * A button.
  */
-const Button = styled.button<ButtonProps>`
-	display: ${props => props.fullWidth && 'block'};
-	width: ${props => props.fullWidth && '100%'};
+// `variant` and `fullWidth` only drive the styles: keep them off the DOM element
+// (styled-components v6 forwards every prop to HTML elements by default)
+const Button = styled.button.withConfig({
+	shouldForwardProp: (prop) => !['variant', 'fullWidth'].includes(prop),
+})<ButtonProps>`
+	display: ${(props) => props.fullWidth && 'block'};
+	width: ${(props) => props.fullWidth && '100%'};
 	height: 2.5rem;
 	padding: ${themeGet('space.3')} ${themeGet('space.4')};
 	text-align: center;
@@ -26,9 +35,8 @@ const Button = styled.button<ButtonProps>`
 	border-radius: ${themeGet('radii.base')};
 	font-family: ${themeGet('fonts.base')};
 	font-size: ${themeGet('fontSizes.base')};
-	color: ${props => props.theme.colors[getColor(props.variant)]};
-	background-color: ${props =>
-		props.theme.colors[getBgColor(props.variant)] || 'transparent'};
+	color: ${(props) => themeColor(props.theme, textColors[props.variant ?? ''])};
+	background-color: ${(props) => themeColor(props.theme, bgColors[props.variant ?? '']) || 'transparent'};
 	text-decoration: none;
 	user-select: none;
 	box-sizing: border-box;

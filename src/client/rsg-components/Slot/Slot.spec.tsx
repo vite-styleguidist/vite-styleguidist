@@ -1,8 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { render, fireEvent } from '@testing-library/react';
-import Slot from './Slot';
-import Context from '../Context';
+import Slot from './Slot.js';
+import Context from '../Context/index.js';
 
 const Button = ({ active, children, ...props }: any) => {
 	return (
@@ -108,7 +108,7 @@ it('should render only active slot if onlyActive=true', () => {
 });
 
 it('should pass slot ID to onClick handler', () => {
-	const onClick = jest.fn();
+	const onClick = vi.fn();
 	const { getByText } = render(
 		<Context.Provider
 			value={

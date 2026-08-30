@@ -1,9 +1,11 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
-import LogoRenderer from './LogoRenderer';
+import { render } from '@testing-library/react';
+import LogoRenderer from './LogoRenderer.js';
 
 it('renderer should render header', () => {
-	const actual = renderer.create(<LogoRenderer>React Styleguidist</LogoRenderer>);
+	const { getByRole } = render(<LogoRenderer>React Styleguidist</LogoRenderer>);
 
-	expect(actual.toJSON()).toMatchSnapshot();
+	const heading = getByRole('heading', { level: 1 });
+	expect(heading).toHaveTextContent('React Styleguidist');
+	expect(heading.className).toMatch(/^rsg--logo-\d+$/);
 });

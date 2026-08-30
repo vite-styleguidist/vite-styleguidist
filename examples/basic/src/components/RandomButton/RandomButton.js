@@ -7,7 +7,6 @@ import './RandomButton.css';
 /**
  * Button that changes label on every click.
  */
-// eslint-disable-next-line import/prefer-default-export
 export class RandomButton extends Component {
 	static propTypes = {
 		/**

@@ -1,12 +1,13 @@
-import fs from 'fs';
-import path from 'path';
-import { Configuration } from 'webpack';
-import getConfig from '../config';
+import fs from 'node:fs';
+import path from 'node:path';
+import getConfig from '../config.js';
 
-const testComponent = (name: string) => path.resolve(__dirname, '../../../test/components', name);
+const testComponent = (name: string) =>
+	path.resolve(import.meta.dirname, '../../../test/components', name);
+const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../test/apps', name);
 
 const cwd = process.cwd();
-const configDir = path.resolve(__dirname, '../../../test/apps/defaults');
+const configDir = testApp('defaults');
 
 beforeEach(() => {
 	process.chdir(configDir);
@@ -21,19 +22,49 @@ it('should read a config file', () => {
 });
 
 it('should accept absolute path', () => {
-	const result = getConfig(path.join(__dirname, '../../../test/apps/basic/styleguide.config.js'));
+	const result = getConfig(path.join(testApp('basic'), 'styleguide.config.js'));
 	expect(result).toMatchObject({ title: 'React Style Guide Example' });
 });
 
 it('should throw when passed config file not found', () => {
 	const fn = () => getConfig('pizza');
-	expect(fn).toThrow();
+	expect(fn).toThrow('Styleguidist config not found');
 });
 
 it('should find config file automatically', () => {
 	process.chdir('../basic');
 	const result = getConfig();
 	expect(result).toMatchObject({ title: 'React Style Guide Example' });
+});
+
+it('should find config file in a parent directory', () => {
+	process.chdir('src/components');
+	const result = getConfig();
+	expect(result).toMatchObject({ configDir });
+});
+
+describe('config file formats', () => {
+	// Styleguidist is an ES module but loads config files with `require()` (see
+	// utils/loadModule.ts), which handles both module systems on supported Node versions.
+	it('should load an ES module config file in a "type": "module" package', () => {
+		process.chdir(testApp('esm'));
+		expect(getConfig()).toMatchObject({ title: 'ESM Style Guide' });
+	});
+
+	it('should load a styleguide.config.mjs file', () => {
+		process.chdir(testApp('mjs'));
+		expect(getConfig()).toMatchObject({ title: 'MJS Style Guide' });
+	});
+
+	it('should load a styleguide.config.cjs file', () => {
+		process.chdir(testApp('cjs'));
+		expect(getConfig()).toMatchObject({ title: 'CJS Style Guide' });
+	});
+
+	it('should explain how to fix CommonJS syntax in an ES module package', () => {
+		process.chdir(testApp('cjs-in-esm'));
+		expect(() => getConfig()).toThrow(/uses CommonJS \(module\.exports\)[\s\S]*\.cjs extension/);
+	});
 });
 
 it('should accept config as an object', () => {
@@ -44,16 +75,11 @@ it('should accept config as an object', () => {
 });
 
 it('should throw if config has errors', () => {
-	expect.assertions(1);
-	try {
+	expect(() =>
 		getConfig({
 			components: 42,
-		} as any);
-	} catch (err) {
-		if (err instanceof Error) {
-			expect(err.message).toMatch('should be string, function, or array');
-		}
-	}
+		} as any)
+	).toThrow('should be string, function, or array');
 });
 
 it('should change the config using the update callback', () => {
@@ -122,7 +148,7 @@ it('configDir option should be a directory of a passed config', () => {
 });
 
 it('configDir option should be a current directory if the config was passed as an object', () => {
-	const result = getConfig();
+	const result = getConfig({});
 	expect(result).toMatchObject({ configDir: process.cwd() });
 });
 
@@ -142,17 +168,14 @@ it('should throw if assetsDir does not exist', () => {
 	expect(fn).toThrow();
 });
 
-it('should use embedded default example template if defaultExample=true', (done) => {
+it('should use embedded default example template if defaultExample=true', () => {
 	const result = getConfig({
 		defaultExample: true,
 	});
-	expect(typeof result.defaultExample).toEqual('string');
-	if (typeof result.defaultExample === 'string') {
-		expect(fs.existsSync(result.defaultExample)).toBeTruthy();
-	} else {
-		done.fail();
+	if (typeof result.defaultExample !== 'string') {
+		throw new Error(`Expected a file path, got ${String(result.defaultExample)}`);
 	}
-	done();
+	expect(fs.existsSync(result.defaultExample)).toBeTruthy();
 });
 
 it('should absolutize defaultExample if it is a string', () => {
@@ -163,16 +186,11 @@ it('should absolutize defaultExample if it is a string', () => {
 });
 
 it('should throw if defaultExample does not exist', () => {
-	expect.assertions(1);
-	try {
+	expect(() =>
 		getConfig({
 			defaultExample: 'pizza',
-		});
-	} catch (err) {
-		if (err instanceof Error) {
-			expect(err.message).toMatch('does not exist');
-		}
-	}
+		})
+	).toThrow('does not exist');
 });
 
 it('should use components option as the first sections if there’s no sections option', () => {
@@ -204,56 +222,63 @@ it('should ignore components option there’s sections options', () => {
 	expect(result.sections[0].components).toEqual(components);
 });
 
-it('should return webpackConfig option as is', () => {
-	const webpackConfig = { mode: 'development' } as Configuration;
-	const result = getConfig({
-		webpackConfig,
+describe('Vite options', () => {
+	it('should return viteConfig option as is', () => {
+		const viteConfig = { define: { __PIZZA__: '"pepperoni"' } };
+		const result = getConfig({
+			viteConfig,
+		});
+		expect(result.viteConfig).toBe(viteConfig);
 	});
-	expect(result.webpackConfig).toEqual(webpackConfig);
-});
 
-it('should return webpackConfig with user webpack config', () => {
-	process.chdir('../basic');
-	const result = getConfig();
-	expect(result.webpackConfig).toEqual(
-		expect.objectContaining({
-			module: {
-				rules: expect.any(Array),
-			},
-		})
-	);
-});
+	it('should accept viteConfig as a function', () => {
+		const viteConfig = () => ({});
+		const result = getConfig({
+			viteConfig,
+		});
+		expect(result.viteConfig).toBe(viteConfig);
+	});
 
-it('should allow no webpack config', () => {
-	process.chdir('../no-webpack');
-	const fn = () => getConfig();
-	expect(fn).not.toThrow();
+	it('should read viteConfig from a config file', () => {
+		process.chdir('../basic');
+		const result = getConfig();
+		expect(result.viteConfig).toMatchObject({
+			resolve: { alias: { components: expect.stringMatching(/lib$/) } },
+		});
+	});
+
+	it('should not require a Vite config', () => {
+		process.chdir('../no-vite-config');
+		expect(() => getConfig()).not.toThrow();
+		expect(getConfig().viteConfig).toBeUndefined();
+	});
+
+	// The webpack options are kept in the schema only to point users at their replacement
+	it.each([
+		['webpackConfig', {}],
+		['dangerouslyUpdateWebpackConfig', () => ({})],
+		['updateWebpackConfig', () => ({})],
+	])('should throw a helpful error for the removed %s option', (option, value) => {
+		expect(() => getConfig({ [option]: value })).toThrow(
+			/config option was removed[\s\S]*now uses Vite instead of webpack/
+		);
+	});
 });
 
 it('should throw when old template as a string option passed', () => {
-	expect.assertions(1);
-	try {
+	expect(() =>
 		getConfig({
 			template: 'pizza',
-		});
-	} catch (err) {
-		if (err instanceof Error) {
-			expect(err.message).toMatch('format has been changed');
-		}
-	}
+		} as any)
+	).toThrow('format has been changed');
 });
 
 it('should throw when editorConfig option passed', () => {
-	expect.assertions(1);
-	try {
+	expect(() =>
 		getConfig({
 			editorConfig: { theme: 'foo' },
-		});
-	} catch (err) {
-		if (err instanceof Error) {
-			expect(err.message).toMatch('config option was removed');
-		}
-	}
+		})
+	).toThrow('config option was removed');
 });
 
 it('mountPointId should have default value', () => {
@@ -261,9 +286,15 @@ it('mountPointId should have default value', () => {
 	expect(result.mountPointId).toEqual('rsg-root');
 });
 
-it('mountPointId should have default value', () => {
+it('resolver should default to a react-docgen resolver instance', () => {
 	const result = getConfig();
-	expect(result.mountPointId).toEqual('rsg-root');
+	expect(typeof result.resolver).toBe('object');
+	expect(typeof (result.resolver as { resolve?: unknown }).resolve).toBe('function');
+});
+
+it('compilerConfig should default to the in-browser compiler options', () => {
+	const result = getConfig();
+	expect(result.compilerConfig).toMatchObject({ transforms: expect.arrayContaining(['jsx']) });
 });
 
 it('should set the exampleMode to expand if the flag showCode is on', () => {

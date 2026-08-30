@@ -1,0 +1,16 @@
+.card {
+	padding: 16px 24px;
+	border: 1px solid #e8e8e8;
+	border-radius: 6px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card__title {
+	margin: 0 0 8px;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.card__body > :last-child {
+	margin-bottom: 0;
+}

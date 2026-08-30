@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import Markdown from 'rsg-components/Markdown';
-import { DOCS_DOCUMENTING } from '../../../scripts/consts';
-import * as Rsg from '../../../typings';
+import { DOCS_DOCUMENTING } from '../../../scripts/consts.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
 	button: {

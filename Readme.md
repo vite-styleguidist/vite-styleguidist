@@ -4,12 +4,11 @@
 
 **Isolated React component development environment with a living style guide**
 
- [![npm](https://img.shields.io/npm/v/react-styleguidist.svg)](https://www.npmjs.com/package/react-styleguidist) [![CI status](https://github.com/styleguidist/react-styleguidist/workflows/CI/badge.svg)](https://github.com/styleguidist/react-styleguidist.git/actions) [![Codecov](https://codecov.io/gh/styleguidist/react-styleguidist/branch/master/graph/badge.svg)](https://codecov.io/gh/styleguidist/react-styleguidist) [![Join the chat at https://gitter.im/styleguidist/styleguidist](https://badges.gitter.im/styleguidist/styleguidist.svg)](https://gitter.im/styleguidist/styleguidist?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-<a href="https://discord.gg/QWsybqJDTA">![Discord](https://img.shields.io/discord/842832186914635806?logo=discord)</a> [![Open Source Helpers](https://www.codetriage.com/styleguidist/react-styleguidist/badges/users.svg)](https://www.codetriage.com/styleguidist/react-styleguidist)
+[![npm](https://img.shields.io/npm/v/react-styleguidist.svg)](https://www.npmjs.com/package/react-styleguidist) [![CI status](https://github.com/styleguidist/react-styleguidist/workflows/CI/badge.svg)](https://github.com/styleguidist/react-styleguidist.git/actions) [![Codecov](https://codecov.io/gh/styleguidist/react-styleguidist/branch/master/graph/badge.svg)](https://codecov.io/gh/styleguidist/react-styleguidist) [![Join the chat at https://gitter.im/styleguidist/styleguidist](https://badges.gitter.im/styleguidist/styleguidist.svg)](https://gitter.im/styleguidist/styleguidist?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) <a href="https://discord.gg/QWsybqJDTA">![Discord](https://img.shields.io/discord/842832186914635806?logo=discord)</a> [![Open Source Helpers](https://www.codetriage.com/styleguidist/react-styleguidist/badges/users.svg)](https://www.codetriage.com/styleguidist/react-styleguidist)
 
 </div>
 
-React Styleguidist is a component development environment with hot reloaded dev server and a living style guide that you can share with your team. It lists component `propTypes` and shows live, editable usage examples based on Markdown files. Check out [**the demo style guide**](https://react-styleguidist.js.org/examples/basic/).
+React Styleguidist is a component development environment with hot reloaded dev server and a living style guide that you can share with your team. It lists component `propTypes` and shows live, editable usage examples based on Markdown files. It’s powered by [Vite](https://vite.dev/), so JSX, TypeScript, CSS modules and static assets work out of the box, whatever bundler your app uses. Check out [**the demo style guide**](https://react-styleguidist.js.org/examples/basic/).
 
 ![React Styleguidist in action](https://user-images.githubusercontent.com/1703219/74945569-51c6ad00-543b-11ea-8351-f4d86860893a.gif)
 
@@ -20,7 +19,7 @@ React Styleguidist is a component development environment with hot reloaded dev 
 - **[Getting Started](https://react-styleguidist.js.org/docs/getting-started): install and run Styleguidist**
 - [Documenting components](https://react-styleguidist.js.org/docs/documenting): how to write documentation
 - [Locating components](https://react-styleguidist.js.org/docs/components): point Styleguidist to your React components
-- [Configuring webpack](https://react-styleguidist.js.org/docs/webpack): tell Styleguidist how to load your code
+- [Configuring Vite](https://react-styleguidist.js.org/docs/vite): tell Styleguidist how to load your code
 - [Cookbook](https://react-styleguidist.js.org/docs/cookbook): how to solve common tasks with Styleguidist
 
 ## Advanced documentation
@@ -28,14 +27,18 @@ React Styleguidist is a component development environment with hot reloaded dev 
 - [Configuration](https://react-styleguidist.js.org/docs/configuration)
 - [CLI commands and options](https://react-styleguidist.js.org/docs/cli)
 - [Node.js API](https://react-styleguidist.js.org/docs/api)
+- [Migrating to Vite](https://react-styleguidist.js.org/docs/migration): upgrading from a webpack-based version
 
 ## Examples
 
 - [Basic style guide](https://react-styleguidist.js.org/examples/basic/), [source](./examples/basic)
 - Style guide with sections, [source](./examples/sections)
 - Style guide with customized styles, [source](./examples/customised)
-- Style guide with custom express endpoints, [source](./examples/express)
-- Create React App integration, [source](./examples/cra)
+- Style guide with custom dev server endpoints, [source](./examples/express)
+- Style guide with a custom theme, [source](./examples/themed)
+- Style guide reusing the project’s Vite config, [source](./examples/vite)
+- Preact, [source](./examples/preact)
+- Styled-components and TypeScript, [source](./examples/styled-components)
 
 ## Showcase
 
@@ -51,7 +54,8 @@ Real projects using React Styleguidist:
 
 ## Integration with other tools
 
-- Create React App — supported out of the box, see the [Getting Started](https://react-styleguidist.js.org/docs/getting-started) guide
+- Vite — your `vite.config.js` is reused automatically, see [Configuring Vite](https://react-styleguidist.js.org/docs/vite)
+- Next.js, webpack and other bundlers — nothing to configure, see [Configuring Vite](https://react-styleguidist.js.org/docs/vite)
 - Vue, see [Vue Styleguidist](https://github.com/vue-styleguidist/vue-styleguidist)
 
 ## Third-party tools

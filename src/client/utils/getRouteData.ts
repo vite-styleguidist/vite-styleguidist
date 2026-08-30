@@ -1,11 +1,11 @@
-import isFinite from 'lodash/isFinite';
-import filterComponentExamples from './filterComponentExamples';
-import filterComponentsInSectionsByExactName from './filterComponentsInSectionsByExactName';
-import filterSectionExamples from './filterSectionExamples';
-import findSection from './findSection';
-import getInfoFromHash from './getInfoFromHash';
-import { DisplayModes } from '../consts';
-import * as Rsg from '../../typings';
+import isFinite from 'lodash/isFinite.js';
+import filterComponentExamples from './filterComponentExamples.js';
+import filterComponentsInSectionsByExactName from './filterComponentsInSectionsByExactName.js';
+import filterSectionExamples from './filterSectionExamples.js';
+import findSection from './findSection.js';
+import getInfoFromHash from './getInfoFromHash.js';
+import { DisplayModes } from '../consts.js';
+import type * as Rsg from '../../typings/index.js';
 
 /**
  * Return sections / components / examples to show on a screen according to a current route.
@@ -36,7 +36,7 @@ export default function getRouteData(
 		isolate,
 	} = infoFromHash;
 
-	let displayMode = isolate ? DisplayModes.example : DisplayModes.all;
+	let displayMode: string = isolate ? DisplayModes.example : DisplayModes.all;
 
 	if (pagePerSection && !targetName && sections[0] && sections[0].name) {
 		// For default takes the first section when pagePerSection enabled

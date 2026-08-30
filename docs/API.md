@@ -17,27 +17,11 @@ const styleguide = styleguidist({
     debug: console.log
   },
   components: './lib/components/**/*.js',
-  webpackConfig: {
-    module: {
-      rules: [
-        {
-          test: /\.jsx?$/,
-          exclude: /node_modules/,
-          loader: 'babel-loader'
-        },
-        {
-          test: /\.css$/,
-          use: [
-            'style-loader',
-            {
-              loader: 'css-loader',
-              options: {
-                modules: true
-              }
-            }
-          ]
-        }
-      ]
+  viteConfig: {
+    resolve: {
+      alias: {
+        '@': new URL('./src', import.meta.url).pathname
+      }
     }
   }
 })
@@ -49,7 +33,7 @@ Using a config file:
 
 ```javascript
 import styleguidist from 'react-styleguidist'
-const styleguide = styleguidist(require('../styleguide.config.js'))
+const styleguide = styleguidist('../styleguide.config.js')
 ```
 
 Or auto searching a config file:
@@ -61,67 +45,59 @@ const styleguide = styleguidist()
 
 See all available [config options](Configuration.md).
 
+> **Info:** Styleguidist is an ES module. CommonJS code can still `require('react-styleguidist')` on the supported Node.js versions (20.19 or 22.12 and newer), the result is the same `styleguidist` function.
+
 ## Methods
 
-### `build(callback)`
+### `build([callback])`
 
 #### Arguments
 
-1.  `callback(err, config, stats)` (_Function_): A callback to be invoked when style guide is built:
+1.  \[`callback(err, config, output)`\] (_Function_): A callback to be invoked when style guide is built:
 
     1.  `err` (_Object_): error details.
     2.  `config` (_Object_): normalized style guide config.
-    3.  `stats` (_Object_): webpack build stats.
+    3.  `output` (_Object_): Vite build output (the list of generated chunks and assets).
 
 #### Returns
 
-(_Compiler_): webpack `Compiler` instance.
+(_Promise_): resolves to the Vite build output. Without a callback, the promise rejects when the build fails; with a callback, the error is passed to the callback instead.
 
 #### Example
 
 ```javascript
 import styleguidist from 'react-styleguidist'
-styleguidist(require('../styleguide.config.js')).build(
-  (err, config) => {
-    if (err) {
-      console.log(err)
-    } else {
-      console.log('Style guide published to', config.styleguideDir)
-    }
-  }
+const styleguide = styleguidist('../styleguide.config.js')
+await styleguide.build()
+console.log(
+  'Style guide published to',
+  styleguide.config.styleguideDir
 )
 ```
 
-### `server(callback)`
+### `server([callback])`
 
 #### Arguments
 
-1.  `callback(err, config)` (_Function_): A callback to be invoked when style guide is built:
+1.  \[`callback(err, config, server)`\] (_Function_): A callback to be invoked when the dev server is listening:
 
     1.  `err` (_Object_): error details.
     2.  `config` (_Object_): normalized style guide config.
+    3.  `server` (_Object_): the [ViteDevServer](https://vite.dev/guide/api-javascript#vitedevserver) instance.
 
 #### Returns
 
-(_Object_): Object containing a webpack `Compiler` instance and the React Styleguidist server
+(_Promise_): resolves to the `ViteDevServer` instance, already listening. Use `server.resolvedUrls` to get its URLs and `server.close()` to stop it.
 
 #### Example
 
 ```javascript
 import styleguidist from 'react-styleguidist'
-styleguidist(require('../styleguide.config.js')).server(
-  (err, config) => {
-    if (err) {
-      console.log(err)
-    } else {
-      const url = `http://${config.serverHost}:${config.serverPort}`
-      console.log(`Listening at ${url}`)
-    }
-  }
-)
+const server = await styleguidist('../styleguide.config.js').server()
+console.log(`Listening at ${server.resolvedUrls.local[0]}`)
 ```
 
-### `makeWebpackConfig([env])`
+### `makeViteConfig([env])`
 
 #### Arguments
 
@@ -129,18 +105,19 @@ styleguidist(require('../styleguide.config.js')).server(
 
 #### Returns
 
-(_Object_): webpack config.
+(_Promise_): resolves to the Vite [inline config](https://vite.dev/guide/api-javascript#inlineconfig) Styleguidist would use, including your `viteConfig` (or `vite.config.js`) and the Styleguidist plugins.
 
 #### Example
 
 ```javascript
-// webpack.config.js
-module.exports = [
-  {
-    // User webpack config
-  },
-  // note that this is requiring rsg in commonjs mode
-  // it does not need to access .default
-  require('react-styleguidist').makeWebpackConfig()
-]
+import { createServer } from 'vite'
+import styleguidist from 'react-styleguidist'
+
+const config = await styleguidist().makeViteConfig('development')
+const server = await createServer(config)
+await server.listen()
 ```
+
+### `config`
+
+(_Object_): the normalized style guide config, with defaults applied and paths resolved.

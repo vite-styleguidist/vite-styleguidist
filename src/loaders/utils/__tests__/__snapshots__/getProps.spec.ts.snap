@@ -1,25 +1,25 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`should accept @return as a synonym of @returns 1`] = `
-Array [
-  Object {
+[
+  {
     "docblock": "
 Baz method with foo param
 
 @public
 @return {string} test
 ",
-    "returns": Object {
+    "returns": {
       "description": "test",
       "title": "return",
-      "type": Object {
+      "type": {
         "name": "string",
         "type": "NameExpression",
       },
     },
-    "tags": Object {
-      "public": Array [
-        Object {
+    "tags": {
+      "public": [
+        {
           "description": null,
           "title": "public",
           "type": null,
@@ -31,25 +31,25 @@ Baz method with foo param
 `;
 
 exports[`should get method info from docblock and merge it 1`] = `
-Array [
-  Object {
+[
+  {
     "docblock": "
 Baz method with foo param
 
 @public
 @returns {string} test
 ",
-    "returns": Object {
+    "returns": {
       "description": "test",
       "title": "returns",
-      "type": Object {
+      "type": {
         "name": "string",
         "type": "NameExpression",
       },
     },
-    "tags": Object {
-      "public": Array [
-        Object {
+    "tags": {
+      "public": [
+        {
           "description": null,
           "title": "public",
           "type": null,
@@ -61,8 +61,8 @@ Baz method with foo param
 `;
 
 exports[`should get method params info from docblock and merge it with passed method info 1`] = `
-Array [
-  Object {
+[
+  {
     "docblock": "
 Foo method with baz param
 
@@ -72,50 +72,50 @@ Foo method with baz param
 @argument {string} test param described with @argument tag
 @returns {string} test
 ",
-    "params": Array [
-      Object {
+    "params": [
+      {
         "default": "bar",
         "description": null,
         "name": "baz",
         "title": "param",
-        "type": Object {
-          "expression": Object {
+        "type": {
+          "expression": {
             "name": "string",
             "type": "NameExpression",
           },
           "type": "OptionalType",
         },
       },
-      Object {
+      {
         "description": "param described with @arg tag",
         "name": "foo",
         "title": "arg",
-        "type": Object {
+        "type": {
           "name": "string",
           "type": "NameExpression",
         },
       },
-      Object {
+      {
         "description": "param described with @argument tag",
         "name": "test",
         "title": "argument",
-        "type": Object {
+        "type": {
           "name": "string",
           "type": "NameExpression",
         },
       },
     ],
-    "returns": Object {
+    "returns": {
       "description": "test",
       "title": "returns",
-      "type": Object {
+      "type": {
         "name": "string",
         "type": "NameExpression",
       },
     },
-    "tags": Object {
-      "public": Array [
-        Object {
+    "tags": {
+      "public": [
+        {
           "description": null,
           "title": "public",
           "type": null,
@@ -127,48 +127,69 @@ Foo method with baz param
 `;
 
 exports[`should highlight code in description (fenced code block) 1`] = `
-Object {
+{
   "description": "The only true button.
 
 \`\`\`js
-<span class=\\"token function\\">alert</span><span class=\\"token punctuation\\">(</span><span class=\\"token string\\">'Hello world'</span><span class=\\"token punctuation\\">)</span><span class=\\"token punctuation\\">;</span>
+<span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Hello world'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 \`\`\`
 ",
   "displayName": "",
-  "doclets": Object {},
-  "methods": Array [],
-  "tags": Object {},
+  "doclets": {},
+  "methods": [],
+  "tags": {},
 }
 `;
 
 exports[`should not crash when using doctrine to parse a default prop that isn't in the props list 1`] = `
-Object {
+{
   "description": "The only true button.
 ",
   "displayName": "",
-  "doclets": Object {},
-  "methods": Array [],
-  "props": Object {
-    "crash": Object {
+  "doclets": {},
+  "methods": [],
+  "props": {
+    "crash": {
       "description": "",
-      "tags": Object {},
+      "tags": {},
     },
   },
-  "tags": Object {},
+  "tags": {},
+}
+`;
+
+exports[`should not return an import marker for the @example doclet when the file does not exist 1`] = `
+{
+  "description": "The only true button.
+",
+  "displayName": "Button",
+  "doclets": {
+    "example": "example.md
+",
+  },
+  "methods": [],
+  "tags": {
+    "example": [
+      {
+        "description": "example.md",
+        "title": "example",
+      },
+    ],
+  },
 }
 `;
 
 exports[`should remove non-public methods 1`] = `
-Object {
+{
   "displayName": "Button",
-  "doclets": Object {},
-  "methods": Array [
-    Object {
+  "doclets": {},
+  "methods": [
+    {
       "docblock": "Public method.
 @public",
-      "tags": Object {
-        "public": Array [
-          Object {
+      "tags": {
+        "public": [
+          {
             "description": null,
             "title": "public",
           },
@@ -179,57 +200,77 @@ Object {
 }
 `;
 
-exports[`should return an object for props 1`] = `
-Object {
+exports[`should return an import marker for the @example doclet 1`] = `
+{
   "description": "The only true button.
 ",
   "displayName": "Button",
-  "doclets": Object {},
-  "methods": Array [],
-  "props": Object {
-    "children": Object {
+  "doclets": {},
+  "example": {
+    "__rsgDefault": true,
+    "__rsgImport": "rsg-examples:~/test/components/Placeholder/examples.md",
+  },
+  "methods": [],
+  "tags": {
+    "example": [
+      {
+        "description": "../../../../test/components/Placeholder/examples.md",
+        "title": "example",
+      },
+    ],
+  },
+}
+`;
+
+exports[`should return an object for props 1`] = `
+{
+  "description": "The only true button.
+",
+  "displayName": "Button",
+  "doclets": {},
+  "methods": [],
+  "props": {
+    "children": {
       "description": "Button label.",
-      "name": "children",
       "required": true,
-      "tags": Object {},
-      "type": Object {
+      "tags": {},
+      "type": {
         "name": "object",
       },
     },
-    "color": Object {
+    "color": {
       "description": "",
-      "name": "color",
       "required": false,
-      "tags": Object {},
-      "type": Object {
+      "tags": {},
+      "type": {
         "name": "string",
       },
     },
   },
-  "tags": Object {},
+  "tags": {},
 }
 `;
 
 exports[`should return an object for props with doclets 1`] = `
-Object {
+{
   "description": "The only true button.
 ",
   "displayName": "Button",
-  "doclets": Object {
+  "doclets": {
     "bar": "Bar
 ",
     "foo": "Foo",
   },
-  "methods": Array [],
-  "tags": Object {
-    "bar": Array [
-      Object {
+  "methods": [],
+  "tags": {
+    "bar": [
+      {
         "description": "Bar",
         "title": "bar",
       },
     ],
-    "foo": Array [
-      Object {
+    "foo": [
+      {
         "description": "Foo",
         "title": "foo",
       },
@@ -239,62 +280,19 @@ Object {
 `;
 
 exports[`should return an object for props without description 1`] = `
-Object {
+{
   "displayName": "Button",
-  "doclets": Object {},
-  "methods": Array [],
-  "props": Object {
-    "children": Object {
+  "doclets": {},
+  "methods": [],
+  "props": {
+    "children": {
       "description": "Button label.",
-      "name": "children",
       "required": true,
-      "tags": Object {},
-      "type": Object {
+      "tags": {},
+      "type": {
         "name": "object",
       },
     },
-  },
-}
-`;
-
-exports[`should return require statement for @example doclet 1`] = `
-Object {
-  "description": "The only true button.
-",
-  "displayName": "Button",
-  "doclets": Object {
-    "example": "../../../test/components/Placeholder/examples.md
-",
-  },
-  "methods": Array [],
-  "tags": Object {
-    "example": Array [
-      Object {
-        "description": "../../../test/components/Placeholder/examples.md",
-        "title": "example",
-      },
-    ],
-  },
-}
-`;
-
-exports[`should return require statement for @example doclet only when the file exists 1`] = `
-Object {
-  "description": "The only true button.
-",
-  "displayName": "Button",
-  "doclets": Object {
-    "example": "example.md
-",
-  },
-  "methods": Array [],
-  "tags": Object {
-    "example": Array [
-      Object {
-        "description": "example.md",
-        "title": "example",
-      },
-    ],
   },
 }
 `;

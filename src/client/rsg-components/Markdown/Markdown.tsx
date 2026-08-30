@@ -1,6 +1,6 @@
 import React, { isValidElement, PropsWithChildren } from 'react';
 import PropTypes from 'prop-types';
-import { compiler } from 'markdown-to-jsx';
+import { compiler } from 'markdown-to-jsx/react';
 import stripHtmlComments from 'strip-html-comments';
 import Link from 'rsg-components/Link';
 import Text from 'rsg-components/Text';
@@ -18,7 +18,7 @@ import { Table, TableHead, TableBody, TableRow, TableCell } from 'rsg-components
 const Pre = (props: PreProps) => {
 	if (isValidElement(props.children)) {
 		// Avoid rendering <Code> inside <Pre>
-		return <PreBase {...props.children.props} />;
+		return <PreBase {...(props.children.props as PreProps)} />;
 	}
 	return <PreBase {...props} />;
 };
@@ -149,9 +149,45 @@ interface MarkdownProps {
 	inline?: boolean;
 }
 
+/**
+ * Rebuild markdown-to-jsx output through React.createElement so it renders
+ * under Preact too.
+ *
+ * markdown-to-jsx v9 fabricates elements as plain object literals instead of
+ * calling createElement, and its `createElement` option is bypassed for the
+ * `forceBlock` root wrapper and some raw-HTML nodes (verified in v9.10.2's
+ * source), so that option alone cannot fix this. React renders the fabricated
+ * objects fine, but Preact's diff silently drops any vnode whose `constructor`
+ * is not `undefined` (its JSON-injection guard) — so with `react` aliased to
+ * `preact/compat` (see examples/preact) every piece of markdown would render
+ * as nothing. Recreating each node via createElement yields real elements of
+ * whichever implementation `react` resolves to; under real React the rendered
+ * HTML is byte-identical, so this is a no-op there.
+ */
+function reviveElements(node: React.ReactNode): React.ReactNode {
+	if (Array.isArray(node)) {
+		return node.map(reviveElements);
+	}
+	if (isValidElement(node)) {
+		// `isValidElement` matches the fabricated nodes in both React and
+		// preact/compat because markdown-to-jsx stamps them with the `$$typeof`
+		// it probes from the host's own createElement.
+		const { children, ...props } = (node.props ?? {}) as PropsWithChildren<Record<string, unknown>>;
+		if (node.key != null) {
+			// createElement extracts `key` from the props object it receives.
+			props.key = node.key;
+		}
+		if (children !== undefined) {
+			props.children = reviveElements(children);
+		}
+		return React.createElement(node.type as React.ElementType, props);
+	}
+	return node;
+}
+
 export const Markdown: React.FunctionComponent<MarkdownProps> = ({ text, inline }) => {
 	const overrides = inline ? inlineOverrides : baseOverrides;
-	return compiler(stripHtmlComments(text), { overrides, forceBlock: true });
+	return reviveElements(compiler(stripHtmlComments(text), { overrides, forceBlock: true }));
 };
 
 Markdown.propTypes = {

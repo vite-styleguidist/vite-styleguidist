@@ -1,7 +1,7 @@
 import React from 'react';
 import Tippy from '@tippyjs/react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import * as Rsg from '../../../typings';
+import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space, color, borderRadius, fontSize }: Rsg.Theme) => ({
 	tooltip: {

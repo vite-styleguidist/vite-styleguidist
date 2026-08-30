@@ -1,12 +1,13 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-import { Configuration } from 'webpack';
-import last from 'lodash/last';
-import styleguidist from '../index.esm';
+import path from 'node:path';
+import styleguidist from '../index.esm.js';
+import { MOCK_BUILD_OUTPUT } from '../__mocks__/build.js';
+import { MOCK_SERVER } from '../__mocks__/server.js';
+import testConfig from '../../../test/data/styleguide.config.js';
 
-jest.mock('../build');
-jest.mock('../server');
-
-const getDefaultWebpackConfig = () => styleguidist().makeWebpackConfig();
+// Building or starting a real Vite server is out of scope here (see make-vite-config.spec.ts
+// for the generated Vite config); the mocks only call back with canned values
+vi.mock('../build.js', () => import('../__mocks__/build.js'));
+vi.mock('../server.js', () => import('../__mocks__/server.js'));
 
 const cwd = process.cwd();
 afterEach(() => {
@@ -14,159 +15,89 @@ afterEach(() => {
 });
 
 it('should return API methods', () => {
-	const api = styleguidist(require('../../../test/data/styleguide.config.js'));
+	const api = styleguidist(testConfig);
 	expect(api).toBeTruthy();
 	expect(typeof api.build).toBe('function');
 	expect(typeof api.server).toBe('function');
-	expect(typeof api.makeWebpackConfig).toBe('function');
+	expect(typeof api.makeViteConfig).toBe('function');
 });
 
-describe('makeWebpackConfig', () => {
-	it('should return development Webpack config', () => {
-		const api = styleguidist();
-		const result = api.makeWebpackConfig('development');
-		expect(result).toBeTruthy();
-		expect(result.output && result.output.filename).toBe('build/[name].bundle.js');
-		expect(result.output && result.output.chunkFilename).toBe('build/[name].js');
+it('should expose the normalized config', () => {
+	const api = styleguidist(testConfig);
+	expect(api.config).toMatchObject({
+		title: 'React Style Guide Example',
+		configDir: cwd,
+		sections: [{ components: './components/**/[A-Z]*.js' }],
+	});
+});
+
+it('should accept a config file path', () => {
+	const api = styleguidist(path.resolve(cwd, 'test/apps/basic/styleguide.config.js'));
+	expect(api.config).toMatchObject({
+		title: 'React Style Guide Example',
+		configDir: path.resolve(cwd, 'test/apps/basic'),
+	});
+});
+
+it('should throw for an invalid config', () => {
+	expect(() => styleguidist({ components: 42 } as any)).toThrow(
+		'Something is wrong with your style guide config'
+	);
+});
+
+describe('makeViteConfig', () => {
+	it('should return production Vite config by default', async () => {
+		const api = styleguidist(testConfig);
+		const result = await api.makeViteConfig();
+		expect(result.mode).toBe('production');
+		expect(result.root).toBe(cwd);
 	});
 
-	it('should return production Webpack config', () => {
-		const api = styleguidist();
-		const result = api.makeWebpackConfig('production');
-		expect(result).toBeTruthy();
-		expect(result.output && result.output.filename).toBe('build/bundle.[chunkhash:8].js');
-		expect(result.output && result.output.chunkFilename).toBe('build/[name].[chunkhash:8].js');
-	});
-
-	it('should merge webpackConfig config option', () => {
-		const defaultWebpackConfig = getDefaultWebpackConfig();
-		const api = styleguidist({
-			webpackConfig: {
-				resolve: {
-					extensions: ['.scss'],
-				},
-			},
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result).toBeTruthy();
-		expect(result?.resolve?.extensions).toHaveLength(
-			(defaultWebpackConfig?.resolve?.extensions?.length || 0) + 1
-		);
-		expect(last(result?.resolve?.extensions)).toEqual('.scss');
-	});
-
-	it('should merge webpackConfig but ignore output section', () => {
-		const defaultWebpackConfig = getDefaultWebpackConfig();
-		const api = styleguidist({
-			webpackConfig: {
-				resolve: {
-					extensions: ['.scss'],
-				},
-				output: {
-					filename: 'broken.js',
-				},
-			},
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result.output && result.output.filename).toEqual(
-			defaultWebpackConfig.output && defaultWebpackConfig.output.filename
-		);
-	});
-
-	it('should merge webpackConfig config option as a function', () => {
-		const api = styleguidist({
-			webpackConfig: (env) =>
-				({
-					mode: env,
-				} as Configuration),
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result).toBeTruthy();
-		expect(result.mode).toEqual('production');
-	});
-
-	it('should apply updateWebpackConfig config option', () => {
-		const defaultWebpackConfig = getDefaultWebpackConfig();
-		const api = styleguidist({
-			dangerouslyUpdateWebpackConfig: (webpackConfig, env) => {
-				if (webpackConfig.resolve && webpackConfig.resolve.extensions) {
-					webpackConfig.resolve.extensions.push(env);
-				}
-				return webpackConfig;
-			},
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result).toBeTruthy();
-		expect(result?.resolve?.extensions).toHaveLength(
-			(defaultWebpackConfig?.resolve?.extensions?.length || 0) + 1
-		);
-		expect(last(result?.resolve?.extensions)).toEqual('production');
-	});
-
-	it('should merge Create React App Webpack config', () => {
-		process.chdir('test/apps/basic');
-		const api = styleguidist();
-		const result = api.makeWebpackConfig();
-
-		expect(result).toBeTruthy();
-		expect(result.module).toBeTruthy();
-	});
-
-	it('should add webpack entry for each require config option item', () => {
-		const modules = ['babel-polyfill', 'path/to/styles.css'];
-		const api = styleguidist({
-			require: modules,
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result.entry).toEqual(expect.arrayContaining(modules));
-	});
-
-	it('should add webpack alias for each styleguideComponents config option item', () => {
-		const api = styleguidist({
-			styleguideComponents: {
-				Wrapper: 'styleguide/components/Wrapper',
-				StyleGuideRenderer: 'styleguide/components/StyleGuide',
-			},
-		});
-		const result = api.makeWebpackConfig();
-
-		expect(result?.resolve?.alias).toMatchObject({
-			'rsg-components/Wrapper': 'styleguide/components/Wrapper',
-			'rsg-components/StyleGuide/StyleGuideRenderer': 'styleguide/components/StyleGuide',
-		});
+	it('should return development Vite config', async () => {
+		const api = styleguidist(testConfig);
+		const result = await api.makeViteConfig('development');
+		expect(result.mode).toBe('development');
 	});
 });
 
 describe('build', () => {
-	it('should pass style guide config and stats to callback', () => {
+	it('should pass style guide config and build output to callback', async () => {
 		const config = {
 			components: '*.js',
 		};
-		const callback = jest.fn();
+		const callback = vi.fn();
 		const api = styleguidist(config);
-		api.build(callback);
+		await api.build(callback);
 
-		expect(callback).toBeCalled();
+		expect(callback).toHaveBeenCalledTimes(1);
+		expect(callback.mock.calls[0][0]).toBeNull();
 		expect(callback.mock.calls[0][1].components).toBe(config.components);
-		expect(callback.mock.calls[0][2]).toEqual({ stats: true });
+		expect(callback.mock.calls[0][2]).toBe(MOCK_BUILD_OUTPUT);
+	});
+
+	it('should resolve to the build output without a callback', async () => {
+		const api = styleguidist({});
+		await expect(api.build()).resolves.toBe(MOCK_BUILD_OUTPUT);
 	});
 });
 
 describe('server', () => {
-	it('should pass style guide config to callback', () => {
+	it('should pass style guide config and dev server to callback', async () => {
 		const config = {
 			components: '*.js',
 		};
-		const callback = jest.fn();
+		const callback = vi.fn();
 		const api = styleguidist(config);
-		api.server(callback);
+		await api.server(callback);
 
-		expect(callback).toBeCalled();
+		expect(callback).toHaveBeenCalledTimes(1);
+		expect(callback.mock.calls[0][0]).toBeUndefined();
 		expect(callback.mock.calls[0][1].components).toBe(config.components);
+		expect(callback.mock.calls[0][2]).toBe(MOCK_SERVER);
+	});
+
+	it('should resolve to the dev server without a callback', async () => {
+		const api = styleguidist({});
+		await expect(api.server()).resolves.toBe(MOCK_SERVER);
 	});
 });

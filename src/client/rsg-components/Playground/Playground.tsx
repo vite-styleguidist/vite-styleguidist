@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import debounce from 'lodash/debounce';
+import debounce from 'lodash/debounce.js';
 import Preview from 'rsg-components/Preview';
 import Para from 'rsg-components/Para';
 import Slot from 'rsg-components/Slot';
 import PlaygroundRenderer from 'rsg-components/Playground/PlaygroundRenderer';
 import Context, { StyleGuideContextContents } from 'rsg-components/Context';
-import { EXAMPLE_TAB_CODE_EDITOR } from '../slots';
-import { DisplayModes, ExampleModes } from '../../consts';
+import { EXAMPLE_TAB_CODE_EDITOR } from '../slots/index.js';
+import { DisplayModes, ExampleModes } from '../../consts.js';
 
 interface PlaygroundProps {
 	evalInContext(code: string): () => any;
@@ -32,11 +32,14 @@ interface PlaygroundState {
 class Playground extends Component<PlaygroundProps, PlaygroundState> {
 	public static contextType = Context;
 
-	private handleChange = debounce((code) => {
-		this.setState({
-			code,
-		});
-	}, (this.context as StyleGuideContextContents).config.previewDelay);
+	private handleChange = debounce(
+		(code) => {
+			this.setState({
+				code,
+			});
+		},
+		(this.context as StyleGuideContextContents).config.previewDelay
+	);
 
 	public state: PlaygroundState = {
 		code: this.props.code,

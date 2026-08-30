@@ -1,4 +1,4 @@
-import transpileImports from '../transpileImports';
+import transpileImports from '../transpileImports.js';
 
 describe('transpileImports', () => {
 	test('transpile default imports', () => {
@@ -85,18 +85,18 @@ const C = cat$0.C;
 `);
 	});
 
-	describe.each([
+	// Vitest refuses different inline snapshots at the same call site, so parameterized
+	// cases compare against a plain string instead
+	test.each([
 		['./cat/capybara/hamster', '__cat_capybara_hamster'],
 		['../cat/capybara/hamster', '___cat_capybara_hamster'],
 		['cat/capybara/hamster', 'cat_capybara_hamster'],
-	])('transpile default imports via relative path', (modulePath, transpiled) => {
-		test(`${modulePath}`, () => {
-			const result = transpileImports(`import B from '${modulePath}'`);
-			expect(result).toMatchInlineSnapshot(`
-	"const ${transpiled}$0 = require('${modulePath}');
-	const B = ${transpiled}$0.default || ${transpiled}$0;"
-	`);
-		});
+	])('transpile default imports via path %s', (modulePath, transpiled) => {
+		const result = transpileImports(`import B from '${modulePath}'`);
+		expect(result).toBe(
+			`const ${transpiled}$0 = require('${modulePath}');\n` +
+				`const B = ${transpiled}$0.default || ${transpiled}$0;`
+		);
 	});
 
 	test('return code if there are no imports', () => {

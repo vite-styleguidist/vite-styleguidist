@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import ComplexType from './ComplexTypeRenderder';
+import ComplexType from './ComplexTypeRenderder.js';
 
 function renderComponent(name = 'color', raw = 'red | blue') {
 	return render(<ComplexType name={name} raw={raw} />);

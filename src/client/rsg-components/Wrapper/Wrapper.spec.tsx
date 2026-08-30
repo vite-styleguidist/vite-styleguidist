@@ -1,27 +1,38 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import Wrapper from './Wrapper';
+import { render } from '@testing-library/react';
+import Wrapper from './Wrapper.js';
 
 it('should render children', () => {
-	const children = <span>Hello</span>;
-	const renderer = createRenderer();
-	renderer.render(<Wrapper onError={() => {}}>{children}</Wrapper>);
+	const { getByText } = render(
+		<Wrapper onError={() => {}}>
+			<span>Hello</span>
+		</Wrapper>
+	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(getByText('Hello').tagName).toBe('SPAN');
 });
 
-it('should call onError handler when React invokes error handler', () => {
-	const onError = jest.fn();
-	const renderer = createRenderer();
-	renderer.render(<Wrapper onError={onError}>blah</Wrapper>);
+it('should call onError handler when a child throws during render', () => {
+	const onError = vi.fn();
+	const error = new Error('err');
+	// Must throw on every render: React retries a failed concurrent render synchronously
+	// before handing the error to the boundary
+	const Bomb = (): null => {
+		throw error;
+	};
+	// React logs the caught error (and a dev-only hint about getDerivedStateFromError)
+	const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-	// faux error
-	const err = new Error('err');
-	const inst = renderer.getMountedInstance() as Wrapper;
-	if (inst && inst.componentDidCatch) {
-		inst.componentDidCatch(err);
-	}
+	const { container } = render(
+		<Wrapper onError={onError}>
+			<Bomb />
+		</Wrapper>
+	);
 
 	expect(onError).toHaveBeenCalledTimes(1);
-	expect(onError).toHaveBeenCalledWith(err);
+	expect(onError).toHaveBeenCalledWith(error);
+	// Wrapper has no fallback UI, React removes the failed children
+	expect(container).toBeEmptyDOMElement();
+
+	consoleError.mockRestore();
 });

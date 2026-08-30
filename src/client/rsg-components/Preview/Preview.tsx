@@ -29,7 +29,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 
 	private mountNode: Element | null = null;
 	private reactRoot: Root | null = null;
-	private timeoutId: number | null = null;
+	private timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	public state: PreviewState = {
 		error: null,
@@ -61,17 +61,17 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	}
 
 	public unmountPreview() {
-		const self = this;
-		if (self.timeoutId) {
-			clearTimeout(self.timeoutId);
+		if (this.timeoutId) {
+			clearTimeout(this.timeoutId);
 		}
-		const id = setTimeout(() => {
-			if (self.reactRoot) {
-				self.reactRoot.unmount();
-				self.reactRoot = null;
+		// React forbids unmounting a root synchronously while another root renders,
+		// so the unmount is deferred to the next macrotask
+		this.timeoutId = setTimeout(() => {
+			if (this.reactRoot) {
+				this.reactRoot.unmount();
+				this.reactRoot = null;
 			}
 		});
-		self.timeoutId = id;
 	}
 
 	private executeCode() {

@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import filterComponentsByName from '../filterComponentsByName';
+import filterComponentsByName from '../filterComponentsByName.js';
 
 const components = deepfreeze([
 	{

@@ -1,8 +1,8 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`getAst return AST 1`] = `
+exports[`getAst > return AST 1`] = `
 Node {
-  "body": Array [
+  "body": [
     Node {
       "end": 2,
       "expression": Node {

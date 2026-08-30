@@ -69,33 +69,7 @@ module.exports = {
 			sectionDepth: 0,
 		},
 	],
+	// Global styles loaded before the style guide itself. Vite imports CSS files
+	// natively, so no loader configuration is needed for this to work.
 	require: [path.join(__dirname, 'src/styles.css')],
-	webpackConfig: (env) => ({
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: ['style-loader', 'css-loader'],
-				},
-			],
-		},
-		// How to analyze what's in the bundle:
-		// 1. Comment `hints: 'error'` line below
-		// 2. Uncomment a line with `stats.json` in src/scripts/build.js
-		// 3. npm run build:sections
-		// 4. npx webpack-bundle-analyzer stats.json
-		performance:
-			env === 'development'
-				? false
-				: {
-						maxAssetSize: 1200000, // bytes
-						maxEntrypointSize: 1200000, // bytes
-						hints: 'error',
-				  },
-	}),
 };

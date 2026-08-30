@@ -1,8 +1,7 @@
-/* eslint-disable compat/compat */
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
-import ComponentsList from './ComponentsList';
-import Context from '../Context';
+import ComponentsList from './ComponentsList.js';
+import Context from '../Context/index.js';
 
 const context = {
 	config: {

@@ -1,16 +1,17 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`processComponent() should return an object for section with content 1`] = `
-Object {
+{
   "filepath": "../../../../pizza.js",
   "hasExamples": true,
-  "metadata": Object {},
-  "module": Object {
-    "require": "pizza.js",
+  "metadata": {},
+  "module": {
+    "__rsgImport": "pizza.js",
   },
   "pathLine": "../../../../pizza.js",
-  "props": Object {
-    "require": "!!~/src/loaders/props-loader.js!pizza.js",
+  "props": {
+    "__rsgDefault": true,
+    "__rsgImport": "rsg-props:pizza.js",
   },
   "slug": "pizza",
 }

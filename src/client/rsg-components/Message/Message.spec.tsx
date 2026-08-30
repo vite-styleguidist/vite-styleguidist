@@ -1,19 +1,26 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { MessageRenderer } from './MessageRenderer';
+import { render } from '@testing-library/react';
+import { MessageRenderer } from './MessageRenderer.js';
 
 it('renderer should render message', () => {
 	const message = 'Hello *world*!';
-	const renderer = createRenderer();
-	renderer.render(<MessageRenderer classes={{}}>{message}</MessageRenderer>);
+	const { container, getByText } = render(
+		<MessageRenderer classes={{}}>{message}</MessageRenderer>
+	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	// The message is rendered as Markdown
+	expect(container).toHaveTextContent('Hello world!');
+	expect(getByText('world').tagName).toBe('EM');
 });
 
 it('renderer should render message for array', () => {
 	const messages = ['Hello *world*!', 'Foo _bar_'];
-	const renderer = createRenderer();
-	renderer.render(<MessageRenderer classes={{}}>{messages}</MessageRenderer>);
+	const { container, getByText } = render(
+		<MessageRenderer classes={{}}>{messages}</MessageRenderer>
+	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	// Array items are joined into one Markdown document
+	expect(container).toHaveTextContent('Hello world! Foo bar');
+	expect(getByText('world').tagName).toBe('EM');
+	expect(getByText('bar').tagName).toBe('EM');
 });

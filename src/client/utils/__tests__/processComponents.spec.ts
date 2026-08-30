@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import processComponents from '../processComponents';
+import processComponents from '../processComponents.js';
 
 const options = { useRouterLinks: false };
 

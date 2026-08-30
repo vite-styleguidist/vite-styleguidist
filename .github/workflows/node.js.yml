@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
           cache: npm
 
       - run: npm ci
@@ -27,10 +27,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '22'
+          cache: npm
 
       - run: npm ci
       - run: npm run compile
@@ -40,13 +41,23 @@ jobs:
           npm run build:basic
           npm run build:customised
           npm run build:sections
+          npm run build:themed
+          npm run build:express
+          npm run build:preact
+          npm run build:styled-components
+          npm run build:vite
 
-      - name: Check that examples really works - no JS errors on load
+      - name: Check that examples really work - no JS errors on load
         run: |
           npm run test:browser:pre
           npm run test:browser:basic
           npm run test:browser:customised
           npm run test:browser:sections
+          npm run test:browser:themed
+          npm run test:browser:express
+          npm run test:browser:preact
+          npm run test:browser:styled-components
+          npm run test:browser:vite
 
       - name: Run Cypress tests
         run: |
@@ -55,21 +66,25 @@ jobs:
           npm run test:cypress:startServer:post
           npm run test:cypress:run
 
-  build:
+  test:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
         node-version:
-          - '16'
+          - '22'
+          - '24'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - run: npm ci
-      - run: npm run test:jest -- --runInBand
+      # The CLI spec runs the compiled bin from lib/
+      - run: npm run compile
+      - run: npm run test:unit

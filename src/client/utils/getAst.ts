@@ -5,7 +5,7 @@ export interface Program extends Node {
 }
 
 export const ACORN_OPTIONS: Options = {
-	ecmaVersion: 2019,
+	ecmaVersion: 'latest',
 	sourceType: 'module',
 };
 
@@ -14,11 +14,10 @@ export const ACORN_OPTIONS: Options = {
  */
 export default function getAst(code: string): Program | undefined {
 	try {
-		return (Parser.parse(code, {
+		return Parser.parse(code, {
 			...ACORN_OPTIONS,
-		// types of acorn are too simplistic and we have to use the body
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any 
-		}) as any) as Program;
+			// types of acorn are too simplistic and we have to use the body
+		}) as any as Program;
 	} catch (err) {
 		return undefined;
 	}

@@ -1,25 +1,27 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { ParaRenderer, styles } from './ParaRenderer';
+import { render } from '@testing-library/react';
+import { ParaRenderer, styles } from './ParaRenderer.js';
 
 const props = {
 	classes: classes(styles),
 };
 
 it('should render paragraph as a <div>', () => {
-	const renderer = createRenderer();
-	renderer.render(<ParaRenderer {...props}>Pizza</ParaRenderer>);
+	const { getByText } = render(<ParaRenderer {...props}>Pizza</ParaRenderer>);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const para = getByText('Pizza');
+	expect(para.tagName).toBe('DIV');
+	expect(para).toHaveClass('para', { exact: true });
 });
 
 it('should render paragraph as a <p>', () => {
-	const renderer = createRenderer();
-	renderer.render(
+	const { getByText } = render(
 		<ParaRenderer {...props} semantic="p">
 			Pizza
 		</ParaRenderer>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const para = getByText('Pizza');
+	expect(para.tagName).toBe('P');
+	expect(para).toHaveClass('para', { exact: true });
 });

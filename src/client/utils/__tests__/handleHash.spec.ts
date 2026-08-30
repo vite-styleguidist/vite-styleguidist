@@ -1,4 +1,4 @@
-import { hasInHash, getHash, getHashAsArray, getParameterByName } from '../handleHash';
+import { hasInHash, getHash, getHashAsArray, getParameterByName } from '../handleHash.js';
 
 describe('handleHash', () => {
 	const isolateHash = '#!/';

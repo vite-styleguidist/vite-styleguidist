@@ -1,10 +1,12 @@
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { NotFoundRenderer } from './NotFoundRenderer';
+import { render } from '@testing-library/react';
+import { NotFoundRenderer } from './NotFoundRenderer.js';
 
 it('renderer should render not found message', () => {
-	const renderer = createRenderer();
-	renderer.render(<NotFoundRenderer classes={{}} />);
+	const { getByRole, getByText } = render(<NotFoundRenderer classes={{}} />);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	expect(getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+	expect(
+		getByText('The link you followed may be broken, or the page may have been removed.')
+	).toBeInTheDocument();
 });

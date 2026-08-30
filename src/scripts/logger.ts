@@ -1,6 +1,4 @@
-/* eslint-disable no-console */
-
-import _ from 'lodash/fp';
+import _ from 'lodash/fp.js';
 import kleur from 'kleur';
 import loggerMaker from 'glogg';
 

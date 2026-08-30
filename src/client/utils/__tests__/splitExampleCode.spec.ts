@@ -1,4 +1,4 @@
-import splitExampleCode from '../splitExampleCode';
+import splitExampleCode from '../splitExampleCode.js';
 
 describe('splitExampleCode', () => {
 	test('basic example', () => {

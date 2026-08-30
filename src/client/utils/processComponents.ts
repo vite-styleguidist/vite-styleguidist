@@ -1,5 +1,5 @@
-import * as Rsg from '../../typings';
-import getUrl from './getUrl';
+import type * as Rsg from '../../typings/index.js';
+import getUrl from './getUrl.js';
 
 export interface HrefOptions {
 	hashPath?: string[];
@@ -18,7 +18,7 @@ export default function processComponents(
 	components: Rsg.Component[],
 	{ useRouterLinks, useHashId, hashPath }: HrefOptions
 ): Rsg.Component[] {
-	return components.map(component => {
+	return components.map((component) => {
 		const newComponent: Rsg.Component = component.props
 			? {
 					...component,
@@ -41,7 +41,7 @@ export default function processComponents(
 							hashPath: useRouterLinks ? hashPath : false,
 							useSlugAsIdParam: useRouterLinks ? useHashId : false,
 						}),
-			  }
+				}
 			: {};
 
 		return newComponent;

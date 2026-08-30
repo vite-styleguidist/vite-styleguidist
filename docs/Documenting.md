@@ -42,7 +42,7 @@ export default class Button extends React.Component {
 
 ## Usage examples and Readme files
 
-Styleguidist will look for any `Readme.md` or `ComponentName.md` files in the component’s folder and display them. Any code block with a language tag of `js`, `jsx`, or `javascript` will be rendered as a React component with an interactive playground. For backwards compatibility, code blocks without a language tag are also rendered in this way. It is recommended to always use the proper language tag for new documentation.
+Styleguidist will look for any `Readme.md` or `ComponentName.md` files in the component’s folder and display them. Any code block with a language tag of `js`, `jsx`, `javascript`, `ts`, `tsx` or `typescript` will be rendered as a React component with an interactive playground. For backwards compatibility, code blocks without a language tag are also rendered in this way. It is recommended to always use the proper language tag for new documentation.
 
     React component example:
 
@@ -215,14 +215,14 @@ class Button extends React.Component {
 
 ## Writing code examples
 
-Code examples in Markdown use ES6+JSX syntax. You can use the current component without explicitly importing it:
+Code examples in Markdown use modern JavaScript, JSX or TypeScript syntax. You can use the current component without explicitly importing it:
 
 ````jsx
 // ```jsx inside Button/Readme.md or Button.md
 <Button>Push Me</Button>
 ````
 
-> **Info:** Styleguidist uses [Bublé](https://buble.surge.sh/guide/) to run ES6 code on the frontend, it supports [most of the ES6 features](https://buble.surge.sh/guide/#unsupported-features).
+> **Info:** Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile examples in the browser: it strips JSX and TypeScript syntax but doesn’t transpile modern JavaScript, so anything your browser supports works. Code blocks with `ts` or `tsx` language tags are rendered as playgrounds too. See the [compilerConfig](Configuration.md#compilerconfig) option.
 
 To use other components, you need to explicitly `import` them:
 

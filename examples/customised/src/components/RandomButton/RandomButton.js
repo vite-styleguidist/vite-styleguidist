@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import sample from 'lodash/sample';
 
-import s from './RandomButton.css';
+import s from './RandomButton.module.css';
 
 /**
  * Button that changes label on every click.

@@ -1,5 +1,5 @@
 import deepfreeze from 'deepfreeze';
-import processSections from '../processSections';
+import processSections from '../processSections.js';
 
 const sections = deepfreeze([
 	{

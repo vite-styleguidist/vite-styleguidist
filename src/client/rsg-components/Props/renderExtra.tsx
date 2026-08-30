@@ -4,11 +4,11 @@ import Type from 'rsg-components/Type';
 import Code from 'rsg-components/Code';
 import Name from 'rsg-components/Name';
 import Markdown from 'rsg-components/Markdown';
-import { PropTypeDescriptor } from 'react-docgen';
+import type { PropTypeDescriptor } from '../../../typings/index.js';
 
-import { unquote, getType, showSpaces, PropDescriptor, TypeDescriptor } from './util';
-import renderDefault from './renderDefault';
-import { renderType } from './renderType';
+import { unquote, getType, showSpaces, PropDescriptor, TypeDescriptor } from './util.js';
+import renderDefault from './renderDefault.js';
+import { renderType } from './renderType.js';
 
 function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
 	if (!Array.isArray(type.value)) {
@@ -41,7 +41,7 @@ function renderUnion(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode
 }
 
 function renderShape(props: Record<string, PropDescriptor>) {
-	return Object.keys(props).map(name => {
+	return Object.keys(props).map((name) => {
 		const prop = props[name];
 		const defaultValue = renderDefault(prop);
 		const description = prop.description;

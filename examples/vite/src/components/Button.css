@@ -1,0 +1,38 @@
+.button {
+	padding: 0.5em 1.5em;
+	color: #333;
+	background-color: #fff;
+	border: 1px solid currentColor;
+	border-radius: 0.3em;
+	font: inherit;
+	cursor: pointer;
+}
+
+.button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.button--primary {
+	color: #fff;
+	background-color: #1673b1;
+	border-color: #1673b1;
+}
+
+.button--danger {
+	color: #fff;
+	background-color: #c00;
+	border-color: #c00;
+}
+
+.button--small {
+	font-size: 12px;
+}
+
+.button--medium {
+	font-size: 14px;
+}
+
+.button--large {
+	font-size: 18px;
+}

@@ -1,20 +1,20 @@
-import { render } from '@testing-library/react';
 import React from 'react';
-import { createRenderer } from 'react-test-renderer/shallow';
-import { LinkRenderer } from './LinkRenderer';
+import { render } from '@testing-library/react';
+import { LinkRenderer } from './LinkRenderer.js';
 
 const href = '/foo';
 const children = 'Foo';
 
 it('renderer should render link', () => {
-	const renderer = createRenderer();
-	renderer.render(
+	const { getByRole } = render(
 		<LinkRenderer href={href} classes={{}}>
 			{children}
 		</LinkRenderer>
 	);
 
-	expect(renderer.getRenderOutput()).toMatchSnapshot();
+	const a = getByRole('link');
+	expect(a).toHaveAttribute('href', href);
+	expect(a).toHaveTextContent(children);
 });
 
 it('should compose passed class names', () => {

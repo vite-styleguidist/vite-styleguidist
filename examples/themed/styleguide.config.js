@@ -1,7 +1,12 @@
 const path = require('path');
 const { version } = require('./package');
 
+// Styleguidist uses Vite: JSX in .js files and CSS imports work out of the box,
+// no bundler configuration needed. `theme` and `styles` point to ES module files
+// (`export default {...}`) that are imported into the browser bundle.
 module.exports = {
+	// Component globs are case-sensitive: the pattern has to match the real
+	// directory name (`src/components`).
 	components: 'src/components/**/[A-Z]*.js',
 	defaultExample: true,
 	moduleAliases: {
@@ -13,19 +18,4 @@ module.exports = {
 	theme: 'styleguide.theme.js',
 	styles: 'styleguide.styles.js',
 	version,
-	webpackConfig: {
-		module: {
-			rules: [
-				{
-					test: /\.jsx?$/,
-					exclude: /node_modules/,
-					loader: 'babel-loader',
-				},
-				{
-					test: /\.css$/,
-					use: ['style-loader', 'css-loader'],
-				},
-			],
-		},
-	},
 };

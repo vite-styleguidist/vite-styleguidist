@@ -1,13 +1,11 @@
-import webpack from 'webpack';
-// Make sure user has webpack installed
-import './utils/ensureWebpack';
-
-import makeWebpackConfig from './make-webpack-config';
-import build from './build';
-import server from './server';
-import getConfig from './config';
-import setupLogger from './logger';
-import * as Rsg from '../typings';
+import type { InlineConfig, ViteDevServer } from 'vite';
+import makeViteConfig from './make-vite-config.js';
+import build from './build.js';
+import type { BuildOutput } from './build.js';
+import server from './server.js';
+import getConfig from './config.js';
+import setupLogger from './logger.js';
+import type * as Rsg from '../typings/index.js';
 
 /**
  * Initialize Styleguide API.
@@ -15,7 +13,7 @@ import * as Rsg from '../typings';
  * @param {object} [config] Styleguidist config.
  * @returns {object} API.
  */
-export default function (configArg?: Rsg.StyleguidistConfig | string) {
+export default function styleguidist(configArg?: Rsg.StyleguidistConfig | string) {
 	const config = getConfig(configArg, (conf) => {
 		setupLogger(conf.logger as Record<string, (msg: string) => void>, conf.verbose, {});
 		return conf;
@@ -25,43 +23,48 @@ export default function (configArg?: Rsg.StyleguidistConfig | string) {
 		/**
 		 * Build style guide.
 		 *
-		 * @param {Function} callback callback(err, config, stats).
-		 * @return {Compiler} Webpack Compiler instance.
+		 * @param {Function} [callback] callback(err, config, output).
+		 * @return {Promise} Resolves to Vite’s build output.
 		 */
 		build(
-			callback: (
-				err: Error,
+			callback?: (
+				err: Error | null,
 				styleguidistConfig: Rsg.SanitizedStyleguidistConfig,
-				stats: webpack.Stats
+				output?: BuildOutput
 			) => void
 		) {
-			return build(config, (err: Error, stats: webpack.Stats) => callback(err, config, stats));
+			return build(config, callback && ((err, output) => callback(err, config, output)));
 		},
 
 		/**
 		 * Start style guide dev server.
 		 *
-		 * @param {Function} callback callback(err, config).
-		 * @return {ServerInfo.App} Webpack-Dev-Server.
-		 * @return {ServerInfo.Compiler} Webpack Compiler instance.
+		 * @param {Function} [callback] callback(err, config, server).
+		 * @return {Promise} Resolves to the Vite dev server.
 		 */
 		server(
-			callback: (
+			callback?: (
 				err: Error | undefined,
-				styleguidistConfig: Rsg.SanitizedStyleguidistConfig
+				styleguidistConfig: Rsg.SanitizedStyleguidistConfig,
+				server?: ViteDevServer
 			) => void
 		) {
-			return server(config, (err) => callback(err, config));
+			return server(config, callback && ((err, devServer) => callback(err, config, devServer)));
 		},
 
 		/**
-		 * Return Styleguidist Webpack config.
+		 * Return Styleguidist Vite config.
 		 *
 		 * @param {string} [env=production] 'production' or 'development'.
-		 * @return {object}
+		 * @return {Promise<object>}
 		 */
-		makeWebpackConfig(env?: 'development' | 'production' | 'none') {
-			return makeWebpackConfig(config, env || 'production');
+		makeViteConfig(env: Rsg.StyleguidistEnv = 'production'): Promise<InlineConfig> {
+			return makeViteConfig(config, env);
 		},
+
+		/**
+		 * Normalized style guide config.
+		 */
+		config,
 	};
 }

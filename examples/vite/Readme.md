@@ -1,6 +1,6 @@
-# React Styleguidist in a Vite app
+# Vite Styleguidist in a Vite app
 
-> **Note:** This example uses the local build of Styleguidist (`file:../../`). Before installing, run `npm ci && npm run compile` in the repository root.
+> **Note:** This example uses the local build of Vite Styleguidist (`"vite-styleguidist": "file:../../"` in `package.json`), so the repository root has to be installed and compiled before the example itself; the steps below include that.
 
 A minimal [Vite](https://vite.dev/) React app (`index.html`, `src/main.jsx`, `vite.config.js` with `@vitejs/plugin-react`) with a style guide for its components.
 
@@ -9,8 +9,10 @@ A minimal [Vite](https://vite.dev/) React app (`index.html`, `src/main.jsx`, `vi
 How to start locally:
 
 ```
-git clone https://github.com/styleguidist/react-styleguidist.git
-cd react-styleguidist/examples/vite
+git clone https://github.com/vite-styleguidist/vite-styleguidist.git
+cd vite-styleguidist
+npm ci && npm run compile
+cd examples/vite
 npm install
 npx styleguidist server
 ```

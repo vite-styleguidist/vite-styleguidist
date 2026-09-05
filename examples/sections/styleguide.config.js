@@ -28,7 +28,7 @@ module.exports = {
 				},
 				{
 					name: 'Online documentation',
-					href: 'https://github.com/styleguidist/react-styleguidist',
+					href: 'https://github.com/vite-styleguidist/vite-styleguidist/blob/main/docs/Readme.md',
 					external: true,
 				},
 			],

@@ -61,10 +61,15 @@ module.exports = {
 	viteConfig: {
 		resolve: {
 			alias: {
-				// Make sure the example uses the local version of react-styleguidist
-				// (the custom SectionsRenderer imports the default one from it).
-				// This is only for the examples in this repo, you won't need it for your own project
-				'react-styleguidist': path.join(__dirname, '../../'),
+				// Make sure the example uses the local build of vite-styleguidist: the custom
+				// SectionsRenderer deep-imports the default renderer from the package, and when
+				// this example is built from the repository root (`npm run build:customised`)
+				// it has no node_modules of its own to resolve that package name from.
+				// Vite aliases are plain prefix rewrites, so the aliased import bypasses the
+				// package's `exports` map; the `.js` extension in SectionsRenderer.js is still
+				// needed for the un-aliased path a real consumer takes.
+				// This is only for the examples in this repo, you won't need it for your own project.
+				'vite-styleguidist': path.join(__dirname, '../../'),
 			},
 		},
 	},

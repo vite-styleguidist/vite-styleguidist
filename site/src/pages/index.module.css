@@ -32,6 +32,13 @@
 	}
 }
 
+.lineage {
+	max-width: 44rem;
+	margin: 0 auto;
+	font-size: 0.9rem;
+	color: var(--ifm-color-gray-700);
+}
+
 .main {
 	padding: 3rem 0;
 }
@@ -56,7 +63,10 @@
 	right: 0;
 	bottom: 0;
 	left: 0;
-	background-image: url(/img/playground2.png);
+	/* Relative path on purpose: the bundler rewrites it to include the site's baseUrl.
+	   An absolute `/img/...` would break on GitHub Pages, where the site lives under
+	   /vite-styleguidist/. */
+	background-image: url(../../static/img/playground2.png);
 	background-size: 100%;
 	opacity: 0;
 	transition: opacity 0.2s ease-in-out;

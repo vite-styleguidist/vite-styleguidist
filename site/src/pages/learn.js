@@ -1,58 +1,15 @@
-import React from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
-import { Row, Column } from '../components/Column';
 import { Stack } from '../components/Stack';
 import { List } from '../components/List';
-import { ImageLink } from '../components/ImageLink';
-import { VideoImage } from '../components/VideoImage';
-import styles from './learn.module.css';
 
+const REPO_URL = 'https://github.com/vite-styleguidist/vite-styleguidist';
+
+// Third-party learning material. All of it was written about the original React
+// Styleguidist, which Vite Styleguidist is a maintained fork of; the concepts and the
+// configuration are the same, only the bundler underneath changed. Check the links are
+// still alive before each release.
 const sections = [
-	{
-		title: 'Video courses',
-		items: [
-			{
-				title: 'React Styleguidist essentials',
-				href: 'https://egghead.io/playlists/react-styleguidist-essentials-627f',
-				image: '/img/rsgcourse.png',
-				type: 'video',
-			},
-			{
-				title: 'Component-driven development in React',
-				href: 'https://egghead.io/playlists/component-driven-development-in-react-e0bf',
-				image: '/img/cddcourse.png',
-				type: 'video',
-			},
-		],
-	},
-	{
-		title: 'Workshops',
-		description: (
-			<Stack gap="m">
-				<p>
-					Learn how to create resilient component libraries using React Styleguidist from its
-					maintainers at{' '}
-					<Link
-						href="https://component-driven.dev/offerings"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						Component-driven
-					</Link>
-					.
-				</p>
-				<Link
-					href="https://component-driven.dev/offerings"
-					target="_blank"
-					rel="noopener noreferrer"
-					className={styles.componentDrivenHero}
-				>
-					<img src="/img/component-driven-inverted.svg" alt="Component-driven" />
-				</Link>
-			</Stack>
-		),
-	},
 	{
 		title: 'Articles',
 		links: [
@@ -66,11 +23,11 @@ const sections = [
 			},
 			{
 				title: 'React Components Living Style Guides Overview',
-				href: 'https://www.nearform.com/blog/react-components-living-style-guides-overview/',
+				href: 'https://nearform.com/insights/react-components-living-style-guides-overview/',
 			},
 			{
 				title: 'Storybook vs Styleguidist: A comparison of the top UI component explorers',
-				href: 'https://blog.hichroma.com/storybook-vs-styleguidist-2bd93d6dcc06',
+				href: 'https://www.chromatic.com/blog/storybook-vs-styleguidist/',
 			},
 		],
 	},
@@ -114,50 +71,37 @@ const EditIcon = () => (
 function Learn() {
 	return (
 		<Layout
-			title="Learn React Styleguidist"
-			description="Video courses, workshops, talks, articles and other learning resources about React Styleguidist"
+			title="Learn Vite Styleguidist"
+			description="Talks, articles and other learning resources about Vite Styleguidist and React Styleguidist"
 		>
 			<Stack gap="l" className="container padding-vert--lg">
 				<Stack gap="m" as="header">
-					<h1>Learn React Styleguidist</h1>
+					<h1>Learn Vite Styleguidist</h1>
 					<p>
-						Learn how to use React Styleguidist efficiently from its creators and the community.
+						Vite Styleguidist is a maintained fork of React Styleguidist, and the two share the same
+						concepts and configuration. The articles and talks below were made about the original
+						project by its creators and the community; everything they teach still applies. Start
+						with the <Link to="/docs/getting-started">Getting started</Link> guide if you are new to
+						either.
 					</p>
 				</Stack>
 				{sections.map((section) => (
 					<Stack key={section.title} gap="m" as="section">
 						<h2>{section.title}</h2>
-						{section.description}
-						{section.links && (
-							<List>
-								{section.links.map((link) => (
-									<li key={link.href}>
-										<Link href={link.href} target="_blank" rel="noopener noreferrer">
-											{link.title}
-										</Link>
-									</li>
-								))}
-							</List>
-						)}
-						{section.items && (
-							<Row>
-								{section.items.map((item) => (
-									<Column key={item.href} size={6}>
-										<ImageLink href={item.href}>
-											<Stack gap="xs">
-												{item.type === 'video' && <VideoImage src={item.image} alt="" />}
-												<div>{item.title}</div>
-											</Stack>
-										</ImageLink>
-									</Column>
-								))}
-							</Row>
-						)}
+						<List>
+							{section.links.map((link) => (
+								<li key={link.href}>
+									<Link href={link.href} target="_blank" rel="noopener noreferrer">
+										{link.title}
+									</Link>
+								</li>
+							))}
+						</List>
 					</Stack>
 				))}
 				<p>
 					<Link
-						href="https://github.com/styleguidist/react-styleguidist/edit/master/site/src/pages/learn.js"
+						href={`${REPO_URL}/edit/main/site/src/pages/learn.js`}
 						target="_blank"
 						rel="noopener noreferrer"
 					>

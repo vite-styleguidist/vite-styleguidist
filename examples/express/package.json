@@ -1,16 +1,15 @@
 {
-  "name": "react-styleguidist-example-express",
-  "description": "React styleguidist custom dev server endpoint example",
+  "name": "vite-styleguidist-example-express",
+  "description": "Vite Styleguidist custom dev server endpoint example",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://github.com/styleguidist/react-styleguidist",
+  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
   "author": {
-    "name": "Artem Sapegin",
-    "url": "http://sapegin.me/"
+    "name": "Mihail-Gabriel Alexe"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/styleguidist/react-styleguidist.git"
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
   },
   "license": "MIT",
   "engines": {
@@ -25,6 +24,6 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "react-styleguidist": "file:../../"
+    "vite-styleguidist": "file:../../"
   }
 }

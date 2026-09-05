@@ -475,8 +475,6 @@ Styleguidist only sets `NODE_ENV` when it isn’t set already, so you can ask fo
 
 **Note:** The script above uses [cross-env](https://github.com/kentcdodds/cross-env) to make sure the environment variable is properly set on all platforms. Run `npm i -D cross-env` to add it.
 
-> **Caution:** This recipe depends on Vite honoring a `NODE_ENV` set before it starts. It hasn’t been fully re-verified against the Vite-based build yet; if it doesn’t work for you, please [open an issue](https://github.com/vite-styleguidist/vite-styleguidist/issues).
-
 ## How to use Vagrant with Styleguidist?
 
 File system events don’t always reach the guest machine, enable polling in your Vite config (see Vite’s [server.watch](https://vite.dev/config/server-options#server-watch) option):

@@ -2,25 +2,40 @@
 
 # Migrating to Vite
 
+This guide covers upgrading from `react-styleguidist` 13.x (last release 13.1.4) to `vite-styleguidist` 1.0. Vite Styleguidist is a maintained fork of React Styleguidist, see [About this fork](Fork.md); the package changed its name together with its bundler.
+
 Styleguidist no longer uses webpack: it compiles and serves your components with [Vite](https://vite.dev/), which ships with Styleguidist. Most of the configuration users had to write for webpack (loaders, Babel presets, `webpackConfig`) is simply gone. This guide covers everything you may need to change to upgrade a style guide from the webpack-based versions.
 
 ## Requirements
 
-- **Node.js** 22.12 and newer.
+- **Node.js** 22.12 or newer (Node 23 is not supported; 24 and later are), see [Compatibility](Compatibility.md).
 - **React** 18 or newer (`react` and `react-dom` are peer dependencies).
-- The package is now an ES module. `import styleguidist from 'react-styleguidist'` and `require('react-styleguidist')` both work on the supported Node.js versions, see [Node.js API](API.md).
+- The package is now an ES module. `import styleguidist from 'vite-styleguidist'` and `require('vite-styleguidist')` both work on the supported Node.js versions, see [Node.js API](API.md).
 
 The style guide config file may be CommonJS (`module.exports`) or an ES module (`export default`): `styleguide.config.js`, `styleguide.config.mjs` or `styleguide.config.cjs`. Config files are loaded synchronously, so top-level `await` isn’t supported in them.
 
 ## Dependencies
 
-Upgrade Styleguidist:
+Replace the old package with the new one:
 
 ```bash
-npm install --save-dev react-styleguidist@latest
+npm uninstall react-styleguidist && npm install --save-dev vite-styleguidist
 ```
 
+While 1.0 is in beta, the stable version doesn’t exist yet: install the prerelease from the `next` dist-tag instead with `npm install --save-dev vite-styleguidist@next`, see [Versioning and release channels](decisions/0003-versioning-and-release-channels.md).
+
+The CLI binary is still called `styleguidist`, so `package.json` scripts like `"styleguide": "styleguidist server"` don’t change.
+
 Then remove the packages that were only there for Styleguidist: `webpack`, `babel-loader`, `style-loader`, `css-loader`, `file-loader`, `url-loader`, `react-docgen-displayname-handler`, etc. Keep your Babel setup only if your app itself uses it: Styleguidist doesn’t read `babel.config.js` anymore.
+
+## Package name in imports
+
+Everything that referred to the package by name has to use the new name. Search your project for `react-styleguidist` and rename:
+
+- Node.js API imports: `import styleguidist from 'vite-styleguidist'` or `require('vite-styleguidist')`.
+- Deep imports of Styleguidist internals, like the default renderers you wrap in [styleguideComponents](Configuration.md#styleguidecomponents): `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js` (note the `.js` extension, the package’s `exports` map doesn’t add it for you), `vite-styleguidist/lib/client/utils/compileCode.js`, and so on.
+- `tsconfig.json` `paths` entries pointing at `node_modules/react-styleguidist/lib/...`, see the [cookbook](Cookbook.md#how-to-re-use-the-types-in-styleguidist).
+- Bundler aliases or `moduleAliases` that mention the package.
 
 ## Config options
 
@@ -242,7 +257,7 @@ The dev server is Vite’s, with hot module replacement for components, Markdown
 The methods return promises now, callbacks are still supported:
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 
 const styleguide = styleguidist(config)
 

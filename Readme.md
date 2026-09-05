@@ -1,160 +1,101 @@
-<div align="center" markdown="1">
+# Vite Styleguidist
 
-<img src="https://d3vv6lp55qjaqc.cloudfront.net/items/061f0A2n1B0H3p0T1p1f/react-styleguidist-logo.png" alt="React Styleguidist" width="400">
+**Isolated React component development environment with a living style guide, powered by Vite**
 
-**Isolated React component development environment with a living style guide**
+[![npm](https://img.shields.io/npm/v/vite-styleguidist.svg)](https://www.npmjs.com/package/vite-styleguidist) [![CI status](https://github.com/vite-styleguidist/vite-styleguidist/actions/workflows/ci.yml/badge.svg)](https://github.com/vite-styleguidist/vite-styleguidist/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](License.md)
 
-[![npm](https://img.shields.io/npm/v/react-styleguidist.svg)](https://www.npmjs.com/package/react-styleguidist) [![CI status](https://github.com/styleguidist/react-styleguidist/workflows/CI/badge.svg)](https://github.com/styleguidist/react-styleguidist.git/actions) [![Codecov](https://codecov.io/gh/styleguidist/react-styleguidist/branch/master/graph/badge.svg)](https://codecov.io/gh/styleguidist/react-styleguidist) [![Join the chat at https://gitter.im/styleguidist/styleguidist](https://badges.gitter.im/styleguidist/styleguidist.svg)](https://gitter.im/styleguidist/styleguidist?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) <a href="https://discord.gg/QWsybqJDTA">![Discord](https://img.shields.io/discord/842832186914635806?logo=discord)</a> [![Open Source Helpers](https://www.codetriage.com/styleguidist/react-styleguidist/badges/users.svg)](https://www.codetriage.com/styleguidist/react-styleguidist)
+## About this fork
 
-</div>
+Vite Styleguidist is a maintained fork of [React Styleguidist](https://github.com/styleguidist/react-styleguidist). The original project has been inactive since 2025-01-07; its last release is `react-styleguidist@13.1.4`. This fork continues it under a new name so that the tool can keep up with current React, Node.js and bundler releases.
 
-React Styleguidist is a component development environment with hot reloaded dev server and a living style guide that you can share with your team. It lists component `propTypes` and shows live, editable usage examples based on Markdown files. It’s powered by [Vite](https://vite.dev/), so JSX, TypeScript, CSS modules and static assets work out of the box, whatever bundler your app uses. Check out [**the demo style guide**](https://react-styleguidist.js.org/examples/basic/).
+What changed compared to React Styleguidist 13.x:
 
-![React Styleguidist in action](https://user-images.githubusercontent.com/1703219/74945569-51c6ad00-543b-11ea-8351-f4d86860893a.gif)
+- The style guide is compiled and served by [Vite](https://vite.dev/) instead of webpack. Your project doesn’t have to use Vite.
+- The package is an ES module and ships compiled TypeScript.
+- It requires **Node.js 22.12 or newer** (Node 23 is not supported; 24 and later are) and **React 18 or newer**.
+- The configuration API (`styleguideComponents`, `theme`, `styles`, `sections`, `moduleAliases`, …) and the Markdown documentation format are unchanged, so existing style guides keep working with few edits.
 
-[![Washing your code. A book on clean code for frontend developers](https://sapegin.me/images/washing-code-github.jpg)](https://sapegin.me/book/)
+It is not affiliated with or endorsed by the original React Styleguidist maintainers.
+
+Read more in [About this fork](docs/Fork.md), or in the [compatibility and support policy](docs/Compatibility.md). **Upgrading from `react-styleguidist` 13.x?** See the [migration guide](docs/Migration.md).
+
+## What it does
+
+Vite Styleguidist is a component development environment with a hot reloaded dev server and a living style guide that you can share with your team. It lists component `propTypes` and shows live, editable usage examples based on Markdown files. Because it’s powered by Vite, JSX, TypeScript, CSS modules and static assets work out of the box, whatever bundler your app uses. Try the [basic example](examples/basic) to see it in action.
+
+![Vite Styleguidist in action](https://user-images.githubusercontent.com/1703219/74945569-51c6ad00-543b-11ea-8351-f4d86860893a.gif)
 
 ## Usage
 
-- **[Getting Started](https://react-styleguidist.js.org/docs/getting-started): install and run Styleguidist**
-- [Documenting components](https://react-styleguidist.js.org/docs/documenting): how to write documentation
-- [Locating components](https://react-styleguidist.js.org/docs/components): point Styleguidist to your React components
-- [Configuring Vite](https://react-styleguidist.js.org/docs/vite): tell Styleguidist how to load your code
-- [Cookbook](https://react-styleguidist.js.org/docs/cookbook): how to solve common tasks with Styleguidist
+- **[Getting Started](docs/GettingStarted.md): install and run Styleguidist**
+- [Documenting components](docs/Documenting.md): how to write documentation
+- [Locating components](docs/Components.md): point Styleguidist to your React components
+- [Configuring Vite](docs/Vite.md): tell Styleguidist how to load your code
+- [Cookbook](docs/Cookbook.md): how to solve common tasks with Styleguidist
 
 ## Advanced documentation
 
-- [Configuration](https://react-styleguidist.js.org/docs/configuration)
-- [CLI commands and options](https://react-styleguidist.js.org/docs/cli)
-- [Node.js API](https://react-styleguidist.js.org/docs/api)
-- [Migrating to Vite](https://react-styleguidist.js.org/docs/migration): upgrading from a webpack-based version
+- [Configuration](docs/Configuration.md)
+- [CLI commands and options](docs/CLI.md)
+- [Node.js API](docs/API.md)
+- [Migrating from react-styleguidist 13.x](docs/Migration.md)
+- [Compatibility and support policy](docs/Compatibility.md)
+- [Working with third-party libraries](docs/Thirdparties.md)
+- [All documentation](docs/Readme.md)
 
 ## Examples
 
-- [Basic style guide](https://react-styleguidist.js.org/examples/basic/), [source](./examples/basic)
-- Style guide with sections, [source](./examples/sections)
-- Style guide with customized styles, [source](./examples/customised)
-- Style guide with custom dev server endpoints, [source](./examples/express)
-- Style guide with a custom theme, [source](./examples/themed)
-- Style guide reusing the project’s Vite config, [source](./examples/vite)
-- Preact, [source](./examples/preact)
-- Styled-components and TypeScript, [source](./examples/styled-components)
+- [Basic style guide](examples/basic)
+- [Style guide with sections](examples/sections)
+- [Style guide with customized styles](examples/customised)
+- [Style guide with custom dev server endpoints](examples/express)
+- [Style guide with a custom theme](examples/themed)
+- [Style guide reusing the project’s Vite config](examples/vite)
+- [Preact](examples/preact)
+- [Styled-components and TypeScript](examples/styled-components)
 
 ## Showcase
 
-Real projects using React Styleguidist:
+Public style guides built with React Styleguidist (inherited from the original project; links checked on 2026-09-06):
 
-- [Rumble Charts](https://rumble-charts.github.io/rumble-charts/)
-- [better-react-spinkit](http://better-react-spinkit.benjamintatum.com/)
 - [Semantic UI Components for React](https://hallister.github.io/semantic-react/)
 - [Dialog Components](https://dialogs.github.io/dialog-web-components/)
 - [Bulma Components](https://bokuweb.github.io/re-bulma/)
 - [Yammer Components](https://microsoft.github.io/YamUI/)
-- [More projects…](https://github.com/styleguidist/react-styleguidist/issues/127)
+
+Using Vite Styleguidist for a public style guide? Tell us in [Discussions](https://github.com/vite-styleguidist/vite-styleguidist/discussions) and we’ll add it here.
 
 ## Integration with other tools
 
-- Vite — your `vite.config.js` is reused automatically, see [Configuring Vite](https://react-styleguidist.js.org/docs/vite)
-- Next.js, webpack and other bundlers — nothing to configure, see [Configuring Vite](https://react-styleguidist.js.org/docs/vite)
-- Vue, see [Vue Styleguidist](https://github.com/vue-styleguidist/vue-styleguidist)
+- Vite: your `vite.config.js` is reused automatically, see [Configuring Vite](docs/Vite.md)
+- Next.js, webpack and other bundlers: nothing to configure, see [Configuring Vite](docs/Vite.md)
+- Vue: [Vue Styleguidist](https://github.com/vue-styleguidist/vue-styleguidist) was the Vue port of React Styleguidist. Its repository is archived and it is no longer maintained.
 
 ## Third-party tools
 
-- [snapguidist](https://github.com/styleguidist/snapguidist): snapshot testing for React Styleguidist
-- [react-styleguidist-visual](https://github.com/unindented/react-styleguidist-visual): automated visual testing for React Styleguidist, using Puppeteer and pixelmatch
-- [styleguidist-scrapper](https://github.com/livechat/styleguidist-scrapper): scrapper script for documentation generated by React Styleguidist
+These tools were written for the webpack-based React Styleguidist and have not been updated for this fork. Check their status before relying on them:
+
+- [snapguidist](https://github.com/styleguidist/snapguidist): snapshot testing for React Styleguidist. Last published in June 2022, unmaintained.
+- [react-styleguidist-visual](https://github.com/unindented/react-styleguidist-visual): automated visual testing using Puppeteer and pixelmatch. Last published in May 2022, unmaintained.
+- [styleguidist-scrapper](https://github.com/livechat/styleguidist-scrapper): scraper script for the documentation generated by React Styleguidist. Last published in January 2025; it works on the generated HTML and hasn’t been tested against this fork.
 
 ## Resources
 
-- [The Dream of Styleguide Driven Development](https://www.youtube.com/watch?v=JjXnmhNW8Cs) talk by [Sara Vieira](https://github.com/saravieira)
-- [Building React Components Library](https://skillsmatter.com/skillscasts/8140-building-react-components-library) talk by [Robert Haritonov](https://github.com/operatino)
-- [Say Cheese: Snapshots and Visual Testing](https://developers.livechatinc.com/blog/snapshots-visual-testing/)
-- [Interview with Artem Sapegin](https://survivejs.com/blog/styleguidist-interview/) about React Styleguidist.
+- [The Dream of Styleguide Driven Development](https://www.youtube.com/watch?v=JjXnmhNW8Cs), a talk by [Sara Vieira](https://github.com/saravieira)
+- [Interview with Artem Sapegin](https://survivejs.com/blog/styleguidist-interview/) about React Styleguidist
 
 ## Change log
 
-The change log can be found on the [Releases page](https://github.com/styleguidist/react-styleguidist/releases).
+Release notes are published on the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases) and collected in [CHANGELOG.md](CHANGELOG.md). Releases for the original project (up to 13.1.4) live in [its repository](https://github.com/styleguidist/react-styleguidist/releases).
 
 ## Contributing
 
-Everyone is welcome to contribute. Please take a moment to read the [contributing guidelines](.github/Contributing.md) and the [developer guide](https://react-styleguidist.js.org/docs/development).
+Everyone is welcome to contribute. Please take a moment to read the [contributing guidelines](.github/CONTRIBUTING.md) and the [developer guide](docs/Development.md). [MAINTAINERS.md](MAINTAINERS.md) explains who maintains the project, what to expect, and how to get involved beyond pull requests.
 
-## Sponsoring
+## Thanks
 
-[Become a sponsor](https://opencollective.com/styleguidist#sponsor) and get your logo on our Readme on GitHub with a link to your site.
+Vite Styleguidist exists because of the people who built React Styleguidist. Thank you to [Artem Sapegin](https://github.com/sapegin), who created the project and maintained it for many years, and to [everyone who contributed](https://github.com/styleguidist/react-styleguidist/graphs/contributors) to it. The original React Styleguidist logo was designed by [Sara Vieira](https://github.com/SaraVieira) and [Andrey Okonetchnikov](https://github.com/okonet); this fork doesn’t reuse it.
 
-<!-- prettier-ignore -->
-<a href="https://opencollective.com/styleguidist/sponsor/0/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/0/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/1/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/1/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/2/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/2/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/3/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/3/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/4/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/4/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/5/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/5/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/6/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/6/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/7/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/7/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/8/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/8/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/9/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/9/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/10/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/10/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/11/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/11/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/12/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/12/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/13/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/13/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/14/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/14/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/15/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/15/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/16/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/16/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/17/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/17/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/18/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/18/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/19/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/19/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/20/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/20/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/21/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/21/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/22/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/22/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/23/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/23/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/24/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/24/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/25/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/25/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/26/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/26/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/27/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/27/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/28/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/28/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/sponsor/29/website" target="_blank"><img src="https://opencollective.com/styleguidist/sponsor/29/avatar.svg"></a>
+## License
 
-[Become a backer](https://opencollective.com/styleguidist#backer) get your image on our Readme on GitHub with a link to your site.
-
-<!-- prettier-ignore -->
-<a href="https://opencollective.com/styleguidist/backer/0/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/0/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/1/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/1/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/2/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/2/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/3/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/3/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/4/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/4/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/5/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/5/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/6/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/6/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/7/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/7/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/8/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/8/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/9/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/9/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/10/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/10/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/11/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/11/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/12/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/12/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/13/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/13/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/14/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/14/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/15/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/15/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/16/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/16/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/17/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/17/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/18/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/18/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/19/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/19/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/20/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/20/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/21/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/21/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/22/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/22/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/23/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/23/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/24/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/24/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/25/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/25/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/26/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/26/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/27/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/27/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/28/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/28/avatar.svg"></a>
-<a href="https://opencollective.com/styleguidist/backer/29/website" target="_blank"><img src="https://opencollective.com/styleguidist/backer/29/avatar.svg"></a>
-
-<a href="https://www.buymeacoffee.com/sapegin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/lato-orange.png" alt="Buy Me A Coffee" style="height: 51px !important;width: 217px !important;" ></a>
-
-## Authors and license
-
-[Artem Sapegin](http://sapegin.me) and [contributors](https://github.com/styleguidist/react-styleguidist/graphs/contributors).
-
-Logo by [Sara Vieira](https://github.com/SaraVieira) and [Andrey Okonetchnikov](https://github.com/okonet).
-
-MIT License, see the included [License.md](License.md) file.
+MIT License, see the included [License.md](License.md) file. The original copyright notice is preserved.

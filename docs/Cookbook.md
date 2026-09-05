@@ -664,6 +664,119 @@ export default function SectionsRenderer({ children }) {
 }
 ```
 
+## How to test my components?
+
+Styleguidist documents and renders your components; it doesn’t run tests. But the two go together well: the same isolated, well-documented components are the easiest ones to test, and the examples you write in Markdown are a good list of the cases a test suite should cover. This section shows one setup that fits a Vite-era project: [Vitest](https://vitest.dev/) as the test runner and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to render components the way a user sees them. Styleguidist itself is tested this way, see the [developer guide](Development.md#testing).
+
+Install the tools:
+
+```bash
+npm install --save-dev vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event
+```
+
+Vitest reads your `vite.config.js` (or a `vitest.config.js`), so it uses the same plugins and aliases as your app and as Styleguidist. Add a `test` section with a browser-like environment and a setup file for the `jest-dom` matchers:
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./test/setup.js']
+  }
+})
+```
+
+```js
+// test/setup.js
+import '@testing-library/jest-dom/vitest'
+```
+
+> **Note:** Test files are excluded from the style guide by default: the [ignore](Configuration.md#ignore) option skips `__tests__` folders and `*.test.*` / `*.spec.*` files, so a `Button.test.jsx` next to `Button.jsx` won’t show up as a component.
+
+### Unit tests
+
+Unit tests check that a component behaves as documented in isolation. Render it, find elements the way a user would (by text, role or label, not by class name), and assert on what they see or what happens when they interact:
+
+```jsx
+// src/components/Button/Button.test.jsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import Button from './Button'
+
+test('renders the label', () => {
+  render(<Button>Click me</Button>)
+  expect(
+    screen.getByRole('button', { name: 'Click me' })
+  ).toBeInTheDocument()
+})
+
+test('calls onClick when clicked', async () => {
+  const onClick = vi.fn()
+  render(<Button onClick={onClick}>Click me</Button>)
+  await userEvent.click(screen.getByRole('button'))
+  expect(onClick).toHaveBeenCalledTimes(1)
+})
+```
+
+`vi.fn()` is Vitest’s mock function (the equivalent of `jest.fn()`), available globally when `globals: true` is set; otherwise import it from `vitest`. [`@testing-library/user-event`](https://testing-library.com/docs/user-event/intro) is a separate package that simulates real user interactions more faithfully than `fireEvent`.
+
+### Snapshot tests
+
+Snapshot tests capture the rendered markup and fail when it changes, which catches unintended visual regressions cheaply. Use React Testing Library’s `asFragment()` rather than `react-test-renderer`, which is deprecated and doesn’t support React 19:
+
+```jsx
+import { render } from '@testing-library/react'
+import Button from './Button'
+
+test('matches the snapshot', () => {
+  const { asFragment } = render(
+    <Button size="large">Click me</Button>
+  )
+  expect(asFragment()).toMatchSnapshot()
+})
+```
+
+Run `npx vitest -u` to update snapshots after an intentional change. Keep snapshots small (one component state per snapshot); a snapshot of a whole page fails on every change and gets updated without being read.
+
+### Integration tests
+
+Integration tests exercise several components together, or a component together with something it depends on, like an API. Mock the dependency at the boundary and wait for the asynchronous result:
+
+```jsx
+import { render, screen } from '@testing-library/react'
+import UserList from './UserList'
+
+beforeEach(() => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify([
+        { id: 1, name: 'Jane Doe' },
+        { id: 2, name: 'John Smith' }
+      ])
+    )
+  )
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+test('fetches and displays the users', async () => {
+  render(<UserList />)
+  expect(await screen.findByText('Jane Doe')).toBeInTheDocument()
+  expect(screen.getByText('John Smith')).toBeInTheDocument()
+})
+```
+
+`vi.spyOn(globalThis, 'fetch')` works for code that calls `fetch` directly; for a module like `axios` use [`vi.mock()`](https://vitest.dev/api/vi.html#vi-mock) instead. `findByText` waits for the element to appear, so there’s no need for an explicit `waitFor`.
+
+Run the tests with `npx vitest` (watch mode) or `npx vitest run` (once, for CI), and add `"test": "vitest run"` to your `package.json` scripts next to the `styleguide` scripts from [CLI commands](CLI.md#usage).
+
 ## What’s the difference between Styleguidist and Storybook?
 
 Both tools are good and mature, they have many similarities but also some distinctions that may make you choose one or the other. For me, the biggest distinction is how you describe component variations.

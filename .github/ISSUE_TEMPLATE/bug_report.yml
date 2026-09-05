@@ -1,0 +1,90 @@
+# Issue form, see https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+#
+# Labels are only applied if they already exist in the repository: `bug` is inherited from upstream,
+# `needs-repro` has to be created once by hand (Issues > Labels), until then GitHub silently skips it.
+# Every report starts as `needs-repro`; the maintainer removes the label once the reproduction checks out.
+name: Bug report
+description: Something isn’t working as expected
+labels: [bug, needs-repro]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. A report we can reproduce in minutes gets fixed a lot sooner than one we have to guess about, so please fill in as much as you can.
+
+        Usage questions belong in [GitHub Discussions](https://github.com/vite-styleguidist/vite-styleguidist/discussions), and security problems go through [SECURITY.md](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/SECURITY.md), never a public issue.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/vite-styleguidist/vite-styleguidist/issues?q=is%3Aissue) (open and closed) and read the [migration guide](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/docs/Migration.md).
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: vite-styleguidist version
+      description: Run `npm ls vite-styleguidist` in your project. Please check that the bug still happens with the latest release first.
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Run `node --version`. Supported versions are 22.12 and newer, and 24 and newer.
+      options:
+        - 22.x
+        - 24.x
+        - 26.x
+        - other (say which one in the description below)
+    validations:
+      required: true
+  - type: input
+    id: package-manager
+    attributes:
+      label: Package manager and version
+      description: For example `npm 11.6.0`, `pnpm 10.15.0` or `yarn 4.9.0`.
+      placeholder: npm 11.6.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 26.0, Windows 11 24H2, Ubuntu 24.04
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do and what went wrong? Screenshots and error messages help.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: reproduction
+    attributes:
+      label: Link to a minimal reproduction
+      description: A [StackBlitz](https://stackblitz.com/) project or a small public Git repository that shows the bug with as little code as possible. Please don’t link your whole app. Reports without a reproduction are labelled `needs-repro` and closed if none arrives, because most bugs can’t be investigated without one.
+      placeholder: https://stackblitz.com/edit/… or https://github.com/you/repro
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: styleguide.config.js
+      description: The relevant part of your Styleguidist config (remove anything secret). Leave empty if you don’t have one.
+      render: js
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Terminal output (run the command with `--verbose` for more detail) or browser console errors.
+      render: shell

@@ -7,7 +7,10 @@
 # Generated files
 .docusaurus
 .cache-loader
-docs
+# Generated from the repo-root docs/ folder by `npm run sync`
+/docs
+# Example style guides copied in by scripts/deploy.sh
+/static/examples
 
 # Misc
 .DS_Store

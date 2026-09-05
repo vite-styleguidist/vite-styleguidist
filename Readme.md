@@ -86,7 +86,7 @@ These tools were written for the webpack-based React Styleguidist and have not b
 
 ## Change log
 
-Release notes are published on the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases) and collected in [CHANGELOG.md](CHANGELOG.md). Releases for the original project (up to 13.1.4) live in [its repository](https://github.com/styleguidist/react-styleguidist/releases).
+Release notes are published on the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases). Releases for the original project (up to 13.1.4) live in [its repository](https://github.com/styleguidist/react-styleguidist/releases).
 
 ## Contributing
 

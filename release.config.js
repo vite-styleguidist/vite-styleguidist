@@ -17,14 +17,21 @@
 //
 // Versioning
 // ----------
-// package.json carries the placeholder "0.0.0-development" until the first release:
-// semantic-release derives the next version from git tags (`v${version}`) and the commit
-// history, never from package.json, and @semantic-release/npm rewrites the field in the
-// checkout right before publishing. Because @semantic-release/git (below) commits package.json
-// back, the field tracks the latest release on that branch from then on. With no tags in the
-// repo the very first version is 1.0.0 (semantic-release's hard-coded first release) — the
-// "react-styleguidist@13.1.4 -> vite-styleguidist@1.0.0" story is deliberate: the fork starts
-// a fresh 1.0 line rather than continuing upstream's numbering.
+// package.json carries the placeholder "0.0.0-development" permanently: semantic-release derives
+// the next version from git tags (`v${version}`) and the commit history, never from package.json,
+// and @semantic-release/npm rewrites the field in the CI checkout right before publishing. With no
+// tags in the repo the very first version is 1.0.0 (semantic-release's hard-coded first release);
+// the "react-styleguidist@13.1.4 -> vite-styleguidist@1.0.0" story is deliberate: the fork starts a
+// fresh 1.0 line rather than continuing upstream's numbering. Do not import upstream's tags.
+//
+// Why nothing is committed back (no @semantic-release/git, no CHANGELOG.md)
+// -----------------------------------------------------------------------
+// The `main` ruleset requires every change to arrive through a pull request, and GitHub refuses
+// to list the GitHub Actions app as a bypass actor on a repository-level ruleset, so a release bot
+// cannot push a "chore(release)" commit. Rather than hand a long-lived personal token to CI, the
+// release notes live only in GitHub Releases (the @semantic-release/github plugin writes them) and
+// the version lives only in git tags and on npm. Readme.md and docs/Maintenance.md point at the
+// Releases page accordingly.
 //
 // Commit conventions
 // ------------------
@@ -38,25 +45,11 @@ export default {
 	plugins: [
 		['@semantic-release/commit-analyzer', { preset: 'conventionalcommits' }],
 		['@semantic-release/release-notes-generator', { preset: 'conventionalcommits' }],
-		// Keeps CHANGELOG.md in the repo up to date; the git plugin below commits it.
-		['@semantic-release/changelog', { changelogFile: 'CHANGELOG.md' }],
 		// Publishes to npm. Authentication is OIDC trusted publishing when the workflow has
 		// `id-token: write` and the trusted publisher is configured on npmjs.com; otherwise the
 		// plugin falls back to the NPM_TOKEN environment variable. See .github/workflows/release.yml.
 		'@semantic-release/npm',
 		// Creates the GitHub Release (tag + notes) and comments on the issues/PRs it closes.
 		'@semantic-release/github',
-		// Commits the files the release touched back to the release branch. package-lock.json is
-		// included because `npm version` (run by the npm plugin) bumps the root version there too,
-		// and leaving it out would make the lock drift from package.json on every release.
-		// `[skip ci]` stops GitHub Actions from re-running CI/Release on that commit; `chore(release)`
-		// is not a release-triggering type, so it could never loop anyway.
-		[
-			'@semantic-release/git',
-			{
-				assets: ['CHANGELOG.md', 'package.json', 'package-lock.json'],
-				message: 'chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}',
-			},
-		],
 	],
 };

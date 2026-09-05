@@ -6,7 +6,7 @@ This file says who maintains Vite Styleguidist, what you can expect from them, a
 
 | Name | GitHub | Contact | Role |
 | --- | --- | --- | --- |
-| Mihail-Gabriel Alexe | [mihail-alexe-nutanix](https://github.com/mihail-alexe-nutanix) | `<maintainer-email>` | Maintainer, npm owner, release manager |
+| Mihail-Gabriel Alexe | [mihail-alexe-nutanix](https://github.com/mihail-alexe-nutanix) | mihail.alexe@outlook.com | Maintainer, npm owner, release manager |
 
 The GitHub handle above is tied to the maintainer’s employer and may move to a personal handle; the repository and the npm package are owned by the `vite-styleguidist` GitHub organization and by the maintainer’s npm account, so a handle change doesn’t affect either.
 

@@ -1,11 +1,3 @@
-<!--
-  TODO(owner) before the first release:
-  1. Enable "Private vulnerability reporting" in the repository settings (Settings > Code security),
-     otherwise the advisories link below shows a 404 to reporters.
-  2. Replace the `<maintainer-email>` placeholder with a real address (kept in backticks so it
-     renders on GitHub instead of being stripped as an unknown HTML tag).
--->
-
 # Security policy
 
 Vite Styleguidist is a maintained fork of React Styleguidist. This policy covers the `vite-styleguidist` npm package and the code in this repository only.
@@ -26,7 +18,7 @@ See the [migration guide](docs/Migration.md) if you are still on `react-stylegui
 
 **Please don’t open a public issue, discussion or pull request for a security problem.** Public reports put every user at risk before a fix exists.
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/vite-styleguidist/vite-styleguidist/security/advisories/new) instead: it opens a private advisory that only you and the maintainers can see, and it gives us a place to work on the fix and to publish a CVE and release notes when it is ready. If the form is unavailable for any reason, email `<maintainer-email>` with “security” in the subject line.
+Use [GitHub Private Vulnerability Reporting](https://github.com/vite-styleguidist/vite-styleguidist/security/advisories/new) instead: it opens a private advisory that only you and the maintainers can see, and it gives us a place to work on the fix and to publish a CVE and release notes when it is ready. If the form is unavailable for any reason, email mihail.alexe@outlook.com with “security” in the subject line.
 
 A good report includes:
 

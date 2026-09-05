@@ -3,10 +3,6 @@
   https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md
   The only edits are the enforcement contact below and Prettier's list formatting.
   The attribution section at the bottom is required by the Covenant's license (CC BY 4.0) and must stay.
-
-  TODO(owner): replace the `<maintainer-email>` placeholder with a real, reachable address.
-  It is written in backticks on purpose: a bare <maintainer-email> looks like an HTML tag to
-  GitHub's Markdown renderer and would be stripped, leaving the sentence without a contact.
 -->
 
 # Contributor Covenant Code of Conduct
@@ -47,7 +43,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at `<maintainer-email>`. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at mihail.alexe@outlook.com. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 

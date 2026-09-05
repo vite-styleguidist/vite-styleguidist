@@ -8,7 +8,7 @@ it('renderer should render welcome screen', () => {
 		<WelcomeRenderer classes={{}} patterns={['foo/*.js', 'bar/*.js']} />
 	);
 
-	expect(getByRole('heading', { name: 'Welcome to React Styleguidist!' })).toBeInTheDocument();
+	expect(getByRole('heading', { name: 'Welcome to Vite Styleguidist!' })).toBeInTheDocument();
 	expect(getByText(/we couldn’t find any components/i)).toBeInTheDocument();
 
 	// Each pattern is listed as inline code

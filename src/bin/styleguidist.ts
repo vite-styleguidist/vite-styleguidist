@@ -156,7 +156,7 @@ function commandHelp() {
 			'',
 			'    ' + kleur.cyan('build') + '           Build style guide',
 			'    ' + kleur.cyan('server') + '          Run development server',
-			'    ' + kleur.cyan('help') + '            Display React Styleguidist help',
+			'    ' + kleur.cyan('help') + '            Display Vite Styleguidist help',
 			'',
 			kleur.underline('Options'),
 			'',

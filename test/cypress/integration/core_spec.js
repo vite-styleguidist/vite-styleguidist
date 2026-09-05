@@ -2,7 +2,7 @@ describe('Styleguidist core', () => {
 	before(() => cy.visit('/'));
 
 	it('loads the page', () => {
-		cy.title().should('include', 'React Styleguidist');
+		cy.title().should('include', 'Vite Styleguidist');
 	});
 
 	it('shows multiple components in normal mode', () => {

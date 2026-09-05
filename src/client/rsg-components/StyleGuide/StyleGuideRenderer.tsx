@@ -81,7 +81,7 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 			<main className={classes.content}>
 				{children}
 				<footer className={classes.footer}>
-					<Markdown text={`Created with [React Styleguidist](${homepageUrl})`} />
+					<Markdown text={`Created with [Vite Styleguidist](${homepageUrl})`} />
 				</footer>
 			</main>
 			{hasSidebar && (

@@ -4,6 +4,12 @@ import highlightCode from './highlightCode.js';
 import parseExample, { ExampleError } from './parseExample.js';
 import type * as Rsg from '../../typings/index.js';
 
+// Fence languages rendered as a live playground; anything else is only highlighted.
+// Only the first word of a fence's info string ends up here: remark splits
+// a ```typescript jsx fence into lang "typescript" and meta "jsx", and parseExample turns
+// the meta into modifiers. So the two-word fences WebStorm emits ("typescript jsx",
+// "javascript jsx"; upstream issue #1540) are already covered by "typescript" and
+// "javascript" — adding the two-word strings to this list would never match.
 const PLAYGROUND_LANGS = ['javascript', 'js', 'jsx', 'typescript', 'ts', 'tsx'];
 const CODE_PLACEHOLDER = '<%{#code#}%>';
 

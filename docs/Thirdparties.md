@@ -38,7 +38,7 @@ module.exports = {
 }
 ```
 
-Please see our [examples](https://github.com/styleguidist/react-styleguidist/tree/master/examples) and refer to [react-docgen](https://github.com/reactjs/react-docgen) documentation for more information about what types of syntax are supported.
+Please see our [examples](../examples) and refer to [react-docgen](https://github.com/reactjs/react-docgen) documentation for more information about what types of syntax are supported.
 
 While Styleguidist supports TypeScript out of the box, thanks to `react-docgen`, this support is limited. Consider this example:
 
@@ -50,7 +50,7 @@ export default Button
 
 Here we’re reexporting a third-party component from `node_modules`. Styleguidist won’t be able to render prop types of this component, unless we’re using `react-docgen-typescript`:
 
-1. Install [react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript).
+1. Install [react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript). Note that it lives under the `styleguidist` GitHub organization, which has been dormant since early 2025, and its last npm release dates from June 2025 (`react-docgen-typescript@2.4.0`). It still works with Styleguidist’s `propsParser` API, which hasn’t changed; if it stops keeping up with TypeScript, please [open an issue](https://github.com/vite-styleguidist/vite-styleguidist/issues) so we can document an alternative.
 2. Create a `styleguide.config.js`, see [configuration](Configuration.md) reference.
 3. Update your `styleguide.config.js`:
 

@@ -177,7 +177,7 @@ module.exports = {
 
 CSS, Sass and other files Vite understands don’t need any extra configuration.
 
-## How to use React Styleguidist with Preact?
+## How to use Styleguidist with Preact?
 
 You need to alias `react` and `react-dom` to `preact/compat`:
 
@@ -196,7 +196,7 @@ module.exports = {
 
 The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`.
 
-See the [Preact example style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/preact).
+See the [Preact example style guide](../examples/preact).
 
 ## How to change styles of a style guide?
 
@@ -234,7 +234,7 @@ module.exports = {
 }
 ```
 
-> **Info:** See available [theme variables](https://github.com/styleguidist/react-styleguidist/blob/master/src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts).
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
@@ -291,7 +291,7 @@ Each modification of `theme.js` or `styles.js` will trigger a hot module replace
 
 > **Caution:** These files are bundled for the browser and must be ES modules (`export default`), `module.exports` won’t work.
 
-Check out the [themed example](https://github.com/styleguidist/react-styleguidist/tree/master/examples/themed) on the github repo to learn more and try it out.
+Check out the [themed example](../examples/themed) to learn more and try it out.
 
 ```javascript
 module.exports = {
@@ -316,7 +316,7 @@ To use a CSS animation, you have to define its keyframe at the root of the rende
 
 ## How to change the layout of a style guide?
 
-You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](https://github.com/styleguidist/react-styleguidist/tree/master/src/client/rsg-components) to see what components are available.
+You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
 
 There’s also a special wrapper component — `Wrapper` — that wraps every example component. By default, it renders `children` as is but you can use it to provide custom logic.
 
@@ -379,7 +379,7 @@ const StyleGuideRenderer = ({
         {components}
         <footer className="footer">
           <Markdown
-            text={`Created with [React Styleguidist](${homepageUrl})`}
+            text={`Created with [Vite Styleguidist](${homepageUrl})`}
           />
         </footer>
       </div>
@@ -389,7 +389,7 @@ const StyleGuideRenderer = ({
 )
 ```
 
-We have [an example style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/customised) with custom components.
+We have [an example style guide](../examples/customised) with custom components.
 
 ## How to change syntax highlighting colors?
 
@@ -449,21 +449,21 @@ Styleguidist’s own messages are controlled by the [logger](Configuration.md#lo
 
 ## How to use the production or development build of React?
 
-In some cases, you might need to use the development build of React instead of the default [production one](https://reactjs.org/docs/optimizing-performance.html#use-the-production-build). For example, this might be needed if you use React Native and make references to a React Native component’s PropTypes in your code. As React removes all PropTypes in its production build, your code will fail. By default, Styleguidist uses the development build for the dev server and the production one for static builds.
+By default, Styleguidist uses the development build of React for the dev server and the [production build](https://react.dev/learn/build-a-react-app-from-scratch#deploying-to-production) for static builds (`styleguidist build`). In some cases you might need the development build in a static style guide too, for example when your code reads another component’s `propTypes` at runtime: React strips `propTypes` from its production build, so code like this fails there with `Cannot read properties of undefined (reading 'isRequired')`:
 
 ```js
 import React from 'react'
-import { TextInput } from 'react-native'
+import Input from './Input'
 
-const CustomInput = ({ value }) => <TextInput value={value} />
+const CustomInput = ({ value }) => <Input value={value} />
 
 CustomInput.propTypes = {
-  // Will fail in a static build
-  value: TextInput.value.isRequired
+  // Will fail in a static build: Input.propTypes is undefined in production
+  value: Input.propTypes.value.isRequired
 }
 ```
 
-If you use code like the example above, you might see a `Cannot read property 'isRequired' of undefined` error. To avoid it, you need to tell Styleguidist to use React’s development build. To do this, set the `NODE_ENV` variable to `development` in your npm script.
+Styleguidist only sets `NODE_ENV` when it isn’t set already, so you can ask for the development build by setting the variable yourself in your npm script:
 
 ```json
 {
@@ -474,6 +474,8 @@ If you use code like the example above, you might see a `Cannot read property 'i
 ```
 
 **Note:** The script above uses [cross-env](https://github.com/kentcdodds/cross-env) to make sure the environment variable is properly set on all platforms. Run `npm i -D cross-env` to add it.
+
+> **Caution:** This recipe depends on Vite honoring a `NODE_ENV` set before it starts. It hasn’t been fully re-verified against the Vite-based build yet; if it doesn’t work for you, please [open an issue](https://github.com/vite-styleguidist/vite-styleguidist/issues).
 
 ## How to use Vagrant with Styleguidist?
 
@@ -561,7 +563,7 @@ module.exports = {
 
 Styleguidist uses the `vite.config.js` next to your style guide config automatically, see [configuring Vite](Vite.md#reusing-your-projects-vite-config) for other cases.
 
-## How to use React Styleguidist with Redux, Relay or Styled Components?
+## How to use Styleguidist with Redux, Relay or Styled Components?
 
 See [working with third-party libraries](Thirdparties.md).
 
@@ -592,7 +594,7 @@ if (import.meta.env.DEV) {
 
 > **Info:** `import.meta.env.DEV` is `true` in the dev server and `false` in `styleguidist build`, so the check (and the library) never ends up in the static style guide.
 
-3. [Start your style guide server](https://react-styleguidist.js.org/docs/getting-started#3-start-your-style-guide) and open your browser’s developer tools console.
+3. [Start your style guide server](GettingStarted.md#3-start-your-style-guide) and open your browser’s developer tools console.
 
 If you are using Jest for testing you can also use [jest-axe](https://github.com/nickcolley/jest-axe).
 
@@ -630,9 +632,9 @@ It also allows you to write customized style guide components using TypeScript T
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      // remap rsg-components/anything to its version in react-styleguidist
+      // remap rsg-components/anything to its version in vite-styleguidist
       "rsg-components/*": [
-        "node_modules/react-styleguidist/lib/client/rsg-components/*"
+        "node_modules/vite-styleguidist/lib/client/rsg-components/*"
       ]
     }
   },
@@ -709,11 +711,11 @@ Another important distinction is that Storybook shows only one variation of one 
 | Style guide¹ | No | Yes |
 | Customizable design | No | Yes |
 | Extra documentation² | No | Yes |
-| Plugins | Many | [In development](https://github.com/styleguidist/react-styleguidist/issues/354) |
+| Plugins | Many | No |
 | React | Yes | Yes |
 | Preact | Yes | Yes |
-| React Native | Yes | [react-native-web](https://github.com/styleguidist/react-styleguidist/issues/675) |
-| Vue | Yes | [Fork](https://github.com/vue-styleguidist/vue-styleguidist) |
+| React Native | Yes | No |
+| Vue | Yes | No ([Vue Styleguidist](https://github.com/vue-styleguidist/vue-styleguidist), the Vue port, is archived) |
 
 ¹ All components on a single page.<br> ² Include non-component documentation.
 

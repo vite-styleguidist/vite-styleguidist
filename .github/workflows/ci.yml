@@ -1,0 +1,211 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - next
+  pull_request:
+    branches:
+      - main
+      - next
+
+# Least privilege: nothing in CI writes to the repository. Releasing has its own workflow.
+permissions:
+  contents: read
+
+# A new push to the same branch or pull request cancels the runs still in flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  pr-title:
+    name: PR title is a Conventional Commit
+    # Pull requests are squash-merged, so the PR title becomes the commit message that
+    # semantic-release reads (see commitlint.config.js and release.config.js). Checking it
+    # here catches a bad title before it can produce a wrong, or missing, release.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      # Only commitlint is needed here: skip husky's `prepare` and every dependency install script.
+      - run: npm ci --ignore-scripts
+      - name: Run commitlint against the title
+        env:
+          # Passed through the environment rather than interpolated into the script, so a
+          # title containing quotes or backticks cannot break out of the shell.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | npx --no-install commitlint
+
+  test:
+    name: Unit tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        node-version:
+          - '22'
+          - '24'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      # The CLI spec runs the compiled bin from lib/
+      - run: npm run compile
+      - run: npm run test:unit
+
+  integration:
+    name: Examples, browser smoke test and Cypress
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run compile
+
+      - name: Build all examples
+        run: |
+          npm run build:basic
+          npm run build:customised
+          npm run build:sections
+          npm run build:themed
+          npm run build:express
+          npm run build:preact
+          npm run build:styled-components
+          npm run build:vite
+
+      - name: Check that examples really work - no JS errors on load
+        run: |
+          npm run test:browser:pre
+          npm run test:browser:basic
+          npm run test:browser:customised
+          npm run test:browser:sections
+          npm run test:browser:themed
+          npm run test:browser:express
+          npm run test:browser:preact
+          npm run test:browser:styled-components
+          npm run test:browser:vite
+
+      - name: Run Cypress tests
+        run: |
+          npm run test:cypress:pre
+          npm run test:cypress:startServer &
+          npm run test:cypress:startServer:post
+          npm run test:cypress:run
+
+  tarball:
+    name: Install from the packed tarball
+    # Every other job reaches the package through `file:../../` links or Vite aliases, which
+    # bypass the `exports` map entirely. This job installs the real tarball into a scratch
+    # project and builds a style guide whose `styleguideComponents` override deep-imports a
+    # renderer from `vite-styleguidist/lib/...`: the exact resolution path a user takes and
+    # the one nothing else tests. To reproduce locally, run the two `run:` blocks below with
+    # RUNNER_TEMP set to a temporary directory.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run compile
+
+      - name: Pack the tarball
+        id: pack
+        # `npm pack --json` reports the generated filename, which embeds the version.
+        run: |
+          filename="$(npm pack --pack-destination "$RUNNER_TEMP" --json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8"))[0].filename')"
+          echo "tarball=$RUNNER_TEMP/$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Build a style guide from a scratch project
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: |
+          set -euo pipefail
+          scratch="$RUNNER_TEMP/tarball-smoke"
+          mkdir -p "$scratch/src/components"
+          cd "$scratch"
+          npm init -y > /dev/null
+          # react/react-dom are peer dependencies; everything else comes with the tarball.
+          npm install --no-audit --no-fund react react-dom prop-types "$TARBALL"
+
+          cat > styleguide.config.js <<'EOF'
+          const path = require('path');
+
+          module.exports = {
+          	components: 'src/components/**/[A-Z]*.js',
+          	styleguideComponents: {
+          		SectionsRenderer: path.join(__dirname, 'src/SectionsRenderer.js'),
+          	},
+          };
+          EOF
+
+          # The override wraps the default renderer, imported through the package's `exports` map.
+          cat > src/SectionsRenderer.js <<'EOF'
+          import React from 'react';
+          import DefaultSectionsRenderer from 'vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js';
+
+          export default function SectionsRenderer({ children }) {
+          	return (
+          		<div>
+          			<h1>Tarball smoke test</h1>
+          			<DefaultSectionsRenderer>{children}</DefaultSectionsRenderer>
+          		</div>
+          	);
+          }
+          EOF
+
+          cat > src/components/Button.js <<'EOF'
+          import React from 'react';
+          import PropTypes from 'prop-types';
+
+          /** The only component in this style guide. */
+          export default function Button({ children }) {
+          	return <button type="button">{children}</button>;
+          }
+
+          Button.propTypes = {
+          	children: PropTypes.node,
+          };
+          EOF
+
+          cat > src/components/Button.md <<'EOF'
+          ```jsx
+          <Button>Click me</Button>
+          ```
+          EOF
+
+          npx --no-install styleguidist build
+
+          # The build must exist and must contain the override (its heading text survives minification).
+          test -f styleguide/index.html
+          grep -rq 'Tarball smoke test' styleguide/

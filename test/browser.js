@@ -52,9 +52,16 @@ function serve(dir) {
 	page.on('error', onerror);
 	page.on('pageerror', onerror);
 
+	// Runtime errors that React catches (error boundaries, hook failures) never reach
+	// `pageerror`, they only show up as console errors, so match those too. The browser’s
+	// implicit /favicon.ico 404 is also a console error and is deliberately not matched.
+	const RUNTIME_ERROR = /TypeError|ReferenceError|Invalid hook call|Minified React error/;
 	page.on('console', (msg) => {
 		if (msg.type() !== 'clear') {
 			console.log('PAGE LOG:', msg.text());
+		}
+		if (msg.type() === 'error' && RUNTIME_ERROR.test(msg.text())) {
+			onerror(new Error(`Runtime error logged at ${url}: ${msg.text()}`));
 		}
 	});
 

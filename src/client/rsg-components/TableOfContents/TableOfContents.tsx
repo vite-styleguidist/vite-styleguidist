@@ -23,10 +23,42 @@ interface RenderedLevel {
 	items: Rsg.TOCItem[];
 }
 
+/** A route without its `?id=` query: `/#/Components/Buttons?id=button` -> `/#/Components/Buttons` */
+const trimQuery = (route: string): string => route.split('?')[0];
+
 export default class TableOfContents extends Component<TableOfContentsProps> {
 	public state = {
 		searchTerm: '',
 	};
+
+	/**
+	 * Whether a top-level entry is the one the current route belongs to.
+	 *
+	 * The list links match the route exactly, which leaves the chip row without a
+	 * current entry on a subsection page: in `pagePerSection` the sidebar never links to
+	 * `#/Components/Buttons` itself, so nothing carries the `Components` route while a
+	 * subsection is shown. The chips therefore also accept a prefix match on the route
+	 * (the part before `?id=`), which is what a breadcrumb-like row is expected to do.
+	 */
+	private isCurrentChip(item: Rsg.TOCItem): boolean {
+		if (item.selected) {
+			return true;
+		}
+		if (!item.href || item.external) {
+			return false;
+		}
+		const { hash, pathname } = this.props.loc ?? window.location;
+		const { useRouterLinks } = this.props;
+		// The same two spaces renderLevel() compares in: the raw hash with router links,
+		// the hash without its `#/` prefix without them
+		const route = trimQuery(pathname + (useRouterLinks ? hash : getHash(hash)));
+		const entry = trimQuery(useRouterLinks ? item.href : getHash(item.href));
+		// A route of `/#/` (or an empty one) is a prefix of every other route
+		if (!entry || entry.endsWith('/')) {
+			return false;
+		}
+		return route === entry || route.startsWith(`${entry}/`);
+	}
 
 	private renderLevel(
 		sections: Rsg.TOCItem[],
@@ -124,7 +156,9 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 				searchTerm={this.state.searchTerm}
 				onSearchTermChange={handleSearchTermChange}
 				hasMatches={hasMatches}
-				chips={chips.filter((item) => item.visibleName)}
+				chips={chips
+					.filter((item) => item.visibleName)
+					.map((item) => ({ ...item, selected: this.isCurrentChip(item) }))}
 			>
 				{content}
 			</TableOfContentsRenderer>

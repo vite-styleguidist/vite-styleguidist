@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, within } from '@testing-library/react';
 import TableOfContents from './TableOfContents.js';
 import { TableOfContentsRenderer } from './TableOfContentsRenderer.js';
 import Context from '../Context/index.js';
@@ -353,4 +353,70 @@ it('should show sections with expand: true when tocMode is collapse', () => {
 		/>
 	);
 	expect(getByText('1.1')).toBeVisible();
+});
+
+it('should give the chip row a group name of its own', () => {
+	// Without it a screen reader reads the top-level entries twice, once in the chip row
+	// and once in the panel list, as if they were one list (QA F36)
+	const { container } = render(<TableOfContents sections={sections} />);
+	// Queried by attribute: the chip row is display: none outside the small-screen media
+	// query, and an accessible name is not computed for a hidden element
+	const chipRow = container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+	expect(chipRow).not.toBeNull();
+	expect(
+		within(chipRow)
+			.getAllByRole('link', { hidden: true })
+			.map((chip) => chip.textContent)
+	).toEqual(['Introduction', 'Buttons', 'Forms']);
+});
+
+it('should mark the chip of the section a subsection page belongs to', () => {
+	// The sidebar never links to `#/Components/Buttons` itself, so no list link matches
+	// it exactly; the chips fall back to a prefix match on the route (QA F10)
+	const routerSections = [
+		{
+			sections: [
+				{
+					visibleName: 'Components',
+					name: 'Components',
+					href: '#/Components',
+					slug: 'components',
+					sections: [
+						{
+							visibleName: 'Buttons',
+							name: 'Buttons',
+							href: '#/Components/Buttons',
+							slug: 'buttons',
+						},
+					],
+				},
+				{
+					visibleName: 'Docs',
+					name: 'Docs',
+					href: '#/Docs',
+					slug: 'docs',
+				},
+			],
+		},
+	];
+	const chipStates = (hash: string) => {
+		const { container } = render(
+			<TableOfContents useRouterLinks sections={routerSections} loc={{ pathname: '', hash }} />
+		);
+		const chipRow = container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+		return Array.from(chipRow.querySelectorAll('a')).map((chip) => [
+			chip.textContent,
+			chip.getAttribute('aria-current'),
+		]);
+	};
+
+	expect(chipStates('#/Components/Buttons?id=button')).toEqual([
+		['Components', 'true'],
+		['Docs', null],
+	]);
+	// A sibling route that merely starts with the same characters is not a match
+	expect(chipStates('#/Docs')).toEqual([
+		['Components', null],
+		['Docs', 'true'],
+	]);
 });

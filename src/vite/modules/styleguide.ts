@@ -16,6 +16,7 @@ const logger = createLogger('rsg');
 
 // Config options that should be passed to the client
 export const CLIENT_CONFIG_OPTIONS = [
+	'colorScheme',
 	'compilerConfig',
 	'tocMode',
 	'mountPointId',

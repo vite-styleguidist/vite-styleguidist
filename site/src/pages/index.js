@@ -77,9 +77,10 @@ const getFeatures = (withBaseUrl) => [
 	},
 ];
 
-// Live style guides built with (Vite) Styleguidist. The first four are this
-// repository's own examples; the other two are third-party projects that were still
-// online when the fork launched. Check them before each release and drop dead ones.
+// Live style guides. The first four are this repository's own examples, built and
+// deployed with every release; the other two are third-party projects built with the
+// original React Styleguidist that were still online when the fork launched, labelled
+// as such so nobody mistakes them for this project's output. Check them before each release and drop dead ones.
 const getExamples = (withBaseUrl) => [
 	{
 		title: 'Basic example',
@@ -102,12 +103,12 @@ const getExamples = (withBaseUrl) => [
 		image: withBaseUrl('img/example-themed.jpg'),
 	},
 	{
-		title: 'Dialog components',
+		title: 'Dialog components (built with React Styleguidist)',
 		href: 'https://dialogs.github.io/dialog-web-components/',
 		image: withBaseUrl('img/example2.png'),
 	},
 	{
-		title: 'Re-bulma',
+		title: 'Re-bulma (built with React Styleguidist)',
 		href: 'https://bokuweb.github.io/re-bulma/',
 		image: withBaseUrl('img/example4.png'),
 	},

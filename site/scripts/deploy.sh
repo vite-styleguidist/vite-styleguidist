@@ -21,7 +21,7 @@ SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT_DIR="$(cd "$SITE_DIR/.." && pwd)"
 STATIC_EXAMPLES_DIR="$SITE_DIR/static/examples"
 
-# Keep in sync with the "Build all examples" step of .github/workflows/node.js.yml and
+# Keep in sync with the "Build all examples" step of .github/workflows/ci.yml and
 # the `build:<name>` scripts in the root package.json.
 EXAMPLES=(basic customised sections themed express preact styled-components vite)
 

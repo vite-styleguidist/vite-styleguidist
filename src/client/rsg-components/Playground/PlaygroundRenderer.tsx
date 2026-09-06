@@ -6,7 +6,8 @@ import type * as Rsg from '../../../typings/index.js';
 
 export const styles = ({ space, color, borderRadius, mq }: Rsg.Theme) => ({
 	root: {
-		marginBottom: space[4],
+		// 24 px between examples: Examples zeroes the last example’s margin (layout lane)
+		marginBottom: space[3],
 	},
 	// The preview box (Main artboard, examples section): 24 / 16 padding, a 1 px border on a
 	// 6 px radius and the page background; 20 / 16 on small screens (Mobile artboard).
@@ -41,7 +42,13 @@ export const styles = ({ space, color, borderRadius, mq }: Rsg.Theme) => ({
 	// `tab` (the tab body) was ever declared, so the row carried no class at all and a
 	// `styles: { Playground: { tabs: … } }` override silently did nothing. `tab` stays:
 	// rule keys are append-only (ADR 0011).
-	tabs: {},
+	tabs: {
+		// The tab buttons of the example (the Code tab, plus custom exampleTabs fills): a flex
+		// row with the artboard’s 16 px gap; TabButton itself has no sibling margin
+		display: 'flex',
+		alignItems: 'center',
+		gap: space[2],
+	},
 	padded: {
 		// add padding between each example element rendered
 		'& > *': {

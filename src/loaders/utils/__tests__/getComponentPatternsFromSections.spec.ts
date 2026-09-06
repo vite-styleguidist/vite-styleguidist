@@ -36,3 +36,10 @@ it('should return a list of patterns', () => {
 	const result = getComponentPatternsFromSections(sections);
 	expect(result).toEqual(['components/**/B*.js', 'components/**/P*.js', 'components/**/T*.js']);
 });
+
+it('should include a string pattern, which the default section keeps as given', () => {
+	const result = getComponentPatternsFromSections([
+		{ name: 'Default', components: 'src/components/**/[A-Z]*.js' },
+	] as any);
+	expect(result).toEqual(['src/components/**/[A-Z]*.js']);
+});

@@ -45,10 +45,6 @@ export const styles = ({
 			borderRadius,
 			boxShadow: [[0, 0, 0, 3, color.focus]],
 		},
-		'& + &': {
-			isolate: false,
-			marginLeft: space[2],
-		},
 		// 44 px touch targets on small screens (Mobile artboard)
 		[mq.small]: {
 			minHeight: 44,

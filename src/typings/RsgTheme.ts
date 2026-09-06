@@ -63,6 +63,8 @@ export interface Theme {
 	lineHeight: {
 		base: number;
 		heading: number;
+		/** Code blocks and the editor (1.6 by default) */
+		code: number;
 	};
 	/** 400 and 600 by default; the CSS keywords (`normal`, `bold`) work as well. */
 	fontWeight: {

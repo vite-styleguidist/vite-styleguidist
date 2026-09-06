@@ -11,7 +11,7 @@ const props = {
 	name: 'argname',
 };
 
-// react-group joins the parts with a single space, so the exact text content
+// Group (rsg-components/Group) joins the parts with a single space, so the exact text content
 // captures both the parts and their order.
 it('should render argument', () => {
 	const { container, getByText } = render(

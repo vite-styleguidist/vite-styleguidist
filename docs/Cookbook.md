@@ -384,6 +384,8 @@ To use a CSS animation, you have to define its keyframe at the root of the rende
 
 You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
 
+If you replace `StyleGuideRenderer`, know that on small screens the table of contents collapses behind the menu button through `rsg-components/StyleGuide/SidebarContext` (the default renderer provides it); without the provider the navigation is simply always open, and the menu and search buttons of the small-screen header are the default renderer’s.
+
 There’s also a special wrapper component — `Wrapper` — that wraps every example component. By default, it renders `children` as is but you can use it to provide custom logic.
 
 For example, you can replace the `Wrapper` component to wrap any example in the [React Intl’s](https://github.com/yahoo/react-intl) provider component. You can’t wrap the whole style guide because every example is compiled separately in a browser.
@@ -487,7 +489,7 @@ module.exports = {
 
 The live editor under each example is [CodeMirror 6](https://codemirror.net/) by default (see [`styleguideComponents.Editor`](Configuration.md#editor) for what it supports and the exact props). If you want something else — a plain text area, Monaco, an editor from your own design system — point `styleguideComponents.Editor` to your component. The default editor is loaded on demand from the `rsg-components/Editor` module, so when you replace it CodeMirror isn’t bundled at all.
 
-The component gets the current `code` and must call `onChange` with the whole source after every change; Styleguidist debounces the calls by [`previewDelay`](Configuration.md#previewdelay) and re-renders the preview. Anything else the component receives (`evalInContext`, `name`, `active`, `onClick`, `exampleName`, `exampleIndex`) can be ignored.
+The component gets the current `code` and must call `onChange` with the whole source after every change; Styleguidist debounces the calls by [`previewDelay`](Configuration.md#previewdelay) and re-renders the preview. Anything else the component receives (`evalInContext`, `name`, `active`, `onClick`, `exampleName`, `exampleIndex`, `lang`) can be ignored.
 
 ```javascript
 // styleguide.config.js

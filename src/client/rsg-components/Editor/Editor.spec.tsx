@@ -67,6 +67,7 @@ describe('Editor', () => {
 			fontFamily: { monospace: 'mono' },
 			fontSize: { small: 13 },
 			fontWeight: { bold: 600 },
+			lineHeight: { base: 1.55, heading: 1.2, code: 1.6 },
 			transition: { fast: '150ms ease-in' },
 			mq: { small: '@media (max-width: 600px)' },
 		} as any;

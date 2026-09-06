@@ -5,12 +5,12 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import prismTheme from '../../../styles/prismTheme.js';
 import type * as Rsg from '../../../../typings/index.js';
 
-const styles = ({ space, color, fontSize, fontFamily, borderRadius }: Rsg.Theme) => ({
+const styles = ({ space, color, fontSize, fontFamily, lineHeight, borderRadius }: Rsg.Theme) => ({
 	pre: {
 		fontFamily: fontFamily.monospace,
 		fontSize: fontSize.small,
-		// Code is set looser than prose (13 / 1.6): the syntax colours need the air
-		lineHeight: 1.6,
+		// Same line height as the editor, so static and live code sit on the same grid
+		lineHeight: lineHeight.code,
 		color: color.codeBase,
 		// Long lines scroll inside the block instead of wrapping, like the code editor
 		whiteSpace: 'pre',

@@ -239,6 +239,18 @@ Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.m
 
 The default appearance changed with 1.0: a warm neutral palette with a single teal accent, a smaller heading scale (40 / 28 / 22 px for h1–h3 instead of 48 / 36 / 24), 6 px corners, sentence-case tab labels and a [dark mode](Cookbook.md#how-to-customize-dark-mode) with a system / light / dark toggle in the sidebar (see [colorScheme](Configuration.md#colorscheme)), so if you preferred the old look, override the [theme](Configuration.md#theme) tokens (`color.*`, `fontSize.h1`…`h3`, `borderRadius`, `sidebarWidth`, `buttonTextTransform`). To make dark mode work, `theme.color.*` values are now `var(--rsg-color-…, fallback)` strings instead of raw colours. Styles that use them as they are keep working; anything that did colour math on them (`color.lighten(theme.color.link)`) must move to the raw values in your own theme file. Overriding a colour token in `theme` pins it for both schemes, opting it out of dark mode: set the `--rsg-color-*` custom properties per scheme instead to keep dark mode (see the Cookbook), or set `colorScheme: 'light'` if your theme was designed for a light page only.
 
+Other visible changes that came with the facelift, in case a custom stylesheet or test targets them:
+
+- The sidebar precedes the content in the DOM (it used to follow it) so small screens read navigation first; on small screens it is a sticky header with a menu button and a row of chips.
+- The `ribbon` renders as a link in the sidebar footer (a pill in the corner without a sidebar) and its default text is “GitHub”.
+- The path line’s copy button is named “Copy path”; the tooltip says “Copied to clipboard” after a click.
+- Static code blocks no longer wrap long lines: they scroll horizontally, like the editor.
+- Inline code in prose is a chip on the code background; prop names, types and default values in tables stay plain.
+- `PlaygroundError.root` is now a panel (`div`) around the message `pre`; a `styles` override that styled the root as the `pre` should target `message`.
+- The missing-examples placeholder no longer expands inline instructions on click; it links to the docs.
+- Headings `h5` and `h6` are plain 600 like the other levels (`h5` was bold, `h6` italic).
+- The empty style guide says “No components found yet” with a “Read the guide” button; the not-found page has a “Go to the start page” button.
+
 ### Code editor
 
 The live editor is now [CodeMirror 6](https://codemirror.net/), loaded on demand when a code tab is opened. It is coloured by the same `theme.color.code*` keys as static code blocks. A custom editor passed through `styleguideComponents.Editor` receives the same props as before (`code`, `onChange`, `name`, `active`, `onClick`, `evalInContext`), now documented as a public contract in [Configuration](Configuration.md#styleguidecomponents).

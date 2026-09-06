@@ -4,16 +4,11 @@ import type * as Rsg from '../../../typings/index.js';
  * Typography and box styles shared by the editor and its loading placeholder, kept in a module
  * that imports nothing from CodeMirror so the placeholder can be styled from the main bundle.
  *
- * The 1.0 code area: `fontSize.small` (13) on a 1.6 line height, `codeBase` on `codeBackground`,
- * the same values the static code blocks (Markdown/Pre) use. The placeholder must use exactly
- * these values to end up the same height as the editor that replaces it, otherwise the page
- * would jump once the chunk arrives.
- *
- * The line height is a literal on purpose: the theme has `lineHeight.base` (running text) and
- * `lineHeight.heading` but no token for code yet, and components do not add theme tokens
- * (ADR 0011). If a `lineHeight.code` token lands, this is the one place to switch.
+ * The 1.0 code area: `fontSize.small` (13) on `lineHeight.code` (1.6), `codeBase` on
+ * `codeBackground`, the same values the static code blocks (Markdown/Pre) use. The placeholder
+ * must use exactly these values to end up the same height as the editor that replaces it,
+ * otherwise the page would jump once the chunk arrives.
  */
-export const CODE_LINE_HEIGHT = 1.6;
 
 /**
  * Inner padding of the code area, 14 / 16 on desktop and 12 / 14 on small screens (Main and
@@ -29,10 +24,10 @@ export const codePadding = ({ space, mq }: Rsg.Theme, { nested = false } = {}) =
 	},
 });
 
-const editorFrame = ({ fontFamily, fontSize, color, borderRadius }: Rsg.Theme) => ({
+const editorFrame = ({ fontFamily, fontSize, lineHeight, color, borderRadius }: Rsg.Theme) => ({
 	fontFamily: fontFamily.monospace,
 	fontSize: fontSize.small,
-	lineHeight: CODE_LINE_HEIGHT,
+	lineHeight: lineHeight.code,
 	color: color.codeBase,
 	background: color.codeBackground,
 	borderRadius,

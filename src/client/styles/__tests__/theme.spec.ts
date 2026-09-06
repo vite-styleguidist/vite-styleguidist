@@ -67,7 +67,7 @@ describe('theme', () => {
 	});
 
 	it('should ship the tokens for formerly hard-coded values', () => {
-		expect(theme.lineHeight).toEqual({ base: 1.55, heading: 1.2 });
+		expect(theme.lineHeight).toEqual({ base: 1.55, heading: 1.2, code: 1.6 });
 		expect(theme.fontWeight).toEqual({ normal: 400, bold: 600 });
 		expect(theme.transition).toEqual({ fast: '150ms ease-in', slow: '750ms ease-out' });
 		expect(theme.shadow).toEqual({

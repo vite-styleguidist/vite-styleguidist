@@ -12,6 +12,10 @@ export default function getComponentPatternsFromSections(sections: Rsg.ConfigSec
 		if (Array.isArray(section.components)) {
 			return patterns.concat(section.components);
 		}
+		// The default section built from a string `components` option keeps the string
+		if (typeof section.components === 'string') {
+			return patterns.concat([section.components]);
+		}
 
 		if (section.sections) {
 			return patterns.concat(getComponentPatternsFromSections(section.sections));

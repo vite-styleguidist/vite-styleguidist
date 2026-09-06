@@ -474,7 +474,7 @@ The default is a `ChainResolver` of Styleguidist’s own `FindAnnotatedExportsRe
 
 Type: `Object`, optional
 
-Show “Fork Me” ribbon in the top right corner.
+Show a link to your repository: in the sidebar footer, next to the colour-scheme toggle, or as a small pill in the top-right corner when the style guide has no sidebar (`showSidebar: false`, isolated views). The default text is “GitHub”.
 
 ```javascript
 module.exports = {
@@ -593,6 +593,7 @@ When you do, CodeMirror is not part of your bundle at all. The component receive
 | `onClick` | `function`, optional | Tab click handler of the slot (its id is bound already). Not needed by an editor. |
 | `exampleName` | `string`, optional | Name of the component or section the example belongs to. The built-in editor uses it, with `exampleIndex`, for its accessible label. |
 | `exampleIndex` | `number`, optional | Index of the example in its Markdown file, the same number the isolated example URL uses. |
+| `lang` | `string`, optional | Fence language of the example (`jsx`, `tsx`, …), absent for a bare fence. The built-in editor shows it as the badge in the corner of the code area. |
 
 See [How to replace the code editor?](Cookbook.md#how-to-replace-the-code-editor) in the cookbook for a minimal implementation.
 
@@ -736,7 +737,7 @@ Or set [colorScheme](#colorscheme) to `light` if your theme only has one scheme.
 
 Besides the text and code colours there are two surface tokens added with the 1.0 design, both with a light and a dark value: `selectedBackground` (the selected sidebar item and the active tab; `base` and `link` sit on it) and `errorBackground` (the playground error panel; `error` is the text on it). Every text colour clears WCAG AA (4.5:1) on the surface it is used on in both schemes, and a unit test keeps it that way, so if you override one side of a pair, check the other.
 
-Tokens that components used to hard-code and that you can now override: `lineHeight.base` (1.55) and `lineHeight.heading` (1.2); `fontWeight.normal` (400) and `fontWeight.bold` (600; numbers, but the `normal` / `bold` keywords work too); `transition.fast` (`150ms ease-in`) and `transition.slow` (`750ms ease-out`, duration and easing only); `shadow.tooltip` and `shadow.ribbon` (complete `box-shadow` / `text-shadow` values); `mq.small` (`@media (max-width: 600px)`) and `mq.medium` (`@media (max-width: 1024px)`). Token names are only ever added, never renamed.
+Tokens that components used to hard-code and that you can now override: `lineHeight.base` (1.55), `lineHeight.heading` (1.2) and `lineHeight.code` (1.6, the editor and static code blocks); `fontWeight.normal` (400) and `fontWeight.bold` (600; numbers, but the `normal` / `bold` keywords work too); `transition.fast` (`150ms ease-in`) and `transition.slow` (`750ms ease-out`, duration and easing only); `shadow.tooltip` and `shadow.ribbon` (complete `box-shadow` / `text-shadow` values); `mq.small` (`@media (max-width: 600px)`) and `mq.medium` (`@media (max-width: 1024px)`). Token names are only ever added, never renamed.
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-plugin-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-plugin-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-plugin-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-plugin-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-plugin-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-plugin-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 

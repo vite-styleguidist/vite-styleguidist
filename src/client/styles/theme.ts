@@ -71,6 +71,9 @@ export const fontSize = {
 export const lineHeight = {
 	base: 1.55,
 	heading: 1.2,
+	// Code is set looser than prose: the syntax colours need the air. Shared by the editor
+	// and the static code blocks so both render the same height.
+	code: 1.6,
 };
 
 // Numbers, not keywords: 600 (semibold) is the designed heading and label weight, and

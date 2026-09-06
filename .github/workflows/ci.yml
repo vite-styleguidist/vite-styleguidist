@@ -209,3 +209,24 @@ jobs:
           # The build must exist and must contain the override (its heading text survives minification).
           test -f styleguide/index.html
           grep -rq 'Tarball smoke test' styleguide/
+
+  site:
+    # The docs site is strict (`onBrokenLinks: throw`) and every docs/*.md edit can break it, but the
+    # deploy workflow only runs after a merge to main. Building here gives pull requests the signal.
+    # The example builds are not needed: the landing page links to them with plain <a> tags.
+    name: Docs site build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm run sync
+        working-directory: site
+      - run: npm run build
+        working-directory: site

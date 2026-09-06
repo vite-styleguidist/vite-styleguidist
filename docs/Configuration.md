@@ -12,6 +12,27 @@ Type: `String` or `Array`, optional
 
 Your application static assets folder will be accessible as `/` in the style guide dev server, and its files are copied into the [styleguideDir](#styleguidedir) folder by `styleguidist build`.
 
+## `colorScheme`
+
+Type: `String`, default: `system`
+
+Colour scheme of the style guide UI (not of your components):
+
+- `system`: follow the visitor’s operating system (`prefers-color-scheme`) and show a system / light / dark toggle in the sidebar header. The visitor’s choice is remembered in `localStorage`.
+- `light` or `dark`: always use that scheme and hide the toggle.
+
+```javascript
+module.exports = {
+  colorScheme: 'dark'
+}
+```
+
+The scheme is applied to the `<html>` element as the `data-rsg-theme` attribute (`light`, `dark`, or absent for `system`) by an inline script in the generated page, before the first paint, so there is no flash of the wrong scheme. See [dark mode](Cookbook.md#how-to-customize-dark-mode) in the cookbook for how the colours work, and [theme](#theme) for the rule about overridden colours.
+
+> **Note:** A custom [template](#template) function receives `colorScheme` in its context and has to include the `<meta name="color-scheme">` tag and the inline script itself; `colorSchemeScript(colorScheme)` from `vite-styleguidist/lib/vite/html.js` returns the script.
+
+> **Note:** The inline script needs `'unsafe-inline'` in a Content-Security-Policy `script-src`, or a nonce that a custom template adds to the `<script>` tag. When the policy blocks it the page still works: it renders in the light scheme first and switches to the stored or forced scheme once the bundle runs.
+
 ## `compilerConfig`
 
 Type: `Object`, default:
@@ -34,25 +55,6 @@ Type: `Object`, default:
 Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile examples (JSX and TypeScript) in the browser. This config object will be passed as the second argument for `sucrase.transform()`.
 
 > **Caution:** The option replaces the default value, it isn’t merged with it. Start from the defaults, which you can import from `vite-styleguidist/lib/client/utils/compileCode.js` as `DEFAULT_COMPILER_CONFIG`.
-
-## `colorScheme`
-
-Type: `String`, default: `system`
-
-Colour scheme of the style guide UI (not of your components):
-
-- `system`: follow the visitor’s operating system (`prefers-color-scheme`) and show a system / light / dark toggle in the sidebar header. The visitor’s choice is remembered in `localStorage`.
-- `light` or `dark`: always use that scheme and hide the toggle.
-
-```javascript
-module.exports = {
-  colorScheme: 'dark'
-}
-```
-
-The scheme is applied to the `<html>` element as the `data-rsg-theme` attribute (`light`, `dark`, or absent for `system`) by an inline script in the generated page, before the first paint, so there is no flash of the wrong scheme. See [dark mode](Cookbook.md#how-to-customize-dark-mode) in the cookbook for how the colours work, and [theme](#theme) for the rule about overridden colours.
-
-> **Note:** A custom [template](#template) function receives `colorScheme` in its context and has to include the `<meta name="color-scheme">` tag and the inline script itself; `colorSchemeScript(colorScheme)` from `vite-styleguidist/lib/vite/html.js` returns the script.
 
 ## `components`
 
@@ -257,7 +259,7 @@ Emit a machine-readable copy of the style guide next to `index.html`, for AI ass
 - `llms.txt`: an index in the [llms.txt](https://llmstxt.org/) format, one line per component with a link to it in the style guide;
 - `llms-full.txt`: the whole style guide as one Markdown document.
 
-The files are generated from the same sources as the style guide itself (react-docgen output, Markdown examples), in the order of the sidebar. `styleguidist build` writes them into [styleguideDir](#styleguidedir); the dev server serves them at `/docs.json`, `/llms.txt` and `/llms-full.txt`, regenerated on every request. Set the option to `false` to skip them.
+The files are generated from the same sources as the style guide itself (react-docgen output, Markdown examples), in the order of the sidebar. `styleguidist build` writes them into [styleguideDir](#styleguidedir); the dev server serves them at `/docs.json`, `/llms.txt` and `/llms-full.txt`, regenerated on every request. Set the option to `false` to skip them. `docs.json` carries a `generatedAt` timestamp; set the `SOURCE_DATE_EPOCH` environment variable (seconds since the Unix epoch) to pin it for reproducible builds.
 
 ```javascript
 module.exports = {
@@ -565,7 +567,7 @@ To wrap, rather than replace a component, make sure to import the default implem
 
 The code editor shown under an example when you click “View Code” is [CodeMirror 6](https://codemirror.net/) with JavaScript, JSX and TypeScript highlighting, undo history, bracket matching and closing, basic autocompletion and search (Ctrl/Cmd+F inside the editor). It has no line numbers. Its chunk is loaded on demand: a style guide page fetches CodeMirror only the first time an editor opens, and shows the code as plain text meanwhile.
 
-Keyboard: Tab indents the current line, Shift+Tab outdents. To move the focus out of the editor with the keyboard, press Escape and then Tab (or Shift+Tab): after Escape, Tab moves the focus like anywhere else on the page for two seconds. The editor is labelled “Code editor” for assistive technology.
+Keyboard: Tab indents the current line, Shift+Tab outdents. To move the focus out of the editor with the keyboard, press Escape and then Tab (or Shift+Tab): after Escape, Tab moves the focus like anywhere else on the page for two seconds. For assistive technology the editor is labelled with the component’s name and the example’s index, “Code editor for Button example 2” (a custom editor receives them as `exampleName` and `exampleIndex`, see the table below).
 
 Colors follow the [`theme`](#theme) option: the same `theme.color.code*` keys that style static code blocks style the editor, see [How to change syntax highlighting colors?](Cookbook.md#how-to-change-syntax-highlighting-colors) in the cookbook.
 
@@ -712,7 +714,7 @@ See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide
 
 ### Colour tokens and dark mode
 
-Every `theme.color.*` token is a CSS custom property with the light value as fallback, `var(--rsg-color-<name>, <light value>)`, where `<name>` is the token name in kebab-case: `color.baseBackground` is `--rsg-color-base-background`. The style guide defines the light values on `:root`, the dark values on `[data-rsg-theme="dark"]` and, for the `system` [colorScheme](#colorscheme), inside `@media (prefers-color-scheme: dark)`.
+Every `theme.color.*` token is a CSS custom property with the light value as fallback, `var(--rsg-color-<name>, <light value>)`, where `<name>` is the token name in kebab-case: `color.baseBackground` is `--rsg-color-base-background`. The style guide defines the light values on `:root`, the dark values on `[data-rsg-theme="dark"]` and, for the `system` [colorScheme](#colorscheme), inside `@media (prefers-color-scheme: dark)`. Its own definitions are wrapped in `:where()`, which has no specificity, so a rule of yours with the same selectors wins wherever it is loaded, even though the style guide attaches its variables last.
 
 This has one consequence for the `theme` option: **overriding a colour token opts that token out of dark mode**. `theme: { color: { link: 'firebrick' } }` replaces the whole `var()` expression with a literal that no longer switches, so you own both schemes for that token. To change a colour in both schemes, override the custom property instead of the token, for example with [template](#template) `head.raw` or a stylesheet listed in [require](#require):
 

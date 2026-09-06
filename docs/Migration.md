@@ -237,7 +237,7 @@ Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.m
   }
 ```
 
-The default appearance has changed (new palette, type scale and a [dark mode](Cookbook.md#how-to-customize-dark-mode)), and `theme.color.*` values are now `var(--rsg-color-…, fallback)` strings instead of raw colours. Styles that use them as they are keep working; anything that did colour math on them (`color.lighten(theme.color.link)`) must move to the raw values in your own theme file. Overriding a colour token in `theme` pins it for both schemes, opting it out of dark mode; set the `--rsg-color-*` custom properties per scheme instead to keep dark mode (see the Cookbook).
+The style guide has a [dark mode](Cookbook.md#how-to-customize-dark-mode) now, with a system / light / dark toggle in the sidebar (see [colorScheme](Configuration.md#colorscheme)); the light scheme looks as before. To make that work, `theme.color.*` values are now `var(--rsg-color-…, fallback)` strings instead of raw colours. Styles that use them as they are keep working; anything that did colour math on them (`color.lighten(theme.color.link)`) must move to the raw values in your own theme file. Overriding a colour token in `theme` pins it for both schemes, opting it out of dark mode: set the `--rsg-color-*` custom properties per scheme instead to keep dark mode (see the Cookbook), or set `colorScheme: 'light'` if your theme was designed for a light page only.
 
 ### Code editor
 

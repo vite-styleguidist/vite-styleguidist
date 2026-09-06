@@ -57,14 +57,6 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 		type: 'string',
 		default: 'expand',
 	},
-	compilerConfig: {
-		type: 'object',
-		// Options for sucrase’s transform(), used to compile examples in the browser
-		// (see src/client/utils/compileCode.ts for the rationale of each default)
-		default: DEFAULT_COMPILER_CONFIG,
-	},
-	// `components` is a shortcut for { sections: [{ components }] },
-	// see `sections` below
 	colorScheme: {
 		type: 'string',
 		default: 'system',
@@ -80,6 +72,14 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 			return value;
 		},
 	},
+	compilerConfig: {
+		type: 'object',
+		// Options for sucrase’s transform(), used to compile examples in the browser
+		// (see src/client/utils/compileCode.ts for the rationale of each default)
+		default: DEFAULT_COMPILER_CONFIG,
+	},
+	// `components` is a shortcut for { sections: [{ components }] },
+	// see `sections` below
 	components: {
 		type: ['string', 'function', 'array'],
 		example: 'components/**/[A-Z]*.js',

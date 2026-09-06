@@ -137,6 +137,6 @@ test('should render active styles', () => {
 })
 ```
 
-Run `npm test` to run linters, the type checker and all tests, `npm run test:watch` to run tests in watch mode, and `npx vitest -u` to update snapshots.
+Run `npm test` to run linters, the type checker and the unit tests, `npm run test:watch` to run tests in watch mode, and `npx vitest -u` to update snapshots.
 
-End-to-end tests live in `test/e2e/` and run with [Playwright](https://playwright.dev/) against the built examples (`npm run test:e2e`, see [Contributing](../.github/CONTRIBUTING.md#end-to-end-tests-playwright)).
+End-to-end tests live in `test/e2e/` and run with [Playwright](https://playwright.dev/): two specs drive a dev server of `examples/basic`, the third opens the eight built examples (`npm run test:e2e`, see [Contributing](../.github/CONTRIBUTING.md#end-to-end-tests-playwright)).

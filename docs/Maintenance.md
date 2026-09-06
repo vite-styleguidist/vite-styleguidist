@@ -136,6 +136,8 @@ Keep the contributor as the author of the squashed commit (GitHub does this by d
 
 Releases are automated with [semantic-release](https://semantic-release.gitbook.io/semantic-release/) using the `conventionalcommits` preset. On every push to a release branch, CI runs the tests, computes the next version from the commits since the last release, publishes to npm and creates a GitHub release with the generated notes. Nothing is committed back to the branch: the `main` ruleset only accepts pull requests and GitHub can’t exempt the Actions app from it, so the version lives in git tags and on npm (package.json keeps a `0.0.0-development` placeholder) and the release notes live on the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases). There is no manual version bump and no release day: a merged fix is published within minutes.
 
+The `main` ruleset also requires seven CI checks, matched by job name: “Lint and typecheck”, “PR title is a Conventional Commit”, “Unit tests (Node 22)”, “Unit tests (Node 24)”, “Examples and end-to-end tests”, “Install from the packed tarball” and “Docs site build”. Renaming a job in `ci.yml` must be mirrored in the ruleset (Settings › Rules › main), otherwise pull requests into `main` wait forever for a check that no longer reports.
+
 | Branch | npm dist-tag | Versions | Used for |
 | --- | --- | --- | --- |
 | `main` | `latest` | `1.x.y` stable releases | Everything after 1.0.0 that isn’t part of the next major. |

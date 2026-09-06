@@ -350,7 +350,7 @@ const {
 } = require('vite-styleguidist/lib/vite/html.js')
 
 module.exports = {
-  template({ colorScheme, title, container, js }) {
+  template({ colorScheme, title, container, publicPath, js, css }) {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -360,9 +360,14 @@ module.exports = {
     }">
 <script>${colorSchemeScript(colorScheme)}</script>
 <title>${title}</title>
+${css
+      .map(file => `<link rel="stylesheet" href="${publicPath}${file}">`)
+      .join('')}
 </head>
 <body><div id="${container}"></div>${js
-      .map(file => `<script type="module" src="${file}"></script>`)
+      .map(
+        file => `<script type="module" src="${publicPath}${file}"></script>`
+      )
       .join('')}</body>
 </html>`
   }
@@ -482,7 +487,7 @@ module.exports = {
 
 The live editor under each example is [CodeMirror 6](https://codemirror.net/) by default (see [`styleguideComponents.Editor`](Configuration.md#editor) for what it supports and the exact props). If you want something else — a plain text area, Monaco, an editor from your own design system — point `styleguideComponents.Editor` to your component. The default editor is loaded on demand from the `rsg-components/Editor` module, so when you replace it CodeMirror isn’t bundled at all.
 
-The component gets the current `code` and must call `onChange` with the whole source after every change; Styleguidist debounces the calls by [`previewDelay`](Configuration.md#previewdelay) and re-renders the preview. Anything else the component receives (`evalInContext`, `name`, `active`, `onClick`) can be ignored.
+The component gets the current `code` and must call `onChange` with the whole source after every change; Styleguidist debounces the calls by [`previewDelay`](Configuration.md#previewdelay) and re-renders the preview. Anything else the component receives (`evalInContext`, `name`, `active`, `onClick`, `exampleName`, `exampleIndex`) can be ignored.
 
 ```javascript
 // styleguide.config.js

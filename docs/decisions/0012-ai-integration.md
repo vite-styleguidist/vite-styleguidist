@@ -21,7 +21,7 @@ Two conventions have emerged for that: [llms.txt](https://llmstxt.org/) (a Markd
 
 **Option 3, built the way option 5 prescribes.** Version 1.0 emits three files next to `index.html` on every `styleguidist build` and serves them from the dev server (regenerated per request, with the react-docgen work memoized on file mtimes), controlled by the `machineReadable` config option, on by default:
 
-- `docs.json`: the manifest. Sections in sidebar order, each with its components; a component carries its name, `@visibleName`, slug and relative link, its file path relative to the project, description, JSDoc tags, props (with the type printed as the props table prints it: `string`, `oneOf: small | normal | large`, `func`, or the TypeScript annotation as written), public methods, and usage examples with the prose that precedes each one. It carries a `schemaVersion`, bumped only on incompatible changes; adding fields is not one.
+- `docs.json`: the manifest. Sections in sidebar order, each with its components; a component carries its name, `@visibleName`, slug and relative link, its file path relative to the project, description, JSDoc tags, props (with the type and its values printed on one line, like the props table’s type and description columns combined: `string`, `oneOf: small | normal | large`, `shape { id: number }`, `func`, or the TypeScript annotation as written), public methods, and usage examples with the prose that precedes each one. It carries a `schemaVersion`, bumped only on incompatible changes; adding fields is not one.
 - `llms.txt`: the llmstxt.org index, one link per component, relative to the style guide.
 - `llms-full.txt`: the whole guide as one Markdown document, props as tables, examples as fenced code.
 

@@ -61,6 +61,7 @@ describe('Editor', () => {
 				focus: 'focus',
 				codeBase: 'code',
 				codeBackground: 'codeBg',
+				selectedBackground: 'selected',
 			},
 			space: [0, 4, 8],
 			borderRadius: 3,
@@ -80,8 +81,15 @@ describe('Editor', () => {
 			background: 'bg',
 			color: 'base',
 		});
+		// The selected completion takes the “current row” token, the only surface with enough
+		// contrast against the tooltip’s baseBackground in the dark scheme
 		expect(root['& .cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected]']).toMatchObject({
-			background: 'sidebar',
+			background: 'selected',
+		});
+		// A bare <button>, so it would take the UA’s buttontext colour instead of the panel’s
+		expect(root['& .cm-editor .cm-panel button[name="close"]']).toMatchObject({
+			isolate: false,
+			color: 'inherit',
 		});
 		expect(root['& .cm-editor .cm-panels']).toMatchObject({ background: 'sidebar', color: 'base' });
 		expect(root['& .cm-editor .cm-textfield']).toMatchObject({ background: 'bg' });

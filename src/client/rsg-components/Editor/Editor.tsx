@@ -80,9 +80,12 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				background: color.baseBackground,
 				color: color.base,
 			},
+			// The selected completion: `selectedBackground` is the token for “this is the current
+			// row” elsewhere (the sidebar’s active link), and it is the only surface token with
+			// enough contrast against the tooltip’s `baseBackground` in the dark scheme
 			'& .cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected]': {
 				isolate: false,
-				background: color.sidebarBackground,
+				background: color.selectedBackground,
 				color: color.base,
 			},
 			'& .cm-editor .cm-completionMatchedText': {
@@ -96,6 +99,12 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				background: color.sidebarBackground,
 				color: color.base,
 				borderColor: color.border,
+			},
+			// The search panel’s close button is a bare <button>, so it takes the UA’s
+			// `buttontext` colour (white in dark, black in light) instead of the panel’s
+			'& .cm-editor .cm-panel button[name="close"]': {
+				isolate: false,
+				color: 'inherit',
 			},
 			'& .cm-editor .cm-textfield': {
 				isolate: false,
@@ -192,8 +201,9 @@ export function Editor({ code, onChange, classes, exampleName, exampleIndex, lan
 					bracketMatching(),
 					closeBrackets(),
 					autocompletion(),
-					// Examples live in a narrow column: wrap long lines like static code blocks do
-					EditorView.lineWrapping,
+					// No line wrapping: a long line scrolls the code area horizontally, the way the
+					// static code blocks (Markdown/Pre) and the artboards’ code area do. The frame
+					// itself never widens, so the page does not scroll sideways on a phone.
 					javascript({ jsx: true, typescript: true }),
 					syntaxHighlighting(prismHighlightStyle),
 					// Escape arms CodeMirror’s tab-focus mode (Tab then moves focus for two seconds)

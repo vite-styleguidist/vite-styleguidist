@@ -21,15 +21,15 @@ export const styles = (theme: Rsg.Theme) => ({
 		position: 'relative',
 	},
 	// Placeholder shown while the chunk loads: the code as plain text in the editor’s frame.
-	// Padding, border and wrapping mirror Editor.tsx so it occupies the same height.
+	// Padding, border and line handling mirror Editor.tsx so it occupies the same height:
+	// long lines scroll sideways here too, they never wrap into extra rows.
 	placeholder: {
 		...editorFrame(theme),
 		...codePadding(theme),
 		margin: 0,
 		border: [[1, theme.color.border, 'solid']],
-		whiteSpace: 'pre-wrap',
-		wordBreak: 'break-word',
-		overflowWrap: 'anywhere',
+		whiteSpace: 'pre',
+		overflowX: 'auto',
 	},
 	badge: editorBadge(theme),
 });

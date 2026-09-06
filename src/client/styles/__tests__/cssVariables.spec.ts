@@ -1,6 +1,6 @@
 import jss from '../setupjss.js';
 import { createVariableStyles } from '../cssVariables.js';
-import { COLOR_SCHEME_ATTRIBUTE } from '../colorSchemes.js';
+import { COLOR_SCHEME_ATTRIBUTE, light } from '../colorSchemes.js';
 
 const palettes = {
 	light: { base: '#333', baseBackground: '#fff' },
@@ -11,8 +11,9 @@ describe('cssVariables', () => {
 	const css = jss.createStyleSheet(createVariableStyles(palettes)).toString();
 
 	it('should attach the variable sheet on import', () => {
+		// The real palette, whatever its current value: this checks attachment, not colours
 		expect(document.querySelector('style[data-meta="rsg-color-schemes"]')?.textContent).toContain(
-			'--rsg-color-base-background: #fff;'
+			`--rsg-color-base-background: ${light.baseBackground};`
 		);
 	});
 

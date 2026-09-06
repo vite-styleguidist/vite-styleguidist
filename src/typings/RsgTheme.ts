@@ -25,6 +25,10 @@ export interface Theme {
 		baseBackground: string;
 		codeBackground: string;
 		sidebarBackground: string;
+		/** Surface of the selected sidebar item and the active tab (since 1.0). */
+		selectedBackground: string;
+		/** Surface of the playground error panel; `error` is the text on it (since 1.0). */
+		errorBackground: string;
 		ribbonBackground: string;
 		ribbonText: string;
 		// Based on default Prism theme
@@ -60,7 +64,7 @@ export interface Theme {
 		base: number;
 		heading: number;
 	};
-	/** `normal` and `bold` by default; a number (400, 700) works as well. */
+	/** 400 and 600 by default; the CSS keywords (`normal`, `bold`) work as well. */
 	fontWeight: {
 		normal: string | number;
 		bold: string | number;

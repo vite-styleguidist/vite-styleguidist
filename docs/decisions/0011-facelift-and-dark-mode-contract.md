@@ -2,6 +2,7 @@
 
 - **Date:** 2026-09-06
 - **Status:** accepted
+- **Update 2026-09-06:** the designed palette from rule 8 landed (light and dark, every text/surface pair at 4.5:1 or better, guarded by `colorSchemes.spec.ts`), together with two new surface tokens, `selectedBackground` and `errorBackground`, the 1.0 type scale (h1–h3 at 40 / 28 / 22), `borderRadius` 6, `sidebarWidth` 232, `lineHeight.base` 1.55, numeric `fontWeight` (400 / 600) and `buttonTextTransform: 'none'`. No name changed.
 
 ## Context
 

@@ -9,7 +9,10 @@
  * not theme tokens.
  *
  * Token names are the keys of `light`; `dark` must have exactly the same keys, which
- * theme.spec.ts checks.
+ * theme.spec.ts checks. Both palettes are the designed 1.0 "quiet editorial" set: warm
+ * neutrals, the docs site's teal as the single accent, and every text/surface pair the
+ * components put together at 4.5:1 or better, which colorSchemes.spec.ts guards. Change
+ * a value here and the guard tells you which pair it broke.
  */
 
 import type { ColorScheme } from '../../typings/RsgTheme.js';
@@ -39,75 +42,84 @@ export const COLOR_SCHEME_CONFIG_ATTRIBUTE = 'data-rsg-color-scheme';
 /** localStorage key of the visitor’s choice (`system`, `light` or `dark`). */
 export const COLOR_SCHEME_STORAGE_KEY = 'rsg-color-scheme';
 
-/** The default (light) palette: the values the style guide has always shipped with. */
+/**
+ * The default (light) palette. The surface a token is meant to sit on is noted next to
+ * it, because that is the pair the contrast guard measures; `lightest` and `border`
+ * are decorative (rules, placeholders, disabled marks) and are not held to 4.5:1.
+ */
 export const light = {
-	base: '#333',
-	light: '#767676',
-	lightest: '#ccc',
-	link: '#1673b1',
-	linkHover: '#e90',
-	focus: 'rgba(22, 115, 177, 0.25)',
-	border: '#e8e8e8',
-	name: '#690',
-	type: '#905',
-	error: '#c00',
-	baseBackground: '#fff',
-	codeBackground: '#f5f5f5',
-	sidebarBackground: '#f5f5f5',
-	ribbonBackground: '#e90',
-	ribbonText: '#fff',
-	// Based on default Prism theme
-	codeBase: '#333',
-	codeComment: '#6d6d6d',
-	codePunctuation: '#999',
-	codeProperty: '#905',
-	codeDeleted: '#905',
-	codeString: '#690',
-	codeInserted: '#690',
-	codeOperator: '#9a6e3a',
-	codeKeyword: '#1673b1',
-	codeFunction: '#DD4A68',
-	codeVariable: '#e90',
+	// Text
+	base: '#262421', // on baseBackground, sidebarBackground and selectedBackground
+	light: '#625d57', // secondary text, on baseBackground and sidebarBackground
+	lightest: '#a8a29a', // decorative only
+	link: '#0b7285', // the single accent, on baseBackground and sidebarBackground
+	linkHover: '#095c6b',
+	focus: 'rgba(11, 114, 133, 0.3)', // focus ring: the accent at 30%
+	border: '#e6e2da', // decorative
+	name: '#4a6b1f', // prop names, on baseBackground and sidebarBackground
+	type: '#8c1f5a', // prop types, on baseBackground and sidebarBackground
+	error: '#b42318', // on baseBackground, sidebarBackground and errorBackground
+	// Surfaces
+	baseBackground: '#fcfbf9',
+	codeBackground: '#f3f1ec',
+	sidebarBackground: '#f4f2ee',
+	selectedBackground: '#e3f1f3', // the selected sidebar item and the active tab
+	errorBackground: '#fdf3f1', // the PlaygroundError surface
+	ribbonBackground: '#0b7285',
+	ribbonText: '#ffffff', // on ribbonBackground
+	// Code tokens, all on codeBackground; the roles follow the default Prism theme
+	codeBase: '#262421',
+	codeComment: '#6b6660',
+	codePunctuation: '#6f6961',
+	codeProperty: '#8c1f5a',
+	codeDeleted: '#8c1f5a',
+	codeString: '#4a6b1f',
+	codeInserted: '#4a6b1f',
+	codeOperator: '#8a5a2b',
+	codeKeyword: '#0b7285',
+	codeFunction: '#b3365f',
+	codeVariable: '#a15c00',
 };
 
 export type ColorToken = keyof typeof light;
 
 /**
- * PROVISIONAL dark palette: it exists so that the colour-scheme toggle demonstrably
- * works, not because anyone chose these colours. Every value is derived mechanically
- * from the light value next to it: greys (saturation below 10%) have their lightness
- * inverted; brand colours keep their hue and saturation and get lightness
- * max(100% - l, 60%) so they stay readable on the dark greys; alpha is kept. The
- * designed palette (light and dark, every pair at 4.5:1 or better) replaces these
- * literals; names never change.
+ * The designed dark palette: the same warm neutrals with the lightness roles swapped
+ * (backgrounds near-black and warm, text off-white) and the accents lifted so they
+ * keep their hue on the dark surfaces. Same token roles and surfaces as `light`.
  */
 export const dark: Record<ColorToken, string> = {
-	base: '#cccccc', // #333, lightness inverted
-	light: '#898989', // #767676, lightness inverted
-	lightest: '#333333', // #ccc, lightness inverted
-	link: '#4eabe9', // #1673b1, lightness 39% -> 61%
-	linkHover: '#ffb633', // #e90, lightness 47% -> 60%
-	focus: 'rgba(78, 171, 233, 0.25)', // rgba(22, 115, 177, 0.25), lightness 39% -> 61%
-	border: '#171717', // #e8e8e8, lightness inverted
-	name: '#ccff66', // #690, lightness 30% -> 70%
-	type: '#ff66bb', // #905, lightness 30% -> 70%
-	error: '#ff3333', // #c00, lightness 40% -> 60%
-	baseBackground: '#000000', // #fff, lightness inverted
-	codeBackground: '#0a0a0a', // #f5f5f5, lightness inverted
-	sidebarBackground: '#0a0a0a', // #f5f5f5, lightness inverted
-	ribbonBackground: '#ffb633', // #e90, lightness 47% -> 60%
-	ribbonText: '#000000', // #fff, lightness inverted
-	codeBase: '#cccccc', // #333, lightness inverted
-	codeComment: '#929292', // #6d6d6d, lightness inverted
-	codePunctuation: '#666666', // #999, lightness inverted
-	codeProperty: '#ff66bb', // #905, lightness 30% -> 70%
-	codeDeleted: '#ff66bb', // #905, lightness 30% -> 70%
-	codeString: '#ccff66', // #690, lightness 30% -> 70%
-	codeInserted: '#ccff66', // #690, lightness 30% -> 70%
-	codeOperator: '#c79d6b', // #9a6e3a, lightness 42% -> 60%
-	codeKeyword: '#4eabe9', // #1673b1, lightness 39% -> 61%
-	codeFunction: '#df5370', // #DD4A68, lightness 58% -> 60%
-	codeVariable: '#ffb633', // #e90, lightness 47% -> 60%
+	// Text
+	base: '#ece8e1',
+	light: '#a8a29a',
+	lightest: '#6b6660', // decorative only
+	link: '#5cc8d8',
+	linkHover: '#8fdde8',
+	focus: 'rgba(92, 200, 216, 0.35)', // focus ring: the dark accent at 35%
+	border: '#3a3631', // decorative
+	name: '#a3d17a',
+	type: '#e59fc7',
+	error: '#f28b82',
+	// Surfaces
+	baseBackground: '#1c1a17',
+	codeBackground: '#262320',
+	sidebarBackground: '#221f1b',
+	selectedBackground: '#1f3236',
+	errorBackground: '#2b1f1d',
+	ribbonBackground: '#5cc8d8',
+	ribbonText: '#1c1a17',
+	// Code tokens, all on codeBackground
+	codeBase: '#ece8e1',
+	codeComment: '#948d84',
+	codePunctuation: '#a8a29a',
+	codeProperty: '#e59fc7',
+	codeDeleted: '#e59fc7',
+	codeString: '#a3d17a',
+	codeInserted: '#a3d17a',
+	codeOperator: '#d9a66b',
+	codeKeyword: '#5cc8d8',
+	codeFunction: '#f28fb1',
+	codeVariable: '#e8b04a',
 };
 
 /**

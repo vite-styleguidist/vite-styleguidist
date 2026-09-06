@@ -53,25 +53,32 @@ export const fontSize = {
 	base: 15,
 	text: 16,
 	small: 13,
-	h1: 48,
-	h2: 36,
-	h3: 24,
+	// The 1.0 type scale: a calmer 40 / 28 / 22 for h1–h3 (48 / 36 / 24 before 1.0),
+	// h4–h6 unchanged
+	h1: 40,
+	h2: 28,
+	h3: 22,
 	h4: 18,
 	h5: 16,
 	h6: 16,
 };
 
 // Tokens for values components used to hard-code (line heights, weights, transitions,
-// shadows); the defaults are exactly those former literals, so adopting a token
-// changes no output. They are here so that users can override them at all.
+// shadows). They exist so that users can override them at all. `transition` and
+// `shadow` still equal the former literals; `lineHeight.base` and `fontWeight` carry
+// the 1.0 design values (1.55 instead of 1.5; 400 / 600 instead of 'normal' / 'bold'),
+// so a component that adopts them changes output on purpose.
 export const lineHeight = {
-	base: 1.5,
+	base: 1.55,
 	heading: 1.2,
 };
 
+// Numbers, not keywords: 600 (semibold) is the designed heading and label weight, and
+// there is no keyword for it. Rsg.Theme types these as `string | number`, so a user
+// theme can still set 'bold'.
 export const fontWeight = {
-	normal: 'normal',
-	bold: 'bold',
+	normal: 400,
+	bold: 600,
 };
 
 // Duration and easing only; the property stays in the component: `color ${transition.fast}`
@@ -89,13 +96,14 @@ export const shadow = {
 
 export const mq = {
 	small: '@media (max-width: 600px)',
-	// Not used by any component yet: sidebar (200) + content (1000) + paddings no longer
+	// Not used by any component yet: sidebar (232) + content (1000) + paddings no longer
 	// fit side by side around this width, so it is the natural next breakpoint.
 	medium: '@media (max-width: 1024px)',
 };
 
-export const borderRadius = 3;
+export const borderRadius = 6;
 export const maxWidth = 1000;
-export const sidebarWidth = 200;
+export const sidebarWidth = 232;
 
-export const buttonTextTransform = 'uppercase';
+// Tab and toggle labels are set in sentence case since 1.0 (they were uppercase before)
+export const buttonTextTransform = 'none';

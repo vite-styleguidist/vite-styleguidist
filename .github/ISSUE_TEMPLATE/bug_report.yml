@@ -1,11 +1,11 @@
 # Issue form, see https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
 #
-# Labels are only applied if they already exist in the repository: `bug` is inherited from upstream,
-# `needs-repro` has to be created once by hand (Issues > Labels), until then GitHub silently skips it.
-# Every report starts as `needs-repro`; the maintainer removes the label once the reproduction checks out.
+# Labels are only applied if they already exist in the repository (`bug` does). `needs-repro` is
+# deliberately NOT applied here: the form already requires a reproduction link, so the maintainer
+# adds that label during triage only when the reproduction is missing or unusable.
 name: Bug report
 description: Something isn’t working as expected
-labels: [bug, needs-repro]
+labels: [bug]
 body:
   - type: markdown
     attributes:

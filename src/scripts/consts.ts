@@ -9,25 +9,25 @@
 
 const REPO = 'https://github.com/vite-styleguidist/vite-styleguidist';
 
-// The docs site is not live yet, so the docs constants link to the Markdown
-// files in the repository, which GitHub renders. Once the site ships (planned at
-// https://vite-styleguidist.github.io/vite-styleguidist/) the site work flips
-// HOMEPAGE and DOCS to the site URLs; nothing else needs to change because every
-// consumer imports these constants instead of spelling out a URL.
-const DOCS = `${REPO}/blob/main/docs`;
+// The docs site: GitHub Pages of this repository (see site/ and .github/workflows/site.yml).
+// Every consumer imports these constants instead of spelling out a URL, so moving the site
+// (for example to a js.org subdomain) is a change to this file only. The site is built with
+// trailingSlash: true, so the page URLs end in "/" and anchors follow.
+const SITE = 'https://vite-styleguidist.github.io/vite-styleguidist/';
+const DOCS = `${SITE}docs`;
 
 /** Target of the "Created with …" link in the footer of every generated style guide. */
-export const HOMEPAGE = REPO;
+export const HOMEPAGE = SITE;
 
 /** Where the client-side error boundary sends people to report a crash. */
 export const BUGS = `${REPO}/issues`;
 
-// Consumers append GitHub-style `#anchor` slugs to these, e.g. the CLI appends
-// `#<option>` (lowercased) when a config option fails validation. GitHub also
-// lowercases heading slugs and strips backticks, so the `## \`template\`` heading in
-// Configuration.md is reachable as `#template`.
-export const DOCS_CONFIG = `${DOCS}/Configuration.md`;
-export const DOCS_COMPONENTS = `${DOCS}/Components.md`;
-export const DOCS_VITE = `${DOCS}/Vite.md`;
-export const DOCS_DOCUMENTING = `${DOCS}/Documenting.md`;
-export const DOCS_THIRDPARTIES = `${DOCS}/Thirdparties.md`;
+// Consumers append `#anchor` slugs to these, e.g. the CLI appends `#<option>` (lowercased)
+// when a config option fails validation. Docusaurus derives heading ids the same way GitHub
+// does (lowercased, backticks stripped), so the `## \`template\`` heading of the
+// configuration page is reachable as `#template`.
+export const DOCS_CONFIG = `${DOCS}/configuration/`;
+export const DOCS_COMPONENTS = `${DOCS}/components/`;
+export const DOCS_VITE = `${DOCS}/vite/`;
+export const DOCS_DOCUMENTING = `${DOCS}/documenting/`;
+export const DOCS_THIRDPARTIES = `${DOCS}/thirdparties/`;

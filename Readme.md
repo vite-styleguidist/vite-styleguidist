@@ -25,6 +25,8 @@ Vite Styleguidist is a component development environment with a hot reloaded dev
 
 ![Vite Styleguidist in action](site/static/img/workbench.jpg)
 
+The documentation lives at [vite-styleguidist.github.io/vite-styleguidist](https://vite-styleguidist.github.io/vite-styleguidist/); the same pages are the Markdown files under [docs/](docs/). Try [the demo style guide](https://vite-styleguidist.github.io/vite-styleguidist/examples/basic/), built from [examples/basic](examples/basic).
+
 ## Usage
 
 - **[Getting Started](docs/GettingStarted.md): install and run Styleguidist**

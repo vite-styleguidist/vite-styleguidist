@@ -2,7 +2,7 @@
   "name": "vite-styleguidist",
   "description": "Isolated React component development environment with a living style guide, powered by Vite. A maintained fork of React Styleguidist.",
   "version": "0.0.0-development",
-  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
+  "homepage": "https://vite-styleguidist.github.io/vite-styleguidist/",
   "author": {
     "name": "Mihail-Gabriel Alexe"
   },

@@ -15,6 +15,13 @@ export default defineConfig({
 				find: 'rsg-components',
 				replacement: path.resolve(import.meta.dirname, 'src/client/rsg-components'),
 			},
+			// Unit tests run on the React the repo develops against (18+), so the React root
+			// shim is always the createRoot() one here; a style guide gets the one matching the
+			// project's react-dom (see src/client/utils/reactRoot.ts).
+			{
+				find: /^rsg-react-root$/,
+				replacement: path.resolve(import.meta.dirname, 'src/client/utils/reactRoot.modern.ts'),
+			},
 		],
 	},
 	test: {

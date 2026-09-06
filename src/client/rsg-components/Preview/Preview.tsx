@@ -3,7 +3,10 @@ import PropTypes from 'prop-types';
 import PlaygroundError from 'rsg-components/PlaygroundError';
 import ReactExample from 'rsg-components/ReactExample';
 import Context, { StyleGuideContextContents } from 'rsg-components/Context';
-import { createRoot, Root } from 'react-dom/client';
+// `rsg-react-root` is aliased by the Vite config to the createRoot() (React 18+) or the
+// ReactDOM.render() (React 16.14 and 17) implementation, see utils/reactRoot.ts
+import { mountRoot } from 'rsg-react-root';
+import type { StyleguideRoot } from '../../utils/reactRoot.js';
 
 const improveErrorMessage = (message: string) =>
 	message.replace(
@@ -28,8 +31,9 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	public static contextType = Context;
 
 	private mountNode: Element | null = null;
-	private reactRoot: Root | null = null;
+	private reactRoot: StyleguideRoot | null = null;
 	private timeoutId: ReturnType<typeof setTimeout> | null = null;
+	private errorTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	public state: PreviewState = {
 		error: null,
@@ -57,6 +61,9 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	}
 
 	public componentWillUnmount() {
+		if (this.errorTimeoutId) {
+			clearTimeout(this.errorTimeoutId);
+		}
 		this.unmountPreview();
 	}
 
@@ -100,7 +107,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 			}
 			try {
 				if (this.reactRoot === null) {
-					this.reactRoot = createRoot(this.mountNode);
+					this.reactRoot = mountRoot(this.mountNode);
 					this.reactRoot.render(wrappedComponent);
 				} else {
 					this.reactRoot.render(wrappedComponent);
@@ -116,8 +123,21 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	private handleError = (err: Error) => {
 		this.unmountPreview();
 
-		this.setState({
-			error: improveErrorMessage(err.toString()),
+		// A compile error is reported synchronously from inside ReactExample's render()
+		// (compileCode -> onError). React 16's "cannot update during an existing state
+		// transition" guard is renderer-wide, so a setState here, while the example root is
+		// rendering, logs that warning in development builds of React 16 even though the
+		// update targets a component in another root; 17 and later only complain about the
+		// component that is itself rendering. Deferring to the next macrotask (the same way
+		// unmountPreview() defers the unmount) keeps every supported React quiet.
+		if (this.errorTimeoutId) {
+			clearTimeout(this.errorTimeoutId);
+		}
+		this.errorTimeoutId = setTimeout(() => {
+			this.errorTimeoutId = null;
+			this.setState({
+				error: improveErrorMessage(err.toString()),
+			});
 		});
 
 		console.error(err); // eslint-disable-line no-console
@@ -126,7 +146,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	private callbackRef = (ref: HTMLDivElement | null) => {
 		this.mountNode = ref;
 		if (!this.reactRoot && ref) {
-			this.reactRoot = createRoot(ref);
+			this.reactRoot = mountRoot(ref);
 		}
 	};
 

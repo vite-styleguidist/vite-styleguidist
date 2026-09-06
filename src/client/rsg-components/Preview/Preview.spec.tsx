@@ -121,11 +121,11 @@ it('should handle no code', () => {
 	expect(console.error).not.toHaveBeenCalled();
 });
 
-it('should handle errors', () => {
+it('should handle errors', async () => {
 	const consoleError = vi.fn();
 
 	console.error = consoleError;
-	const { getByText } = render(
+	const { findByText } = render(
 		<Provider>
 			<Preview code={'<invalid code'} evalInContext={evalInContext} />
 		</Provider>
@@ -135,8 +135,9 @@ it('should handle errors', () => {
 	expect(
 		consoleError.mock.calls.find((call) => /^SyntaxError: .+ \(\d+:\d+\)$/.test(String(call[0])))
 	).toBeTruthy();
-	// The compiler error is shown to the user in place of the example
-	expect(getByText(/^SyntaxError: /)).toBeInTheDocument();
+	// The compiler error is shown to the user in place of the example; the state update
+	// is deferred to a macrotask (see Preview.handleError), hence the wait
+	expect(await findByText(/^SyntaxError: /)).toBeInTheDocument();
 });
 
 it('should not clear console on initial mount', () => {

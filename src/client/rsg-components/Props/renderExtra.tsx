@@ -1,5 +1,5 @@
 import React from 'react';
-import Group from 'react-group';
+import Group from 'rsg-components/Group';
 import Type from 'rsg-components/Type';
 import Code from 'rsg-components/Code';
 import Name from 'rsg-components/Name';

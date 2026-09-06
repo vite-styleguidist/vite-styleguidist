@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { loadConfigFromFile, searchForWorkspaceRoot } from 'vite';
 import type { Alias, InlineConfig, PluginOption, UserConfig } from 'vite';
@@ -80,6 +81,38 @@ export function findExampleDependencies(markdownFiles: string[], aliases: string
 }
 
 /**
+ * Which React root API the project's `react-dom` supports: `modern` (`createRoot()`,
+ * React 18 and newer) or `legacy` (`ReactDOM.render()`, React 16.14 and 17).
+ *
+ * The two implementations live in src/client/utils/reactRoot.{modern,legacy}.ts and the
+ * client imports whichever one the `rsg-react-root` alias points at (see reactRoot.ts for
+ * why the choice cannot be made at runtime). `react-dom` is resolved from the project
+ * (`config.configDir`), the same place `resolve.dedupe` pins the runtime copy to, so the
+ * branch and the React that ends up in the bundle always agree. `react-dom/package.json`
+ * resolves on every supported version: 16 and 17 have no `exports` map, 18 and 19 export it.
+ *
+ * Not resolvable (Preact-only projects, unusual layouts) falls back to `modern`, the only
+ * behaviour before React 16 support; `preact/compat` provides both APIs anyway.
+ */
+export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
+	let version: string;
+	try {
+		const requireFromProject = createRequire(path.join(configDir, 'package.json'));
+		({ version } = requireFromProject('react-dom/package.json') as { version: string });
+	} catch {
+		logger.debug('Cannot resolve react-dom from the project, mounting with createRoot()');
+		return 'modern';
+	}
+	const flavor = parseInt(version, 10) >= 18 ? 'modern' : 'legacy';
+	logger.debug(
+		`Found react-dom ${version}, mounting with ${
+			flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'
+		}`
+	);
+	return flavor;
+}
+
+/**
  * Build the alias list implementing `moduleAliases` and `styleguideComponents`.
  *
  * Order matters (first match wins): user overrides of individual Styleguidist
@@ -111,6 +144,12 @@ export function getAliases(config: Rsg.SanitizedStyleguidistConfig): Alias[] {
 	alias.push({
 		find: 'rsg-components',
 		replacement: toPosix(path.join(CLIENT_DIR, 'rsg-components')),
+	});
+
+	// The React root implementation matching the project’s react-dom (see getReactRootFlavor)
+	alias.push({
+		find: /^rsg-react-root$/,
+		replacement: toPosix(findClientFile(`utils/reactRoot.${getReactRootFlavor(config.configDir)}`)),
 	});
 
 	// `doctrine` (JSDoc type rendering in the browser) requires Node’s `assert`.

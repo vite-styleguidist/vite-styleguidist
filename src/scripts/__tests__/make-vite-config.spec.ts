@@ -9,6 +9,7 @@ import makeViteConfig, {
 	findExampleDependencies,
 	getAliases,
 	getAliasNames,
+	getReactRootFlavor,
 } from '../make-vite-config.js';
 import type * as Rsg from '../../typings/index.js';
 
@@ -46,10 +47,15 @@ const createTempDir = (files: Record<string, string>): string => {
 describe('getAliases', () => {
 	const findOf = (alias: Alias) => (alias.find instanceof RegExp ? alias.find.source : alias.find);
 
-	it('should always resolve rsg-components and the assert shim', () => {
+	it('should always resolve rsg-components, the React root and the assert shim', () => {
 		const aliases = getAliases(loadConfig('defaults'));
 		expect(aliases).toEqual([
 			{ find: 'rsg-components', replacement: path.join(clientDir, 'rsg-components') },
+			// The repo develops against React 19, so the fixture app resolves the modern root
+			{
+				find: /^rsg-react-root$/,
+				replacement: expect.stringMatching(/\/client\/utils\/reactRoot\.modern\.ts$/),
+			},
 			{
 				find: /^assert$/,
 				replacement: expect.stringMatching(/\/client\/utils\/assertShim\.cjs$/),
@@ -82,6 +88,7 @@ describe('getAliases', () => {
 			'^rsg-components\\/Logo\\/LogoRenderer$',
 			'^rsg-components\\/Wrapper$',
 			'rsg-components',
+			'^rsg-react-root$',
 			'^assert$',
 		]);
 		expect(aliases[0].replacement).toBe('/project/styleguide/Logo.js');
@@ -101,6 +108,52 @@ describe('getAliases', () => {
 		expect((wrapper.find as RegExp).test('rsg-components/WrapperFoo')).toBe(false);
 		expect((logo.find as RegExp).test('rsg-components/Logo/LogoRenderer')).toBe(true);
 		expect((logo.find as RegExp).test('rsg-components/Logo')).toBe(false);
+	});
+});
+
+describe('getReactRootFlavor', () => {
+	/** A fake project whose node_modules holds the given react-dom version. */
+	const createProject = (reactDomVersion?: string): string => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-react-root-'));
+		fs.writeFileSync(path.join(dir, 'package.json'), '{ "name": "pizza" }');
+		if (reactDomVersion) {
+			const pkgDir = path.join(dir, 'node_modules/react-dom');
+			fs.mkdirSync(pkgDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(pkgDir, 'package.json'),
+				JSON.stringify({ name: 'react-dom', version: reactDomVersion, main: 'index.js' })
+			);
+			fs.writeFileSync(path.join(pkgDir, 'index.js'), '');
+		}
+		return dir;
+	};
+
+	it.each([
+		['16.14.0', 'legacy'],
+		['17.0.2', 'legacy'],
+		['18.3.1', 'modern'],
+		['19.2.8', 'modern'],
+	])('should pick the root API for react-dom %s', (version, flavor) => {
+		const dir = createProject(version);
+		try {
+			expect(getReactRootFlavor(dir)).toBe(flavor);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should fall back to the modern root when react-dom is not installed', () => {
+		const dir = createProject();
+		try {
+			expect(getReactRootFlavor(dir)).toBe('modern');
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should resolve react-dom from the style guide config directory', () => {
+		// The fixture apps have no node_modules of their own: the repo's React 19 is found
+		expect(getReactRootFlavor(testApp('defaults'))).toBe('modern');
 	});
 });
 
@@ -279,8 +332,31 @@ describe('makeViteConfig', () => {
 			{ find: '~', replacement: '/src' },
 			{ find: /^rsg-components\/Wrapper$/, replacement: '/w.js' },
 			{ find: 'rsg-components', replacement: expect.any(String) },
+			{ find: /^rsg-react-root$/, replacement: expect.any(String) },
 			{ find: /^assert$/, replacement: expect.any(String) },
 		]);
+	});
+
+	it('should alias the React root matching the project’s react-dom', async () => {
+		const dir = createTempDir({ 'package.json': '{ "name": "pizza" }' });
+		const pkgDir = path.join(dir, 'node_modules/react-dom');
+		fs.mkdirSync(pkgDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(pkgDir, 'package.json'),
+			'{ "version": "16.14.0", "main": "index.js" }'
+		);
+		fs.writeFileSync(path.join(pkgDir, 'index.js'), '');
+		try {
+			process.chdir(dir);
+			const result = await makeViteConfig(getConfig({}), 'production');
+			expect(result.resolve?.alias).toContainEqual({
+				find: /^rsg-react-root$/,
+				replacement: expect.stringMatching(/\/client\/utils\/reactRoot\.legacy\.ts$/),
+			});
+		} finally {
+			process.chdir(cwd);
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	describe('user Vite config', () => {
@@ -318,6 +394,7 @@ describe('makeViteConfig', () => {
 			expect(result.resolve?.alias).toEqual([
 				{ find: 'components', replacement: '/project/components' },
 				{ find: 'rsg-components', replacement: expect.any(String) },
+				{ find: /^rsg-react-root$/, replacement: expect.any(String) },
 				{ find: /^assert$/, replacement: expect.any(String) },
 			]);
 		});

@@ -4,7 +4,7 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import Markdown from 'rsg-components/Markdown';
 import Name from 'rsg-components/Name';
 import Type from 'rsg-components/Type';
-import Group from 'react-group';
+import Group from 'rsg-components/Group';
 import doctrine from 'doctrine';
 import type * as Rsg from '../../../typings/index.js';
 

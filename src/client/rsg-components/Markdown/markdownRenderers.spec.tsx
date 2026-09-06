@@ -50,8 +50,11 @@ describe('markdownRenderers', () => {
 	});
 
 	it('should keep the inline variant a copy with its own paragraph renderer', () => {
-		expect(inlineOverrides).not.toBe(markdownRenderers);
-		expect(inlineOverrides.p).not.toBe(markdownRenderers.p);
-		expect(inlineOverrides.a).toBe(markdownRenderers.a);
+		// Spreading the shared map widens its type, so read the copy back as the same map shape
+		const inline = inlineOverrides as typeof markdownRenderers;
+
+		expect(inline).not.toBe(markdownRenderers);
+		expect(inline.p).not.toBe(markdownRenderers.p);
+		expect(inline.a).toBe(markdownRenderers.a);
 	});
 });

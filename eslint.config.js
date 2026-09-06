@@ -12,6 +12,8 @@ export default tseslint.config(
 		ignores: [
 			'node_modules/**',
 			'lib/**',
+			// Git worktrees of parallel branches kept under .worktrees/ (excluded via .git/info/exclude), each with its own lib/ and node_modules
+			'.worktrees/**',
 			'coverage/**',
 			'examples/**/styleguide/**',
 			'examples/**/node_modules/**',

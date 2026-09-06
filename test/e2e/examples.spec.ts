@@ -3,7 +3,8 @@
 // and the eight `test:browser:*` npm scripts that ran it (see ADR 0009).
 //
 // The examples must be built first (`npm run build:basic` ... `npm run build:vite`, exactly
-// what the CI integration job does); a missing build fails its test with a clear 404.
+// what the CI integration job does); a missing build fails on the render assertion, and the
+// browser console attached to the report shows the 404s.
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
@@ -76,23 +77,31 @@ for (const name of EXAMPLES) {
 
 		await page.goto(url);
 
-		// A component or a section must have rendered, and so must some documentation prose:
-		// a runtime that silently drops Markdown still shows the containers. Both assertions
-		// auto-wait, which replaces the old `networkidle0` navigation wait.
-		await expect(
-			page.locator('[data-testid$="-container"], [data-testid^="section-"]').first()
-		).toBeVisible();
-		await expect(page.locator('p').filter({ hasText: /\S/ }).first()).toBeAttached();
+		// Judge the errors of the load first: a build that throws before rendering would
+		// otherwise only fail the render assertion below, with a timed-out locator in the report
+		// instead of the TypeError. Soft, so the render assertions still run and report.
+		expect.soft(errors, `runtime errors while loading ${url}`).toEqual([]);
 
-		// Give late console errors (effects, lazy chunks) a chance to arrive before judging.
-		// The builds are static, so "no network activity" is reached almost immediately.
-		await page.waitForLoadState('networkidle');
+		try {
+			// A component or a section must have rendered, and so must some documentation prose:
+			// a runtime that silently drops Markdown still shows the containers. Both assertions
+			// auto-wait, which replaces the old `networkidle0` navigation wait.
+			await expect(
+				page.locator('[data-testid$="-container"], [data-testid^="section-"]').first()
+			).toBeVisible();
+			await expect(page.locator('p').filter({ hasText: /\S/ }).first()).toBeAttached();
 
-		if (consoleLog.length > 0) {
-			await test.info().attach('browser console', {
-				body: consoleLog.join('\n'),
-				contentType: 'text/plain',
-			});
+			// Give late console errors (effects, lazy chunks) a chance to arrive before judging.
+			// The builds are static, so "no network activity" is reached almost immediately.
+			await page.waitForLoadState('networkidle');
+		} finally {
+			// Attached whatever happened above, so a failed render comes with the console
+			if (consoleLog.length > 0) {
+				await test.info().attach('browser console', {
+					body: consoleLog.join('\n'),
+					contentType: 'text/plain',
+				});
+			}
 		}
 		expect(errors, `runtime errors at ${url}`).toEqual([]);
 	});

@@ -41,11 +41,18 @@ export const GFM_PACKAGE = 'remark-gfm';
 
 export const isMdxFile = (file: string): boolean => file.toLowerCase().endsWith('.mdx');
 
-/** The message every "@mdx-js/mdx is missing" path prints, warning or error. */
+/**
+ * The message every "@mdx-js/mdx is missing" path prints, warning or error.
+ *
+ * It names remark-gfm as well, even though only @mdx-js/mdx is strictly required to
+ * compile a page: GFM is on by default (ADR 0014) and the docs promise that tables, task lists
+ * and strikethrough work out of the box, so a user who installs only what this message says
+ * would silently lose all three. Same command as docs/Documenting.md#mdx and the cookbook.
+ */
 export function missingMdxMessage(file: string): string {
 	return (
-		`Styleguidist: MDX support needs the optional peer dependency ${MDX_PACKAGE}.\n` +
-		`  npm install --save-dev ${MDX_PACKAGE}\n` +
+		`Styleguidist: MDX support needs the optional peer dependencies ${MDX_PACKAGE} and ${GFM_PACKAGE}.\n` +
+		`  npm install --save-dev ${MDX_PACKAGE} ${GFM_PACKAGE}\n` +
 		`  ${file}\n` +
 		`See ${DOCS_DOCUMENTING}#mdx`
 	);

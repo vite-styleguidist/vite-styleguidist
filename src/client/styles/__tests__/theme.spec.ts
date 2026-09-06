@@ -61,7 +61,7 @@ describe('theme', () => {
 			h6: 16,
 		});
 		expect(theme.borderRadius).toBe(6);
-		expect(theme.maxWidth).toBe(1000);
+		expect(theme.maxWidth).toBe(960);
 		expect(theme.sidebarWidth).toBe(232);
 		expect(theme.buttonTextTransform).toBe('none');
 	});

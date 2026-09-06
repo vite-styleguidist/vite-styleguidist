@@ -102,7 +102,7 @@ export const mq = {
 };
 
 export const borderRadius = 6;
-export const maxWidth = 1000;
+export const maxWidth = 960;
 export const sidebarWidth = 232;
 
 // Tab and toggle labels are set in sentence case since 1.0 (they were uppercase before)

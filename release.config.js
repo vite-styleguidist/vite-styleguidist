@@ -35,9 +35,28 @@
 //
 // Commit conventions
 // ------------------
-// Conventional Commits, enforced by commitlint.config.js. `fix:` -> patch, `feat:` -> minor,
-// `feat!:` or a `BREAKING CHANGE:` footer -> major. Every other type (chore, docs, ci, build,
-// refactor, test, style, perf without `!`) does not trigger a release on its own.
+// Conventional Commits, enforced by commitlint.config.js. `fix:` and `perf:` -> patch,
+// `feat:` -> minor, `!` in the header or a `BREAKING CHANGE:` footer -> major. Every other type
+// (chore, docs, ci, build, refactor, test, style) does not trigger a release on its own. These
+// are @semantic-release/commit-analyzer's default rules; docs/Maintenance.md documents the same.
+//
+// The preset major matters: conventional-changelog-conventionalcommits@10 requires
+// conventional-changelog-writer@9, but @semantic-release/release-notes-generator@14 bundles
+// writer 8 and fails at generateNotes with "Missing helper" when it loads the newer preset.
+// Keep the preset on ^9 until release-notes-generator moves to writer 9.
+//
+// Baseline tag
+// ------------
+// semantic-release builds the notes from every commit since the last release tag, and with no
+// tag at all that means the whole inherited history: 2,200+ upstream commits, a release body
+// over GitHub's 125,000-character limit, and upstream work presented as this fork's. So before
+// the first release a single baseline tag is pushed on the last upstream commit:
+//
+//     git tag v0.0.0 c223f9a2 && git push <remote> v0.0.0
+//
+// It is not an import of upstream's version tags (which would make the migration commit compute
+// 14.0.0): semver.inc('0.0.0', 'major') is 1.0.0, so the first prerelease is still 1.0.0-next.1,
+// and the notes start at the migration commit, breaking changes included.
 
 export default {
 	branches: ['main', { name: 'next', prerelease: true }],

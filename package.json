@@ -118,7 +118,7 @@
     "@types/styled-system__theme-get": "^5.0.4",
     "@types/type-detect": "^4.0.3",
     "@vitest/coverage-v8": "^4.1.11",
-    "conventional-changelog-conventionalcommits": "^10.4.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "deepfreeze": "^2.0.0",
     "dog-names": "^3.0.1",
     "eslint": "^9.39.5",
@@ -144,7 +144,6 @@
     "vitest": "^4.1.11"
   },
   "scripts": {
-    "prepare": "husky",
     "pretest": "npm run lint && npm run typecheck",
     "typecheck": "tsc -p . --noEmit",
     "test": "npm run test:unit",
@@ -163,12 +162,12 @@
     "build:basic": "node lib/bin/styleguidist.js build --config examples/basic/styleguide.config.js",
     "build:customised": "node lib/bin/styleguidist.js build --config examples/customised/styleguide.config.js",
     "build:sections": "node lib/bin/styleguidist.js build --config examples/sections/styleguide.config.js",
-    "test:browser:pre": "npm i --no-save puppeteer",
+    "test:browser:pre": "npm i --no-save puppeteer@25.10.0",
     "test:browser:basic": "node test/browser.js examples/basic/styleguide",
     "test:browser:customised": "node test/browser.js examples/customised/styleguide",
     "test:browser:sections": "node test/browser.js examples/sections/styleguide",
     "format": "prettier --log-level warn --write \"**/*.{js,md}\"",
-    "test:cypress:pre": "npm i --no-save cypress@15.21.1 wait-on",
+    "test:cypress:pre": "npm i --no-save cypress@15.21.1 wait-on@9.1.0",
     "test:cypress:open": "cypress open",
     "test:cypress:run": "cypress run",
     "test:cypress:startServer": "node test/run.server.js",
@@ -182,7 +181,8 @@
     "build:styled-components": "node lib/bin/styleguidist.js build --config examples/styled-components/styleguide.config.js",
     "test:browser:styled-components": "node test/browser.js examples/styled-components/styleguide",
     "build:vite": "node lib/bin/styleguidist.js build --config examples/vite/styleguide.config.js",
-    "test:browser:vite": "node test/browser.js examples/vite/styleguide"
+    "test:browser:vite": "node test/browser.js examples/vite/styleguide",
+    "hooks:install": "husky"
   },
   "keywords": [
     "react",

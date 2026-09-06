@@ -1,7 +1,6 @@
 import React from 'react';
 import Group from 'rsg-components/Group';
 import Type from 'rsg-components/Type';
-import Code from 'rsg-components/Code';
 import Name from 'rsg-components/Name';
 import Markdown from 'rsg-components/Markdown';
 import type { PropTypeDescriptor } from '../../../typings/index.js';
@@ -22,12 +21,11 @@ function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode 
 		return renderPlainValue(type);
 	}
 
-	// Literal values read as types in the description: monospace in the type colour, with
-	// the <code> element kept for its semantics
+	// Literal values read as types in the description: Type is already monospace 13 in the
+	// type colour, and rendering them through it directly (rather than nesting a Code chip,
+	// which sets its own colour and background) is what makes that colour visible
 	const values = type.value.map(({ value }) => (
-		<Type key={value}>
-			<Code>{showSpaces(unquote(value))}</Code>
-		</Type>
+		<Type key={value}>{showSpaces(unquote(value))}</Type>
 	));
 	return (
 		<span>

@@ -425,6 +425,24 @@ describe('props columns', () => {
 	`);
 	});
 
+	// The Default column and enum literals are table fields, not prose: they are plain
+	// monospace (PropDefault / Type) rather than the inline-code chip Code renders, so that
+	// the type colour set on the literals is the colour that shows (ADR 0011)
+	test('should render enum values and default values without a code chip', () => {
+		const { container } = renderJs(
+			['size: PropTypes.oneOf(["small", "normal", "large"])'],
+			['size: "normal"']
+		);
+
+		// PropName renders a <code> of its own, so this looks for the Code component's chip
+		expect(container.querySelector('[class^="rsg--code-"]')).toBe(null);
+		const literals = [...container.querySelectorAll('span')].filter(
+			(node) => node.textContent === 'small'
+		);
+		expect(literals).toHaveLength(1);
+		expect(literals[0].className).toMatch(/^rsg--type-\d+$/);
+	});
+
 	test('should render PropTypes.oneOfType', () => {
 		const { container } = renderJs([
 			'union: PropTypes.oneOfType([PropTypes.string, PropTypes.number])',
@@ -468,7 +486,7 @@ describe('props columns', () => {
 		expect(getByText('Function').title).toMatchInlineSnapshot(`"(e) => console.log(e)"`);
 	});
 
-	test('should render function defaultValue as code when undefined', () => {
+	test('should render function defaultValue as plain text when undefined', () => {
 		const { container } = renderJs(['fn: PropTypes.func'], ['fn: undefined']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`
@@ -479,7 +497,7 @@ describe('props columns', () => {
 	`);
 	});
 
-	test('should render function defaultValue as code when null', () => {
+	test('should render function defaultValue as plain text when null', () => {
 		const { container } = renderJs(['fn: PropTypes.func'], ['fn: null']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`

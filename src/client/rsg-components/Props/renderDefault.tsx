@@ -1,6 +1,5 @@
 import React from 'react';
 import Text from 'rsg-components/Text';
-import Code from 'rsg-components/Code';
 import PropDefault from './PropDefaultRenderer.js';
 import { showSpaces, unquote, PropDescriptor } from './util.js';
 
@@ -19,11 +18,7 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 					: prop.tsType && prop.tsType.type;
 
 			if (defaultValueBlacklist.indexOf(prop.defaultValue.value) > -1) {
-				return (
-					<PropDefault>
-						<Code>{defaultValueString}</Code>
-					</PropDefault>
-				);
+				return <PropDefault>{defaultValueString}</PropDefault>;
 			} else if (propName === 'func' || propName === 'function') {
 				return (
 					<PropDefault>
@@ -62,11 +57,10 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 			}
 		}
 
-		return (
-			<PropDefault>
-				<Code>{defaultValueString}</Code>
-			</PropDefault>
-		);
+		// Plain monospace in the secondary colour (PropDefault.value): the Default column is
+		// a table field, not prose, so it does not take the inline-code chip (ADR 0011 and
+		// the 1.0 artboard show it unchipped)
+		return <PropDefault>{defaultValueString}</PropDefault>;
 	} else if (prop.required) {
 		return <PropDefault required>Required</PropDefault>;
 	}

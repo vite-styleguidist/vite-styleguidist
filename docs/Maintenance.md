@@ -167,6 +167,7 @@ Before the very first release only:
 
 - Push the baseline tag so the release notes start at the fork rather than at the first upstream commit: `git tag v0.0.0 c223f9a2 && git push origin v0.0.0` (see the comments in `release.config.js` for why this is not an import of upstream's tags).
 - Create a granular npm automation token with publish rights for `vite-styleguidist` and store it as the `NPM_TOKEN` repository secret.
+- Tag the published commit (`git tag -a v1.0.0-next.1 -m 1.0.0-next.1 && git push origin v1.0.0-next.1`) and give it the channel note semantic-release writes for its own tags, otherwise the next run doesn’t recognise the tag as a release on `next` and fails on the existing tag: `git notes --ref semantic-release-v1.0.0-next.1 add -f -m '{"channels":["next"]}' v1.0.0-next.1^{commit} && git push origin refs/notes/semantic-release-v1.0.0-next.1`.
 - After `1.0.0-next.1` is on npm: register the trusted publisher on npmjs.com, delete the `NPM_TOKEN` secret, and set the repository variable `RELEASES_ENABLED` to `true` (`gh variable set RELEASES_ENABLED --body true`). Until then the release job is skipped rather than failed. The same variable pauses releases at any time: set it to `false`.
 
 For every release:

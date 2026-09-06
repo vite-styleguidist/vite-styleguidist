@@ -7,9 +7,9 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 // "shows code on click" opened the editor just before it. Serial mode keeps that contract.
 test.describe.configure({ mode: 'serial' });
 
-// The code editor, whatever renders it. Today that is react-simple-code-editor's
-// <textarea>; the CodeMirror 6 editor renders a contenteditable `.cm-content` instead.
-// Both are matched so this spec survives the editor swap without changes.
+// The code editor, whatever renders it: the built-in CodeMirror 6 editor is a contenteditable
+// `.cm-content`; a replacement configured through styleguideComponents.Editor is most likely
+// a <textarea> (the Cookbook recipe), so both are matched.
 const EDITOR_SELECTOR = 'textarea, [contenteditable="true"].cm-content';
 
 let page: Page;

@@ -21,8 +21,9 @@ import type * as Rsg from '../../../typings/index.js';
  */
 export default function ThemeToggle() {
 	const { config } = useStyleGuideContext();
-	// `colorScheme` may not be part of the config shipped to the client; the inline
-	// script writes it into <html> as well, which also covers custom templates
+	// The option is part of the config shipped to the client; the attribute the inline
+	// script writes into <html> is the fallback for a hand-built context (a custom
+	// StyleGuideRenderer that constructs its own config, tests)
 	const configured: Rsg.ColorScheme = config.colorScheme || readConfiguredScheme();
 	const forced = configured !== 'system';
 

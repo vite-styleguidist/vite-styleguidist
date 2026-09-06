@@ -35,7 +35,7 @@ export default function getExamples(
 		// named — a custom getExampleFilename, or the defaultExample option — is an error:
 		// they asked for that file, failing silently would be worse.
 		if (hasExamplesFile && config.getExampleFilename === defaultGetExampleFilename) {
-			logger.warn(missingMdxMessage(examplesFileToLoad));
+			warnSkippedMdxFile(examplesFileToLoad);
 			return null;
 		}
 		throw new MissingMdxError(examplesFileToLoad);
@@ -54,9 +54,36 @@ export default function getExamples(
 }
 
 /**
+ * Files already reported as “skipped, @mdx-js/mdx is missing”, so that a component is not
+ * announced twice: `isUsableExampleFile()` runs for every component (processComponent) and
+ * `getExamples()` runs again for the ones that survive `skipComponentsWithoutExample`.
+ */
+const warnedMdxFiles = new Set<string>();
+
+/** The documented “please install @mdx-js/mdx”, at most once per file per run. */
+function warnSkippedMdxFile(file: string): void {
+	if (warnedMdxFiles.has(file)) {
+		return;
+	}
+	warnedMdxFiles.add(file);
+	logger.warn(missingMdxMessage(file));
+}
+
+/** Only exported for tests: forget which files have already been warned about. */
+export function clearMdxWarnings(): void {
+	warnedMdxFiles.clear();
+}
+
+/**
  * Would this examples file actually produce examples? `false` for an `.mdx` file that is
  * skipped because @mdx-js/mdx is missing (see above), so that `hasExamples` and
  * `skipComponentsWithoutExample` agree with what the style guide can really show.
+ *
+ * The diagnostic belongs here as well as in getExamples(): with
+ * `skipComponentsWithoutExample` the component is filtered out on this answer alone and
+ * getExamples() is never reached, so this is the only place that can say why the component
+ * vanished. Same rule as getExamples(): a file we found ourselves warns, a file the user
+ * named (a custom `getExampleFilename`) throws.
  */
 export function isUsableExampleFile(
 	config: Rsg.SanitizedStyleguidistConfig,
@@ -65,5 +92,12 @@ export function isUsableExampleFile(
 	if (!file || !fs.existsSync(file)) {
 		return false;
 	}
-	return !isMdxFile(file) || isMdxAvailable(config.configDir);
+	if (!isMdxFile(file) || isMdxAvailable(config.configDir)) {
+		return true;
+	}
+	if (config.getExampleFilename !== defaultGetExampleFilename) {
+		throw new MissingMdxError(file);
+	}
+	warnSkippedMdxFile(file);
+	return false;
 }

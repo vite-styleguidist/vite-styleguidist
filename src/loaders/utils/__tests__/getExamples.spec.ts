@@ -1,10 +1,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import getExamples from '../getExamples.js';
+import glogg from 'glogg';
+import getExamples, { clearMdxWarnings, isUsableExampleFile } from '../getExamples.js';
 import { defaultGetExampleFilename } from '../../../scripts/schemas/config.js';
 import { EXAMPLES_PREFIX, MDX_PREFIX, NULL, parseExamplesId, toPosix } from '../../../vite/ids.js';
 import type * as Rsg from '../../../typings/index.js';
+
+const logger = glogg('rsg');
 
 const displayName = 'Pizza';
 // The default example is never read from disk by getExamples(), so it needs no fixture
@@ -17,6 +20,8 @@ let examplesFile: string;
 let config: Rsg.SanitizedStyleguidistConfig;
 
 beforeEach(() => {
+	// The "please install @mdx-js/mdx" warning is once per file per run
+	clearMdxWarnings();
 	dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-getExamples-'));
 	file = path.join(dir, 'pizza.js');
 	examplesFile = path.join(dir, 'Pizza.md');
@@ -27,6 +32,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	logger.removeAllListeners();
 	fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -105,6 +111,65 @@ describe('MDX', () => {
 
 		expect(getExamples(config, file, displayName, mdxFile, defaultExample)).toBeNull();
 		vi.restoreAllMocks();
+	});
+
+	it('should warn once per file when a discovered .mdx file is skipped', async () => {
+		const mdx = await import('../mdx.js');
+		vi.spyOn(mdx, 'isMdxAvailable').mockReturnValue(false);
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+		const warn = vi.fn();
+		logger.on('warn', warn);
+
+		// Both entry points see the same file: processComponent asks isUsableExampleFile()
+		// whether the component has examples at all, then getExamples() builds the module
+		expect(isUsableExampleFile(config, mdxFile)).toBe(false);
+		expect(getExamples(config, file, displayName, mdxFile, defaultExample)).toBeNull();
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatch('@mdx-js/mdx');
+		expect(warn.mock.calls[0][0]).toMatch(mdxFile);
+		vi.restoreAllMocks();
+	});
+
+	// With `skipComponentsWithoutExample` the component never reaches getExamples(): it is
+	// filtered out on the isUsableExampleFile() answer alone, so the diagnostic has to
+	// happen here or nowhere (C7)
+	it('should warn from isUsableExampleFile when the component is about to be skipped', async () => {
+		const mdx = await import('../mdx.js');
+		vi.spyOn(mdx, 'isMdxAvailable').mockReturnValue(false);
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+		const warn = vi.fn();
+		logger.on('warn', warn);
+
+		expect(isUsableExampleFile(config, mdxFile)).toBe(false);
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatch(`npm install --save-dev @mdx-js/mdx`);
+		expect(warn.mock.calls[0][0]).toMatch(mdxFile);
+		vi.restoreAllMocks();
+	});
+
+	it('should throw from isUsableExampleFile for an .mdx file named by a custom getExampleFilename', async () => {
+		const mdx = await import('../mdx.js');
+		vi.spyOn(mdx, 'isMdxAvailable').mockReturnValue(false);
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+		const custom = {
+			...config,
+			getExampleFilename: () => mdxFile,
+		} as unknown as Rsg.SanitizedStyleguidistConfig;
+
+		expect(() => isUsableExampleFile(custom, mdxFile)).toThrow('@mdx-js/mdx');
+		vi.restoreAllMocks();
+	});
+
+	it('should say a .md examples file and a missing file are usable or not', () => {
+		fs.writeFileSync(examplesFile, 'pizza');
+		expect(isUsableExampleFile(config, examplesFile)).toBe(true);
+		expect(isUsableExampleFile(config, path.join(dir, 'Nope.md'))).toBe(false);
+		expect(isUsableExampleFile(config, false)).toBe(false);
 	});
 
 	it('should throw for an .mdx file named by a custom getExampleFilename', async () => {

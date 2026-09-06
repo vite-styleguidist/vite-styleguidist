@@ -139,6 +139,65 @@ module.exports = {
 }
 ```
 
+## How do I write examples in MDX?
+
+Install the two optional dependencies:
+
+```bash
+npm install --save-dev @mdx-js/mdx remark-gfm
+```
+
+Then name the file `.mdx` instead of `.md`. `Readme.mdx` next to a component, `ComponentName.mdx`, an `.mdx` path in `sections[].content` or in an `@example` doclet — all of them are picked up by their extension, and nothing else in the config changes:
+
+```javascript
+module.exports = {
+  sections: [
+    { name: 'Introduction', content: 'docs/Intro.mdx' },
+    { name: 'Components', components: 'src/components/**/[A-Z]*.js' }
+  ]
+}
+```
+
+Fences work exactly as in Markdown — the same playground languages, the same `padded`, `noeditor`, `static` and JSON settings modifiers — and the prose around them can use components:
+
+````md
+import Callout from '../../docs/Callout'
+
+`Button` is the only true button.
+
+<Callout kind="warning">
+  Use one primary button per screen.
+</Callout>
+
+```jsx
+<Button>Push Me</Button>
+```
+
+| `size`   | Font size |
+| -------- | --------- |
+| `small`  | 10px      |
+| `normal` | 14px      |
+````
+
+Three things are worth knowing before you write the first page:
+
+1. **MDX is not Markdown.** An indented block is not a code block, HTML comments and non-self-closing void elements are compile errors, and a curly brace in prose starts a JavaScript expression. The full list is in [MDX is not Markdown](Documenting.md#mdx-is-not-markdown).
+2. **Page imports and playground imports are different scopes.** `import Callout from './Callout'` at the top of the page is for the prose; a playground still imports what it needs inside its own fence.
+3. **GFM is on by default.** Tables, task lists and strikethrough work because `remark-gfm` is enabled; if you set [mdx.remarkPlugins](Configuration.md#mdx) you replace that default and have to list it again.
+
+To share a component between pages without importing it in each one, register it with [mdxComponents](Configuration.md#mdxcomponents):
+
+```javascript
+const path = require('path')
+module.exports = {
+  mdxComponents: {
+    Callout: path.join(__dirname, 'styleguide/components/Callout')
+  }
+}
+```
+
+A complete style guide doing all of this — MDX component pages, an MDX section page, and one component still documented in `Readme.md` — is in the [MDX example](../examples/mdx).
+
 ## How to set global styles for user components?
 
 Using the [jss-global](https://github.com/cssinjs/jss-global) API you can set global styles in your config:

@@ -186,9 +186,9 @@ module.exports = {
 
 ## `getExampleFilename`
 
-Type: `Function`, default: finds `Readme.md` or `ComponentName.md` in the component folder
+Type: `Function`, default: finds `Readme.md`, `Readme.mdx`, `ComponentName.md` or `ComponentName.mdx` in the component folder
 
-Function that returns examples file path for a given component path.
+Function that returns examples file path for a given component path. The extension of the path you return selects the pipeline: `.md` is Markdown, `.mdx` is [MDX](Documenting.md#mdx).
 
 For example, instead of `Readme.md` you can use `ComponentName.examples.md`:
 
@@ -270,6 +270,52 @@ module.exports = {
 > **Caution:** The files are plain, unprotected downloads: when the style guide is deployed, everything in them (descriptions, examples, file paths relative to the project) is public, exactly like the style guide page is. Turn the option off if the style guide is served from somewhere you don’t want to expose that way.
 
 See [How do I make my style guide readable by AI tools?](Cookbook.md#how-do-i-make-my-style-guide-readable-by-ai-tools) for the details of each file.
+
+## `mdx`
+
+Type: `Object`, optional
+
+Options for the [MDX](Documenting.md#mdx) pipeline, passed to `@mdx-js/mdx`’s `compile()`:
+
+- `remarkPlugins`: remark plugins, default `[remarkGfm]`;
+- `rehypePlugins`: rehype plugins, default none;
+- `recmaPlugins`: recma plugins, default none.
+
+Each is a [unified plugin list](https://github.com/unifiedjs/unified#plugin): a plugin, or a `[plugin, options]` pair, per entry. Setting `remarkPlugins` **replaces** the default, so keep [remark-gfm](https://github.com/remarkjs/remark-gfm) in the list if you still want GFM tables, task lists and strikethrough:
+
+```javascript
+// styleguide.config.mjs — remark plugins are ES modules
+import remarkGfm from 'remark-gfm'
+import remarkFrontmatter from 'remark-frontmatter'
+
+export default {
+  mdx: {
+    remarkPlugins: [remarkGfm, remarkFrontmatter]
+  }
+}
+```
+
+The option has no effect on `.md` files, which are parsed by the Markdown pipeline and are not affected by MDX plugins.
+
+## `mdxComponents`
+
+Type: `Object`, optional
+
+Extra components available to every [MDX](Documenting.md#mdx) page, as a map of name to the module that default-exports the component. They are merged over the default element map, so an entry can either add a shortcode that any `.mdx` file may use without importing it, or replace how an HTML element of the prose is rendered:
+
+```javascript
+const path = require('path')
+module.exports = {
+  mdxComponents: {
+    // Usable as <Callout kind="info"> in any .mdx file, no import needed
+    Callout: path.join(__dirname, 'styleguide/components/Callout'),
+    // Every table of every MDX page is rendered by this component
+    table: path.join(__dirname, 'styleguide/components/Table')
+  }
+}
+```
+
+Paths may omit the extension, Vite resolves them like any import. Lowercase keys are HTML element names; capitalised keys are components an `.mdx` file can use as JSX elements. Without this option a page imports what it needs itself, which is the usual way — reach for `mdxComponents` when the same component belongs on many pages.
 
 ## `minimize`
 
@@ -493,7 +539,7 @@ Use the [theme](#theme) config option to change ribbon style.
 
 Type: `Array`, optional
 
-Allows components to be grouped into sections with a title and overview content. Sections can also be content only, with no associated components (for example, a textual introduction). Sections can be nested.
+Allows components to be grouped into sections with a title and overview content. Sections can also be content only, with no associated components (for example, a textual introduction). Sections can be nested. A section’s `content` may be a `.md` or an `.mdx` file, see [MDX](Documenting.md#mdx).
 
 See examples of [sections configuration](Components.md#sections).
 
@@ -811,7 +857,7 @@ export default
 
 Type: `Function`, optional
 
-Function that modifies code example (Markdown fenced code block). For example, you can use it to load examples from files:
+Function that modifies code example (a fenced code block of a `.md` or `.mdx` file — it runs for both, before the block is classified as a playground or as static code). For example, you can use it to load examples from files:
 
 ```javascript
 module.exports = {

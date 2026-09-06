@@ -266,6 +266,7 @@ The live editor is now [CodeMirror 6](https://codemirror.net/), loaded on demand
 - Modern syntax is left as is (no transpiling down to ES5), which is what all supported browsers expect.
 - `import` and `require()` in examples work as before: modules must be listed in the Markdown file, they can’t be added in the browser editor.
 - Relative imports are resolved from the Markdown file, bare imports (`import map from 'lodash/map'`) from your project.
+- Examples and section pages can also be written in [MDX](Documenting.md#mdx): install `@mdx-js/mdx` and `remark-gfm`, rename the file to `.mdx`, and the prose around the playgrounds becomes a React tree that can use your components. `.md` files keep working exactly as they do now, and a style guide without an `.mdx` file installs neither package. Two things to know before renaming anything: MDX is not a superset of Markdown (indented blocks, HTML comments and non-self-closing tags all behave differently, see [MDX is not Markdown](Documenting.md#mdx-is-not-markdown)), and the index in an isolated-example link counts playgrounds on an MDX page, where a Markdown page counts prose blocks too — so `#!/Button/2` can point at a different example after a rename. A stray `.mdx` already sitting in a component folder is now discovered as documentation; without `@mdx-js/mdx` installed it is skipped with a warning, so no build breaks because of it.
 
 ### Output
 

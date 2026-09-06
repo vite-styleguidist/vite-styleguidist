@@ -14,6 +14,7 @@ Vite Styleguidist is a maintained fork of React Styleguidist. It is not affiliat
 - Install the [EditorConfig](https://editorconfig.org/) plugin for your code editor to make sure it uses correct settings.
 - Fork the repository and clone your fork.
 - Install dependencies: `npm ci` (installs exactly what `package-lock.json` says; plain `npm install` works too but may rewrite the lock file).
+- Install the Git hooks once: `npm run hooks:install`. They run lint-staged and commitlint on every commit. This is a separate step, not part of `npm ci`, so that the published package has no install scripts.
 - Read the [developer guide](../docs/Development.md).
 
 ## Development workflow

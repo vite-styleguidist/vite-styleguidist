@@ -81,9 +81,11 @@ interface BaseStyleguidistConfig {
 	mdx: MdxOptions;
 	/**
 	 * Extra components available to every MDX page, merged over the default element map
-	 * (`h1`, `p`, `a`, …): `{ Callout }` makes `<Callout/>` usable without an import.
+	 * (`h1`, `p`, `a`, …): `{ Callout: 'src/docs/Callout' }` makes `<Callout/>` usable
+	 * without an import. Values are module paths, resolved and imported for the browser like
+	 * a `styles` or `theme` path; a component value works when the config itself is bundled.
 	 */
-	mdxComponents: Record<string, ComponentType<any>>;
+	mdxComponents: Record<string, string | ComponentType<any>>;
 	minimize: boolean;
 	mountPointId: string;
 	moduleAliases: Record<string, string>;

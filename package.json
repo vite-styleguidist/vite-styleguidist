@@ -190,6 +190,7 @@
     "build:preact": "node lib/bin/styleguidist.js build --config examples/preact/styleguide.config.js",
     "build:styled-components": "node lib/bin/styleguidist.js build --config examples/styled-components/styleguide.config.js",
     "build:vite": "node lib/bin/styleguidist.js build --config examples/vite/styleguide.config.js",
+    "build:mdx": "node lib/bin/styleguidist.js build --config examples/mdx/styleguide.config.js",
     "hooks:install": "husky"
   },
   "keywords": [

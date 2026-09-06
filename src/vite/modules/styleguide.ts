@@ -18,6 +18,7 @@ const logger = createLogger('rsg');
 export const CLIENT_CONFIG_OPTIONS = [
 	'colorScheme',
 	'compilerConfig',
+	'mdxComponents',
 	'tocMode',
 	'mountPointId',
 	'pagePerSection',
@@ -103,6 +104,23 @@ export default function generateStyleguideModule(
 			watchFiles.push(value);
 			clientConfig[key] = importDefault(value);
 		}
+	}
+
+	// `mdxComponents` is a map of name to module path (docs/Configuration.md#mdxcomponents):
+	// a config file runs in Node and cannot carry a React component into the browser, so each
+	// path becomes an import marker the serializer turns into a real import, exactly as a
+	// `styles` or `theme` path does.
+	if (config.mdxComponents) {
+		const components: Record<string, unknown> = {};
+		for (const [name, value] of Object.entries(config.mdxComponents)) {
+			if (typeof value === 'string') {
+				watchFiles.push(value);
+				components[name] = importDefault(value);
+			} else {
+				components[name] = value;
+			}
+		}
+		clientConfig.mdxComponents = components;
 	}
 
 	const serializer = new ModuleSerializer();

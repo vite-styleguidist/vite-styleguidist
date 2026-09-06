@@ -37,7 +37,12 @@ updates:
           - minor
           - patch
 
-  # The documentation site is its own npm project.
+  # The documentation site is its own npm project. Nothing here is published to
+  # npm, so its advisories only ever affect a build on our own CI runners; the
+  # site therefore gets one grouped security PR rather than one per alert, which
+  # is what a Docusaurus dependency tree would otherwise produce. (Security PRs
+  # come from the separate "Dependabot security updates" setting, and `groups`
+  # only applies to them when `applies-to: security-updates` is set.)
   - package-ecosystem: npm
     directory: /site
     target-branch: next
@@ -55,6 +60,10 @@ updates:
         update-types:
           - minor
           - patch
+      site-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
 
   # The eight examples built in CI. Listing them under one entry lets Dependabot open a
   # single PR that bumps the same dependency across all of them (e.g. a new React major),

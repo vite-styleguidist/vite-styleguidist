@@ -144,10 +144,10 @@ Releases are automated with [semantic-release](https://semantic-release.gitbook.
 The flow around a major version:
 
 1. Breaking and non-breaking work lands on `next` through pull requests. Every release-worthy commit publishes a new `-next.N` prerelease to the `next` dist-tag; `npm install vite-styleguidist@next` gets it, plain `npm install vite-styleguidist` doesn’t.
-2. When the beta exit criteria are met (known blockers fixed, a handful of external projects have run a prerelease, the [migration guide](Migration.md) is complete), `next` is merged into `main` and semantic-release publishes the stable version to `latest`.
+2. When the beta exit criteria are met (known blockers fixed, a handful of external projects have run a prerelease, the [migration guide](Migration.md) is complete), a maintainer **fast-forwards `main` to `next`** (see [Promoting next to main](#promoting-next-to-main)) and semantic-release publishes the stable version to `latest`. Never merge `next` into `main` through a pull request: the repository only allows squash merges, which replaces the whole beta history with one commit that none of the `-next.N` tags point at, and deletes the `next` branch. semantic-release then can’t see the prereleases from `main`, and `next` can’t be re-created with its tags.
 3. Until the next major, fixes and features go to `main` directly and are released as patch and minor versions. `next` is only re-opened when a breaking change needs a beta.
 
-npm authentication is meant to go through [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, so no long-lived npm token lives in the repository secrets. One exception is unavoidable: a trusted publisher can only be registered for a package that already exists on npm, so the very first publish (`1.0.0-next.1`) uses a granular automation token stored as the `NPM_TOKEN` repository secret. Right after that release lands, the maintainer registers the trusted publisher on npmjs.com (GitHub Actions, organization `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no environment) and deletes the secret; from then on OIDC is the only credential. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
+npm authentication is meant to go through [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, so no long-lived npm token lives in the repository secrets. One exception is unavoidable: a trusted publisher can only be registered for a package that already exists on npm, so the very first publish (`1.0.0-next.1`) uses a granular automation token stored as the `NPM_TOKEN` repository secret. Right after that release lands, the maintainer registers the trusted publisher on npmjs.com (GitHub Actions, organization `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no environment, **and “allow `npm publish`” ticked**: trusted publishers created after September 2026 only allow `npm stage publish` by default, and semantic-release runs a plain `npm publish`, which npm then refuses with `403 OIDC permission denied for this action`) and deletes the secret; from then on OIDC is the only credential. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
 
 ### Patch releases
 
@@ -177,6 +177,30 @@ For every release:
 3. Wait for the release workflow to finish. Check the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases) and `npm view vite-styleguidist dist-tags`.
 4. Edit the release notes on GitHub if the generated notes need context: a screenshot or GIF for visual changes, a code example for a new option, a link to the relevant docs page (see [Changelogs](#changelogs)).
 5. For breaking changes, verify that the migration guide was updated in the same pull request and that the release notes link to it.
+
+### Promoting next to main
+
+The stable release must be built from the same commits the prereleases were tagged on, so `main` is moved with a fast-forward push, not with a pull request. The `main` ruleset requires pull requests, and repository admins are on its bypass list for exactly this case:
+
+```bash
+git fetch origin
+git merge-base --is-ancestor origin/main origin/next && echo "fast-forward possible"
+git push origin origin/next:main
+```
+
+If the check prints nothing, `main` has commits `next` doesn’t have (a hotfix released from `main`): rebase or merge them into `next` first, let the resulting prerelease go out, then promote. The release workflow refuses to release a version from `main` whose `-next.N` tags aren’t in `main`’s history, so a squash merge fails before anything is tagged or published. Open a pull request from `next` to `main` only to review the diff, and close it without merging.
+
+### When a release fails after the tag was pushed
+
+semantic-release pushes the version tag before it publishes to npm and creates the GitHub release. If a later step fails (npm refused the publish, GitHub was down), the tag and its channel note exist but nothing was published, and a re-run reports that there is nothing to release. Recover by removing the half-made release and re-running:
+
+```bash
+git push origin :refs/tags/v1.2.3
+git push origin :refs/notes/semantic-release-v1.2.3
+gh release delete v1.2.3 --yes   # only if the GitHub release was created
+```
+
+Then fix the cause and start the release workflow again from the Actions tab (`workflow_dispatch`). Check `npm view vite-styleguidist versions` first: if the npm publish did go through, keep the tag and create the GitHub release by hand instead.
 
 ## Triage
 

@@ -81,6 +81,28 @@ jobs:
           npm run compile
           npm test
 
+      # A stable release must contain the commits its prereleases were tagged on. Ask
+      # semantic-release which version main is about to release; if that version had a beta
+      # (`vX.Y.Z-next.N` tags exist) and the newest of those tags is not an ancestor of HEAD, main
+      # was squash-merged instead of fast-forwarded (docs/Maintenance.md#promoting-next-to-main).
+      # Fail here, before anything is tagged. Hotfixes released from main while a later major is
+      # in beta pass, because their version never had prerelease tags.
+      - name: Check that main contains the prereleases of the version it is about to release
+        if: github.ref_name == 'main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="$(npx --no-install semantic-release --dry-run 2>&1 | tee /dev/stderr | sed -n 's/.*The next release version is \([0-9][0-9A-Za-z.+-]*\).*/\1/p' | tail -n 1)"
+          if [ -z "$version" ]; then
+            echo "No release to make, nothing to check."
+            exit 0
+          fi
+          newest="$(git tag -l "v$version-next.*" --sort=-v:refname | head -n 1)"
+          if [ -n "$newest" ] && ! git merge-base --is-ancestor "$newest^{commit}" HEAD; then
+            echo "::error::About to release $version, but $newest is not in the history of main. Promote next with a fast-forward push, not a squash merge (see docs/Maintenance.md#promoting-next-to-main)."
+            exit 1
+          fi
+
       - name: Release
         run: npx --no-install semantic-release
         env:

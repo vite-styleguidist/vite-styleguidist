@@ -18,6 +18,7 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0010](0010-code-editor.md) | Code editor | accepted |
 | [0011](0011-facelift-and-dark-mode-contract.md) | Facelift and dark-mode contract | accepted |
 | [0012](0012-ai-integration.md) | AI integration | accepted |
+| [0013](0013-react-16-support.md) | React 16.14 and 17 support | accepted |
 
 ## Convention
 

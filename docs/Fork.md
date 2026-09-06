@@ -37,7 +37,7 @@ The webpack 4 toolchain the 13.x line was built on is itself end-of-life, which 
 
 - Vite replaces webpack. Loaders, Babel presets and `webpackConfig` are gone; `viteConfig` and `dangerouslyUpdateViteConfig` take their place. The dev server has hot module replacement for components, Markdown examples and theme files.
 - The package is an ES module and ships compiled TypeScript; `require()` keeps working on the supported Node.js versions.
-- Node.js 22.12 or newer and React 18 or newer are required, see [Compatibility](Compatibility.md).
+- Node.js 22.12 or newer and React 16.14 or newer are required, see [Compatibility](Compatibility.md).
 - react-docgen 8 parses your components; custom resolvers and handlers follow its API.
 - Examples are compiled in the browser by Sucrase instead of Bublé, so TypeScript syntax works in examples.
 - Versioning restarts at 1.0.0 under the new name, see [Versioning and release channels](decisions/0003-versioning-and-release-channels.md). The migration story is `react-styleguidist@13.1.4` to `vite-styleguidist@1.0.0`.

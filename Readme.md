@@ -12,7 +12,7 @@ What changed compared to React Styleguidist 13.x:
 
 - The style guide is compiled and served by [Vite](https://vite.dev/) instead of webpack. Your project doesn’t have to use Vite.
 - The package is an ES module and ships compiled TypeScript.
-- It requires **Node.js 22.12 or newer** (Node 23 is not supported; 24 and later are) and **React 18 or newer**.
+- It requires **Node.js 22.12 or newer** (Node 23 is not supported; 24 and later are) and **React 16.14 or newer**.
 - The configuration API (`styleguideComponents`, `theme`, `styles`, `sections`, `moduleAliases`, …) and the Markdown documentation format are unchanged, so existing style guides keep working with few edits.
 - Every build also writes `docs.json`, `llms.txt` and `llms-full.txt` next to the style guide: the same documentation in a form AI assistants and scripts can read, see [the cookbook](docs/Cookbook.md#how-do-i-make-my-style-guide-readable-by-ai-tools).
 

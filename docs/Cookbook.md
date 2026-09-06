@@ -194,7 +194,7 @@ module.exports = {
 }
 ```
 
-The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`.
+The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`. Keep the plain `react-dom` alias too: when the project’s `react-dom` is 16 or 17 (or absent), the style guide is mounted through `react-dom`’s `render`, which `preact/compat` provides as well.
 
 See the [Preact example style guide](../examples/preact).
 

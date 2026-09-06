@@ -82,7 +82,11 @@ class Playground extends Component<PlaygroundProps, PlaygroundState> {
 		const { displayMode } = this.context as StyleGuideContextContents;
 		const isExampleHidden = exampleMode === ExampleModes.hide;
 		const isEditorHidden = settings.noeditor || isExampleHidden;
-		const preview = <Preview code={code} evalInContext={evalInContext} />;
+		// `editable` only says whether an editor is rendered at all, not whether the Code tab is
+		// open: a closed tab is one click away, so the hint still points at the editor
+		const preview = (
+			<Preview code={code} evalInContext={evalInContext} editable={!isEditorHidden} />
+		);
 
 		return isEditorHidden ? (
 			<Para>{preview}</Para>

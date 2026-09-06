@@ -17,6 +17,11 @@ const improveErrorMessage = (message: string) =>
 interface PreviewProps {
 	code: string;
 	evalInContext(code: string): () => any;
+	/**
+	 * Whether the example is rendered with the code editor, passed on to PlaygroundError so its
+	 * hint points at the editor or at the Markdown file (Playground knows which)
+	 */
+	editable?: boolean;
 }
 
 interface PreviewState {
@@ -27,6 +32,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	public static propTypes = {
 		code: PropTypes.string.isRequired,
 		evalInContext: PropTypes.func.isRequired,
+		editable: PropTypes.bool,
 	};
 	public static contextType = Context;
 
@@ -175,7 +181,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 		return (
 			<>
 				<div data-testid="mountNode" ref={this.callbackRef} />
-				{error && <PlaygroundError message={error} />}
+				{error && <PlaygroundError message={error} editable={this.props.editable} />}
 			</>
 		);
 	}

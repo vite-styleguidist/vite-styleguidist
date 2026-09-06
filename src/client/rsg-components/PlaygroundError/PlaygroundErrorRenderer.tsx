@@ -39,33 +39,49 @@ const styles = ({
 		margin: 0,
 		fontFamily: fontFamily.monospace,
 		fontSize: fontSize.small,
-		lineHeight: 1.5,
+		lineHeight: lineHeight.code,
 		color: color.error,
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-word',
 	},
 	hint: {
 		fontSize: fontSize.small,
-		lineHeight: 1.5,
+		lineHeight: lineHeight.code,
 		color: color.light,
 	},
 });
 
 interface PlaygroundErrorProps extends JssInjectedProps {
 	message: string;
+	/**
+	 * Whether the example this error belongs to is rendered with the code editor. `noeditor`
+	 * examples and a style guide in `exampleMode: 'hide'` show the preview alone, so the hint
+	 * has to point at the Markdown file instead of at an editor that is not on the page.
+	 */
+	editable?: boolean;
 }
 
 export const PlaygroundErrorRenderer: React.FunctionComponent<PlaygroundErrorProps> = ({
 	classes,
 	message,
+	editable = true,
 }) => (
-	// `alert`: the panel appears in place of the preview while the visitor types, so assistive
-	// technology is told about it without moving the focus out of the editor
-	<div className={classes.root} role="alert">
+	<div className={classes.root}>
 		<div className={classes.title}>This example failed to render</div>
-		<pre className={classes.message}>{message}</pre>
+		{/*
+		 * Only the message is a live region, and a polite one: the panel is unmounted and
+		 * remounted on every debounced run while the visitor types, so an assertive region
+		 * around the whole panel re-announced the title and the hint too, interrupting the
+		 * screen reader’s keystroke echo in the editor. `status` waits for a pause and the
+		 * static copy around it is read on demand.
+		 */}
+		<pre className={classes.message} role="status">
+			{message}
+		</pre>
 		<div className={classes.hint}>
-			Fix the code in the editor below; the preview updates as you type.
+			{editable
+				? 'Fix the code in the editor below; the preview updates as you type.'
+				: 'Fix the example in its Markdown file.'}
 		</div>
 	</div>
 );
@@ -73,6 +89,7 @@ export const PlaygroundErrorRenderer: React.FunctionComponent<PlaygroundErrorPro
 PlaygroundErrorRenderer.propTypes = {
 	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
 	message: PropTypes.string.isRequired,
+	editable: PropTypes.bool,
 };
 
 export default Styled<PlaygroundErrorProps>(styles)(PlaygroundErrorRenderer);

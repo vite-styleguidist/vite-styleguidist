@@ -42,6 +42,13 @@ const styles = ({
 		borderRadius,
 		backgroundColor: color.baseBackground,
 	},
+	// The alert region around the title and the explanation. It replaces the card as the flex
+	// item that used to hold those two, so it keeps the card’s own 10 px rhythm between them.
+	announcement: {
+		display: 'flex',
+		flexDirection: 'column',
+		gap: 10,
+	},
 	title: {
 		margin: 0,
 		fontSize: fontSize.h4,
@@ -82,8 +89,9 @@ const styles = ({
 		borderRadius,
 		backgroundColor: color.codeBackground,
 		fontFamily: fontFamily.monospace,
+		// 12 px is a notch below `fontSize.small`: the stack is reference material, not copy
 		fontSize: 12,
-		lineHeight: 1.5,
+		lineHeight: lineHeight.code,
 		color: color.error,
 		whiteSpace: 'pre-wrap',
 		// Stack frames carry long unbroken paths and URLs; let them wrap on narrow screens
@@ -99,16 +107,23 @@ interface ErrorProps extends JssInjectedProps {
 export const ErrorRenderer: React.FunctionComponent<ErrorProps> = ({ classes, error, info }) => {
 	return (
 		<div className={classes.root}>
-			<div className={classes.card} role="alert">
-				<h1 className={classes.title}>Something went wrong</h1>
-				<p className={classes.message}>
-					This may be due to an error in a component you are overriding, or a bug in Vite
-					Styleguidist. If you believe this is a bug,{' '}
-					<a className={classes.link} href={BUGS}>
-						please submit an issue
-					</a>
-					.
-				</p>
+			<div className={classes.card}>
+				{/*
+				 * The alert covers the title and the explanation only. It used to be the whole
+				 * card, so a screen reader read every stack frame as one assertive announcement
+				 * that cannot be paused per line; the stack stays outside it, readable on demand.
+				 */}
+				<div className={classes.announcement} role="alert">
+					<h1 className={classes.title}>Something went wrong</h1>
+					<p className={classes.message}>
+						This may be due to an error in a component you are overriding, or a bug in Vite
+						Styleguidist. If you believe this is a bug,{' '}
+						<a className={classes.link} href={BUGS}>
+							please submit an issue
+						</a>
+						.
+					</p>
+				</div>
 				<pre className={classes.stack}>
 					{error.toString()}
 					{info.componentStack}

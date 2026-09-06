@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 /**
  * The only true label.
  */
-export default function Label({ color, background, children }) {
+export default function Label({ color = '#333', background = 'white', children }) {
 	const styles = {
 		color,
 		background,
@@ -22,8 +22,4 @@ Label.propTypes = {
 	children: PropTypes.string.isRequired,
 	color: PropTypes.string,
 	background: PropTypes.string,
-};
-Label.defaultProps = {
-	color: '#333',
-	background: 'white',
 };

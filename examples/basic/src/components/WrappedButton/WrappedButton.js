@@ -8,7 +8,7 @@ import PropTypes from 'prop-types';
  * @author [Jeremy Gayed](https://github.com/tizmagik)
  * @deprecated Use the [only true button](#button) instead
  */
-const WrappedButton = ({ color, size, children }) => {
+const WrappedButton = ({ color = '#333', size = 'normal', children }) => {
 	const styles = {
 		color,
 		fontSize: WrappedButton.sizes[size],
@@ -55,10 +55,6 @@ WrappedButton.propTypes = {
 	 * @ignore
 	 */
 	ignoredProp: PropTypes.bool,
-};
-WrappedButton.defaultProps = {
-	color: '#333',
-	size: 'normal',
 };
 WrappedButton.sizes = {
 	small: '10px',

@@ -9,6 +9,7 @@ import styleguide from 'virtual:rsg-styleguide';
 import renderStyleguide from './utils/renderStyleguide.js';
 import type { StyleguideObject } from './utils/renderStyleguide.js';
 import { getParameterByName, hasInHash, getHash } from './utils/handleHash.js';
+import { readStickyOffset } from './styles/styles.js';
 
 // Examples code revision to rerender only code examples (not the whole page) when code changes
 let codeRevision = 0;
@@ -33,7 +34,16 @@ const scrollToOrigin = () => {
 			const idElement = document.getElementById(idHashParam);
 
 			if (idElement) {
-				idElement.scrollIntoView(true);
+				// On small screens the sidebar is a sticky header that would cover the
+				// target; `scrollIntoView` aligns to the very top, so the same offset the
+				// `scroll-padding-top` in styles.ts uses is subtracted here by hand
+				const offset = readStickyOffset();
+				if (offset > 0) {
+					const top = idElement.getBoundingClientRect().top + window.pageYOffset - offset;
+					window.scrollTo(0, Math.max(0, top));
+				} else {
+					idElement.scrollIntoView(true);
+				}
 			}
 		} else {
 			window.scrollTo(0, 0);

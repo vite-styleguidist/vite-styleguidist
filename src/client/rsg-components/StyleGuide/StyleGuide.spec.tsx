@@ -75,11 +75,13 @@ test('should render a sidebar if showSidebar is not set', () => {
 	);
 	const sidebar = within(getByTestId('sidebar'));
 	const links = sidebar.getAllByRole('link');
+	// The skip link comes first: the sidebar precedes the content in the DOM
 	expect(links.map((node: any) => node.href)).toEqual([
+		'http://localhost/#rsg-content',
 		'http://localhost/#foo',
 		'http://localhost/#bar',
 	]);
-	expect(links.map((node) => node.textContent)).toEqual(['Foo', 'Bar']);
+	expect(links.map((node) => node.textContent)).toEqual(['Skip to content', 'Foo', 'Bar']);
 });
 
 test('should render the sidebar before the content, with a menu button that controls the panel', () => {
@@ -186,4 +188,77 @@ describe('error handling', () => {
 		);
 		expect(getByText(/Page not found/i)).toBeInTheDocument();
 	});
+});
+
+/**
+ * The sidebar precedes the content in the DOM (the small-screen header needs it there),
+ * so a keyboard user needs a way past its links (WCAG 2.4.1, QA F3).
+ */
+test('should offer a skip link that moves the focus to the content', () => {
+	const { getByTestId, getByRole } = render(
+		<StyleGuide {...defaultProps} sections={sections} allSections={sections} />
+	);
+	const skipLink = within(getByTestId('sidebar')).getAllByRole('link')[0];
+	expect(skipLink).toHaveTextContent('Skip to content');
+
+	fireEvent.click(skipLink);
+	const main = getByRole('main');
+	expect(main).toHaveAttribute('id', 'rsg-content');
+	expect(document.activeElement).toBe(main);
+	// The routing hash is left alone: the link focuses the content by hand
+	expect(window.location.hash).toBe('');
+});
+
+/**
+ * Closing the panel hides whatever had the focus inside it, so the focus goes back to
+ * the button that opens it instead of to <body> (QA F8).
+ */
+test('should return the focus to the menu button when the panel is closed with Escape', () => {
+	const { getByLabelText } = render(
+		<StyleGuide {...defaultProps} sections={sections} allSections={sections} />
+	);
+	// The header buttons are display: none outside the small-screen media query, which
+	// jsdom does not evaluate, so they are queried by label rather than by role
+	fireEvent.click(getByLabelText('Search'));
+	expect(document.activeElement).toBe(document.getElementById('rsg-sidebar-search'));
+
+	fireEvent.keyDown(document, { key: 'Escape' });
+	expect(document.activeElement).toBe(getByLabelText('Menu'));
+});
+
+/**
+ * On small screens the colour-scheme control is a single cycling button inside the
+ * header, in DOM order after the search button, so the tab order follows the visual
+ * order and the title keeps its room (QA F9, V5).
+ */
+test('should render the colour-scheme control inside the small-screen header', () => {
+	const originalMatchMedia = window.matchMedia;
+	window.matchMedia = ((query: string) =>
+		({
+			matches: true,
+			media: query,
+			onchange: null,
+			addEventListener: () => undefined,
+			removeEventListener: () => undefined,
+			addListener: () => undefined,
+			removeListener: () => undefined,
+			dispatchEvent: () => false,
+		}) as unknown as MediaQueryList) as typeof window.matchMedia;
+	try {
+		const { getByTestId, queryByRole } = render(
+			<StyleGuide {...defaultProps} sections={sections} allSections={sections} />
+		);
+		const header = getByTestId('sidebar').querySelector('header') as HTMLElement;
+		expect(
+			// `hidden: true`: the header buttons are display: none outside the small-screen
+			// media query, which jsdom does not evaluate
+			within(header)
+				.getAllByRole('button', { hidden: true })
+				.map((button) => button.getAttribute('aria-label'))
+		).toEqual(['Menu', 'Search', 'Color scheme: System. Switch to Light']);
+		// and the three-button group is not rendered as well
+		expect(queryByRole('group', { name: 'Color scheme', hidden: true })).toBeNull();
+	} finally {
+		window.matchMedia = originalMatchMedia;
+	}
 });

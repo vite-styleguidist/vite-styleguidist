@@ -14,12 +14,23 @@ import SidebarContext, {
 	SIDEBAR_PANEL_ID,
 	SIDEBAR_SEARCH_ID,
 } from 'rsg-components/StyleGuide/SidebarContext';
+import useMediaQuery, { toMediaQuery } from './useMediaQuery.js';
+import { hasSchemeChoice } from '../ThemeToggle/colorScheme.js';
+import { mq as defaultMq } from '../../styles/theme.js';
+import {
+	STICKY_OFFSET_FALLBACK,
+	STICKY_OFFSET_FALLBACK_NO_TOC,
+	STICKY_OFFSET_PROPERTY,
+} from '../../styles/styles.js';
 import type * as Rsg from '../../../typings/index.js';
 
 // Small-screen header: the sidebar collapses into this bar (Mobile artboard), and every
 // control in it is a 44 px touch target
 const MOBILE_HEADER_HEIGHT = 56;
 const TOUCH_TARGET = 44;
+
+/** Element id of the content region: the target of the skip link and of `?id=` links */
+const CONTENT_ID = 'rsg-content';
 
 const styles = ({
 	color,
@@ -94,6 +105,44 @@ const styles = ({
 	},
 	// Marker: the small-screen panel is open (see $ribbon)
 	isOpen: {},
+	// Off-screen until it takes the focus, then a small button in the top-left corner.
+	// `position: fixed` so that it is visible even though the desktop sidebar scrolls.
+	skipLink: {
+		position: 'absolute',
+		width: 1,
+		height: 1,
+		margin: -1,
+		padding: 0,
+		overflow: 'hidden',
+		clip: 'rect(0, 0, 0, 0)',
+		whiteSpace: 'nowrap',
+		border: 0,
+		'&:focus-visible': {
+			isolate: false,
+			position: 'fixed',
+			zIndex: 1000,
+			top: space[1],
+			left: space[1],
+			width: 'auto',
+			height: 'auto',
+			margin: 0,
+			padding: [[space[0], space[1]]],
+			overflow: 'visible',
+			clip: 'auto',
+			display: 'inline-flex',
+			alignItems: 'center',
+			border: [[1, color.border, 'solid']],
+			borderRadius,
+			background: color.baseBackground,
+			color: color.link,
+			fontFamily: fontFamily.base,
+			fontSize: fontSize.base,
+			lineHeight: lineHeight.base,
+			textDecoration: 'none',
+			outline: 0,
+			boxShadow: [[0, 0, 0, 3, color.focus]],
+		},
+	},
 	logo: {
 		display: 'flex',
 		flexDirection: 'column',
@@ -177,12 +226,11 @@ const styles = ({
 			display: 'contents',
 		},
 	},
+	// The wrapper of whichever colour-scheme control is rendered: the segmented group in
+	// the footer on wide screens, the single cycling button inside the header on small
+	// ones (StyleGuideRenderer renders it in the header's own DOM order there)
 	toggle: {
 		flexShrink: 0,
-		[mq.small]: {
-			order: 1,
-			paddingRight: space[0],
-		},
 	},
 	ribbon: {
 		minWidth: 0,
@@ -231,6 +279,14 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 	const { config } = useStyleGuideContext();
 	// Small screens only: whether the menu button has opened the search + list panel
 	const [isPanelOpen, setPanelOpen] = useState(false);
+	// The small-screen header holds the colour-scheme control itself, so that the tab
+	// order follows the visual order; that is a different element in a different place
+	// in the DOM, which CSS alone cannot do. A `theme.mq.small` override is honoured.
+	const isSmallScreen = useMediaQuery(
+		toMediaQuery(config.theme?.mq?.small || defaultMq.small)
+	);
+	const sidebarRef = useRef<HTMLDivElement>(null);
+	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const sidebar = useMemo(
 		() => ({ isPanelOpen, closePanel: () => setPanelOpen(false) }),
 		[isPanelOpen]
@@ -254,6 +310,81 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 		}
 	};
 
+	// Closing the panel hides whatever had the focus inside it (a list link, the filter
+	// input), which drops the focus to <body>; hand it back to the button that opens the
+	// panel so that a keyboard or screen-reader user keeps their place
+	const wasPanelOpen = useRef(isPanelOpen);
+	useEffect(() => {
+		const closed = wasPanelOpen.current && !isPanelOpen;
+		wasPanelOpen.current = isPanelOpen;
+		if (!closed) {
+			return undefined;
+		}
+		const restoreFocus = () => {
+			const active = document.activeElement;
+			// Only when the focus is the panel's to lose: it has usually fallen back to
+			// <body> by now (the browser blurs an element that becomes display: none), but
+			// a browser that keeps it, or a chip that closed the panel, leaves it inside
+			// the sidebar. Escape pressed with the focus in the content keeps it there.
+			const lost = !active || active === document.body || !!sidebarRef.current?.contains(active);
+			if (lost) {
+				menuButtonRef.current?.focus();
+			}
+		};
+		// Deferred by a frame, because the panel is hidden by the render this effect
+		// belongs to. Following a list link closes the panel *and* navigates to a
+		// fragment, and the browser resets the focus to <body> at the end of that
+		// navigation, after the frame; `hashchange` is where that has happened. The
+		// listener is bounded, so a navigation minutes later is none of its business.
+		const frame = requestAnimationFrame(restoreFocus);
+		window.addEventListener('hashchange', restoreFocus);
+		const timer = window.setTimeout(
+			() => window.removeEventListener('hashchange', restoreFocus),
+			500
+		);
+		return () => {
+			/* istanbul ignore next: jsdom's rAF stub (test/setup.ts) runs synchronously */
+			if (typeof cancelAnimationFrame === 'function') {
+				cancelAnimationFrame(frame);
+			}
+			window.clearTimeout(timer);
+			window.removeEventListener('hashchange', restoreFocus);
+		};
+	}, [isPanelOpen]);
+
+	// Publish the height of the sticky header so that anchor targets can clear it: the
+	// `scroll-padding-top` in styles.ts and the `?id=` scrolling in index.ts read it
+	useEffect(() => {
+		const root = document.documentElement;
+		const node = sidebarRef.current;
+		// Only the small-screen sidebar covers the content; on wide screens it sits
+		// beside it, and the property goes away so index.ts scrolls to the very top
+		if (!node || !isSmallScreen) {
+			root.style.removeProperty(STICKY_OFFSET_PROPERTY);
+			return undefined;
+		}
+		// An open panel makes the sidebar as tall as the list; the offset that matters is
+		// the one left after a navigation, which always closes the panel first
+		if (isPanelOpen) {
+			return undefined;
+		}
+		const publish = () => {
+			const height =
+				node.offsetHeight || (toc ? STICKY_OFFSET_FALLBACK : STICKY_OFFSET_FALLBACK_NO_TOC);
+			root.style.setProperty(STICKY_OFFSET_PROPERTY, `${Math.round(height)}px`);
+		};
+		publish();
+		/* istanbul ignore next: jsdom has no ResizeObserver */
+		if (typeof ResizeObserver === 'undefined') {
+			return undefined;
+		}
+		// The header grows and shrinks on its own (a wrapping title, the chip row
+		// appearing, a rotated phone), so measuring once is not enough
+		const observer = new ResizeObserver(publish);
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [isSmallScreen, isPanelOpen, toc]);
+
 	// Escape closes the open panel wherever the focus is
 	useEffect(() => {
 		if (!isPanelOpen) {
@@ -268,21 +399,43 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 		return () => document.removeEventListener('keydown', onKeyDown);
 	}, [isPanelOpen]);
 
-	// Mirrors what ThemeToggle and Ribbon decide for themselves, so the footer is not
-	// rendered as an empty bordered strip when neither has anything to show
-	const hasToggle = (config.colorScheme || 'system') === 'system';
+	// What ThemeToggle and Ribbon decide for themselves, so the footer is not rendered as
+	// an empty bordered strip when neither has anything to show. The colour-scheme
+	// decision comes from colorScheme.ts, the module the toggle itself asks.
+	const hasToggle = hasSchemeChoice(config.colorScheme);
 	const hasRibbon = !!config.ribbon;
+	// On small screens the control lives in the header instead (see $toggle)
+	const hasFooterToggle = hasToggle && !isSmallScreen;
+
+	// The sidebar precedes the content in the DOM, so a keyboard user would otherwise
+	// tab through every navigation link on every page (WCAG 2.4.1 Bypass Blocks)
+	const skipToContent = (event: React.MouseEvent<HTMLAnchorElement>) => {
+		const content = document.getElementById(CONTENT_ID);
+		if (content) {
+			// Focus it by hand: following the link would replace the routing hash
+			event.preventDefault();
+			content.focus();
+		}
+	};
 
 	return (
 		<div className={cx(classes.root, hasSidebar && classes.hasSidebar)}>
 			{hasSidebar && (
 				// The sidebar comes first in the DOM so that on small screens, where it is a
 				// header bar, the navigation precedes the content in reading and tab order
-				<div className={cx(classes.sidebar, isPanelOpen && classes.isOpen)} data-testid="sidebar">
+				<div
+					className={cx(classes.sidebar, isPanelOpen && classes.isOpen)}
+					data-testid="sidebar"
+					ref={sidebarRef}
+				>
+					<a className={classes.skipLink} href={`#${CONTENT_ID}`} onClick={skipToContent}>
+						Skip to content
+					</a>
 					<header className={classes.logo}>
 						{toc && (
 							<button
 								type="button"
+								ref={menuButtonRef}
 								className={classes.menuButton}
 								aria-label="Menu"
 								aria-expanded={isPanelOpen}
@@ -303,18 +456,25 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 								aria-label="Search"
 								onClick={openSearch}
 							>
-								<FiSearch className={classes.buttonIcon} aria-hidden="true" />
+									<FiSearch className={classes.buttonIcon} aria-hidden="true" />
 							</button>
+						)}
+						{isSmallScreen && hasToggle && (
+							<div className={classes.toggle}>
+								<ThemeToggle compact />
+							</div>
 						)}
 					</header>
 					<div className={classes.toc}>
 						<SidebarContext.Provider value={sidebar}>{toc}</SidebarContext.Provider>
 					</div>
-					{(hasToggle || hasRibbon) && (
+					{(hasFooterToggle || hasRibbon) && (
 						<div className={classes.sidebarFooter}>
-							<div className={classes.toggle}>
-								<ThemeToggle />
-							</div>
+							{hasFooterToggle && (
+								<div className={classes.toggle}>
+									<ThemeToggle />
+								</div>
+							)}
 							{hasRibbon && (
 								<div className={classes.ribbon}>
 									<Ribbon inline />
@@ -324,7 +484,8 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 					)}
 				</div>
 			)}
-			<main className={classes.content}>
+			{/* tabIndex: the skip link above moves the focus here */}
+			<main id={CONTENT_ID} className={classes.content} tabIndex={-1}>
 				{children}
 				<footer className={classes.footer}>
 					<Markdown text={`Created with [Vite Styleguidist](${homepageUrl})`} />

@@ -1,3 +1,4 @@
+import filterExamplesByIndex from './filterExamplesByIndex.js';
 import type * as Rsg from '../../typings/index.js';
 
 /**
@@ -9,7 +10,9 @@ import type * as Rsg from '../../typings/index.js';
  * @returns {object}
  */
 export default function filterSectionExamples(section: Rsg.Section, index = -1): Rsg.Section {
-	const content = Array.isArray(section.content) ? [section.content[index]] : [];
+	const content = Array.isArray(section.content)
+		? filterExamplesByIndex(section.content, index)
+		: [];
 	return {
 		...section,
 		content,

@@ -1,3 +1,4 @@
+import filterExamplesByIndex from './filterExamplesByIndex.js';
 import type * as Rsg from '../../typings/index.js';
 
 /**
@@ -18,7 +19,9 @@ export default function filterComponentExamples(
 		props: {
 			...component.props,
 			examples:
-				component.props && component.props.examples ? [component.props.examples[index]] : [],
+				component.props && component.props.examples
+					? filterExamplesByIndex(component.props.examples, index)
+					: [],
 		},
 	};
 }

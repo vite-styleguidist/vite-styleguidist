@@ -22,3 +22,26 @@ describe('filterComponentExamples', () => {
 		});
 	});
 });
+
+describe('filterComponentExamples with an mdx page', () => {
+	// An `.mdx` page is one chunk holding every playground, so the index is the ordinal of the
+	// playground and the isolated view gets a plain code chunk out of it
+	const mdxComponent = deepfreeze({
+		props: {
+			examples: [
+				{
+					type: 'mdx',
+					Content: () => null,
+					examples: ['a', 'b', 'c'].map((x) => ({ type: 'code', content: x })),
+				},
+			] as unknown as Rsg.Example[],
+		},
+		other: 'info',
+	});
+
+	it('should return the nth playground of the page', () => {
+		const result = filterComponentExamples(mdxComponent as any, 1);
+
+		expect(result.props?.examples).toEqual([{ type: 'code', content: 'b' }]);
+	});
+});

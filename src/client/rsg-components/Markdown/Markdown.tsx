@@ -12,6 +12,7 @@ import PreBase, { PreProps } from 'rsg-components/Markdown/Pre';
 import Code from 'rsg-components/Code';
 import Checkbox from 'rsg-components/Markdown/Checkbox';
 import Hr from 'rsg-components/Markdown/Hr';
+import Img from 'rsg-components/Markdown/Img';
 import { Details, DetailsSummary } from 'rsg-components/Markdown/Details';
 import { Table, TableHead, TableBody, TableRow, TableCell } from 'rsg-components/Markdown/Table';
 
@@ -107,6 +108,9 @@ export const baseOverrides = {
 	},
 	hr: {
 		component: Hr as React.FC,
+	},
+	img: {
+		component: Img as React.FC,
 	},
 	table: {
 		component: Table as React.FC,

@@ -1,6 +1,8 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import ComponentsList from './ComponentsList.js';
+import { styles } from './ComponentsListRenderer.js';
+import createStyleSheet from '../../styles/createStyleSheet.js';
 import Context from '../Context/index.js';
 
 const context = {
@@ -141,4 +143,49 @@ it('should show content of forcedOpen items even if they are initially collapsed
 	expect(
 		Array.from(getAllByTestId('content')).map((node) => (node as HTMLDivElement).innerHTML)
 	).toEqual(['Content for Button', 'Content for Input']);
+});
+
+/**
+ * The `styles` config option merges into the component's own rules, so anything the
+ * component declares through a higher-specificity selector (`&&`) can never be
+ * overridden by it. Only the properties Link itself declares for the base state of a
+ * link need that treatment; everything else has to stay on the plain single-class rule,
+ * where an override lands and wins (QA F7).
+ */
+it('should let the styles option override the base declarations of a list link', () => {
+	const sheet = createStyleSheet(
+		styles,
+		{
+			styles: {
+				ComponentsList: {
+					link: { padding: 0, backgroundColor: 'rgb(255, 0, 0)' },
+				},
+			},
+		} as any,
+		'ComponentsList',
+		'components-list-override'
+	);
+	const linkClass = sheet.classes.link;
+	const blocks = Array.from(sheet.toString().matchAll(/([^{}]+)\{([^{}]*)\}/g)).map(
+		([, selector, body]) => ({ selector: selector.trim(), body })
+	);
+
+	// The override is emitted on the plain rule, with a single-class selector
+	const base = blocks.find((block) => block.selector === `.${linkClass}`);
+	expect(base).toBeDefined();
+	expect(base?.body).toMatch(/background-color: rgb\(255, 0, 0\)/);
+	expect(base?.body).toMatch(/padding: 0/);
+
+	// and the doubled-class rule that outranks Link only carries what it has to: the
+	// properties Link declares for `&, &:link, &:visited`
+	const doubled = blocks.find((block) =>
+		block.selector.startsWith(`.${linkClass}.${linkClass},`)
+	);
+	expect(doubled?.selector).toBe(
+		`.${linkClass}.${linkClass}, .${linkClass}.${linkClass}:link, .${linkClass}.${linkClass}:visited`
+	);
+	const declared = Array.from((doubled?.body || '').matchAll(/^\s*([a-z-]+):/gm)).map(
+		([, property]) => property
+	);
+	expect(declared.sort()).toEqual(['color', 'text-decoration', 'transition']);
 });

@@ -8,7 +8,8 @@ import { useStyleGuideContext } from 'rsg-components/Context';
 import { useSidebar } from 'rsg-components/StyleGuide/SidebarContext';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({
+// Exported for the specs that assert the override contract of the doubled-class rules
+export const styles = ({
 	color,
 	fontFamily,
 	fontSize,
@@ -51,19 +52,21 @@ const styles = ({
 	// Marker on the item whose link is the current route (see $link)
 	isSelected: {},
 	link: {
-		// Doubled class: outranks the Link component's own `&:link` colour rules
-		// whichever sheet is attached later
+		display: 'block',
+		padding: [[6, space[1]]],
+		borderRadius,
+		background: 'transparent',
+		overflow: 'hidden',
+		textOverflow: 'ellipsis',
+		whiteSpace: 'nowrap',
+		// Doubled class: only the properties the Link component declares for the base
+		// state (`&, &:link, &:visited`, one class + one pseudo-class) need to outrank it,
+		// whichever sheet is attached later. The rest stays on the plain rule above, so a
+		// `styles` override — which lodash-merges into the same rule — still wins.
 		'&&, &&:link, &&:visited': {
 			isolate: false,
-			display: 'block',
-			padding: [[6, space[1]]],
-			borderRadius,
 			color: color.base,
-			background: 'transparent',
 			textDecoration: 'none',
-			overflow: 'hidden',
-			textOverflow: 'ellipsis',
-			whiteSpace: 'nowrap',
 			transition: `background-color ${transition.fast}, color ${transition.fast}`,
 		},
 		// Hover uses the selection surface too; the selected item is told apart by its
@@ -90,15 +93,18 @@ const styles = ({
 	},
 	// The link of a section that has children: a small uppercase group label
 	heading: {
+		// After $link in the sheet, so these beat $link's own plain declarations
+		padding: [[10, space[1], space[0]]],
+		fontWeight: fontWeight.bold,
+		letterSpacing: '0.06em',
+		textTransform: 'uppercase',
+		background: 'transparent',
+		// Doubled class, as for $link: the size and colour have to outrank Link's own
+		// base-state rule (which sets `font-size: inherit` and the link colour)
 		'&&, &&:link, &&:visited': {
 			isolate: false,
-			padding: [[10, space[1], space[0]]],
 			fontSize: 11,
-			fontWeight: fontWeight.bold,
-			letterSpacing: '0.06em',
-			textTransform: 'uppercase',
 			color: color.light,
-			background: 'transparent',
 		},
 		'&&:hover': {
 			isolate: false,

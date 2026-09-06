@@ -116,22 +116,25 @@ const styles = ({
 		},
 	},
 	chip: {
-		// Doubled class: outranks the Link component's own `&:link` colour rules
+		flexShrink: 0,
+		display: 'inline-flex',
+		alignItems: 'center',
+		height: TOUCH_TARGET,
+		padding: [[0, 12]],
+		borderRadius,
+		fontWeight: fontWeight.normal,
+		lineHeight: lineHeight.base,
+		background: 'transparent',
+		whiteSpace: 'nowrap',
+		// Doubled class: the four properties the Link component declares for the base
+		// state (`&, &:link, &:visited`, one class + one pseudo-class) have to outrank it.
+		// Everything else stays on the plain rule above, where a `styles` override —
+		// which lodash-merges into the same rule — can still beat it.
 		'&&, &&:link, &&:visited': {
 			isolate: false,
-			flexShrink: 0,
-			display: 'inline-flex',
-			alignItems: 'center',
-			height: TOUCH_TARGET,
-			padding: [[0, 12]],
-			borderRadius,
 			fontSize: 14,
-			fontWeight: fontWeight.normal,
-			lineHeight: lineHeight.base,
 			color: color.base,
-			background: 'transparent',
 			textDecoration: 'none',
-			whiteSpace: 'nowrap',
 			transition: `background-color ${transition.fast}, color ${transition.fast}`,
 		},
 		'&&:hover': {

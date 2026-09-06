@@ -63,6 +63,7 @@ export const styles = ({
 			boxShadow: [[0, 0, 0, 3, color.focus]],
 		},
 		'& svg': {
+			isolate: false,
 			width: 14,
 			height: 14,
 			color: 'currentColor',

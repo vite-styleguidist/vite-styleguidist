@@ -2,8 +2,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Styled from 'rsg-components/Styled';
 import Heading from 'rsg-components/Heading';
-// Import default implementation from react-styleguidist using the full path
-import DefaultSectionsRenderer from 'react-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer';
+// Import the default implementation from vite-styleguidist using the full path.
+// The `.js` extension is required: the package's `exports` map only exposes exact
+// `./lib/*` paths, and exports-map resolution never appends extensions.
+import DefaultSectionsRenderer from 'vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js';
 
 const styles = ({ fontFamily, space }) => ({
 	headingSpacer: {

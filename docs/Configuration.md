@@ -33,11 +33,11 @@ Type: `Object`, default:
 
 Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile examples (JSX and TypeScript) in the browser. This config object will be passed as the second argument for `sucrase.transform()`.
 
-> **Caution:** The option replaces the default value, it isn’t merged with it. Start from the defaults, which you can import from `react-styleguidist/lib/client/utils/compileCode.js` as `DEFAULT_COMPILER_CONFIG`.
+> **Caution:** The option replaces the default value, it isn’t merged with it. Start from the defaults, which you can import from `vite-styleguidist/lib/client/utils/compileCode.js` as `DEFAULT_COMPILER_CONFIG`.
 
 ## `components`
 
-Type: `String`, `Function` or `Array`, default: `src/components/**/*.{js,jsx,ts,tsx}`
+Type: `String`, `Function` or `Array`, default: `src/@(components|Components)/**/*.{js,jsx,ts,tsx}` (see [Locating components](Components.md) for the Windows fallback)
 
 - when `String`: a [glob pattern](https://github.com/isaacs/node-glob#glob-primer) that matches all your component modules.
 - when `Function`: a function that returns an array of module paths.
@@ -130,7 +130,7 @@ module.exports = {
 
 Type: `Boolean` or `String`, default: `false`
 
-For components that do not have an example, a default one can be used. When set to `true`, the [DefaultExample.md](https://raw.githubusercontent.com/styleguidist/react-styleguidist/master/templates/DefaultExample.md) is used, or you can provide the path to your own example Markdown file.
+For components that do not have an example, a default one can be used. When set to `true`, the [DefaultExample.md](../templates/DefaultExample.md) is used, or you can provide the path to your own example Markdown file.
 
 When writing your own default example file, `__COMPONENT__` will be replaced by the actual component name at compile time.
 
@@ -425,7 +425,7 @@ module.exports = {
 }
 ```
 
-The default is a `ChainResolver` of Styleguidist’s own `FindAnnotatedExportsResolver` (available as `react-styleguidist/lib/loaders/utils/FindAnnotatedExportsResolver.js`) and react-docgen’s `FindAnnotatedDefinitionsResolver` and `FindExportedDefinitionsResolver`.
+The default is a `ChainResolver` of Styleguidist’s own `FindAnnotatedExportsResolver` (available as `vite-styleguidist/lib/loaders/utils/FindAnnotatedExportsResolver.js`) and react-docgen’s `FindAnnotatedDefinitionsResolver` and `FindExportedDefinitionsResolver`.
 
 ## `ribbon`
 
@@ -512,13 +512,13 @@ module.exports = {
 }
 ```
 
-Paths may omit the extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.), Vite resolves them like any import. Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](https://github.com/styleguidist/react-styleguidist/tree/master/src/client/rsg-components) to see what components are available.
+Paths may omit the extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.), Vite resolves them like any import. Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
 
-See an example of [customized style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/customised).
+See an example of [customized style guide](../examples/customised).
 
-To wrap, rather than replace a component, make sure to import the default implementation using the full path to `react-styleguidist`, for example `react-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer`. See an example of [wrapping a Styleguidist component](https://github.com/styleguidist/react-styleguidist/blob/master/examples/customised/styleguide/components/SectionsRenderer.js).
+To wrap, rather than replace a component, make sure to import the default implementation using the full path to `vite-styleguidist`, with the `.js` extension, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js`. (The package’s `exports` map doesn’t add extensions for you, so the extensionless form only works when a bundler happens to resolve it.) See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
 
-**Note**: these components are not guaranteed to be safe from breaking changes in React Styleguidist updates.
+**Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates.
 
 ## `styleguideDir`
 
@@ -534,7 +534,7 @@ Customize styles of any Styleguidist’s component using an object, a function r
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](https://github.com/styleguidist/react-styleguidist/blob/master/src/client/styles/theme.ts). The returned object folows the same format as when configured as a litteral.
+> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](../src/client/styles/theme.ts). The returned object folows the same format as when configured as a litteral.
 
 ```javascript
 module.exports = {
@@ -632,7 +632,7 @@ The path is relative to the config file or absolute. The file is bundled for the
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Info:** See available [theme variables](https://github.com/styleguidist/react-styleguidist/blob/master/src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts).
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-plugin-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-plugin-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-plugin-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-plugin-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-plugin-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-plugin-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
@@ -806,7 +806,7 @@ module.exports = {
 
 > **Caution:** This option disables config load from `vite.config.js`, load your config [manually](Vite.md#reusing-your-projects-vite-config).
 
-> **Danger:** `root`, `base`, `appType`, `configFile`, `build.outDir`, `build.emptyOutDir`, `build.rolldownOptions.input`, `build.rollupOptions.input`, `server.host`, `server.port`, `server.strictPort` and `server.middlewareMode` options will be ignored because Styleguidist controls them.
+> **Danger:** These options will be ignored because Styleguidist controls them: `root`, `base`, `appType`, `configFile`, `build.outDir`, `build.emptyOutDir`, `build.lib`, `build.ssr`, `build.manifest`, `build.ssrManifest`, `server.host`, `server.port`, `server.strictPort`, `server.middlewareMode`, and — under both `build.rolldownOptions` and `build.rollupOptions` — `input`, `external`, `output` and `preserveEntrySignatures`. Styleguidist owns the entry, the output location and the dev server address, and your library-build settings (like `external: ['react']`) would make the style guide bundle unloadable. Run with `--verbose` to see which options were dropped. (The list is `IGNORED_OPTIONS` in [src/vite/mergeViteConfig.ts](../src/vite/mergeViteConfig.ts).)
 
 > **Note:** Styleguidist adds [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) unless your `plugins` already include it.
 

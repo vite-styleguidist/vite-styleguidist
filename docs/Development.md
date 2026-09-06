@@ -2,7 +2,7 @@
 
 # Developer guide
 
-_For basics see [How to contribute](https://github.com/styleguidist/react-styleguidist/blob/master/.github/Contributing.md)._
+_For basics see [How to contribute](../.github/CONTRIBUTING.md)._
 
 Styleguidist isn’t an ordinary single-page app and some design decisions may look confusing to an outsider. In this guide, we’ll explain these decisions to un-confuse potential contributors.
 
@@ -22,7 +22,7 @@ A Vite plugin (see below) generates JavaScript modules with all user components,
 
 ## The Vite plugin and virtual modules
 
-Styleguidist is a [Vite](https://vite.dev/) plugin plus a browser app. The plugin lives in [src/vite](https://github.com/styleguidist/react-styleguidist/tree/master/src/vite):
+Styleguidist is a [Vite](https://vite.dev/) plugin plus a browser app. The plugin lives in [src/vite](../src/vite):
 
 - `plugin.ts` — the plugin itself. It resolves and loads the virtual modules, serves the style guide page in development (`configureServer`), emits `index.html` in builds (`generateBundle`), copies `assetsDir` into the output (`closeBundle`) and drives hot module replacement (`hotUpdate`).
 - `ids.ts` — the ids of the virtual modules and helpers to build and parse them. Following the Vite convention, `resolveId` prefixes an id with `\0` and `load` generates its source.
@@ -37,9 +37,9 @@ Styleguidist is a [Vite](https://vite.dev/) plugin plus a browser app. The plugi
 
 The entry module (`virtual:rsg-entry`) imports the [require](Configuration.md#require) config items and then the client (`src/client/index.ts`), which imports `virtual:rsg-styleguide` and renders the app.
 
-The Vite config is assembled in [src/scripts/make-vite-config.ts](https://github.com/styleguidist/react-styleguidist/blob/master/src/scripts/make-vite-config.ts): it loads the user’s `vite.config.js` (unless the `viteConfig` option is set), adds `@vitejs/plugin-react` when the user doesn’t have it, builds the `resolve.alias` list (`moduleAliases`, `styleguideComponents` and the `rsg-components` alias) and registers our plugins. We’re trying to keep this config minimal to reduce clashes with the user’s configuration.
+The Vite config is assembled in [src/scripts/make-vite-config.ts](../src/scripts/make-vite-config.ts): it loads the user’s `vite.config.js` (unless the `viteConfig` option is set), adds `@vitejs/plugin-react` when the user doesn’t have it, builds the `resolve.alias` list (`moduleAliases`, `styleguideComponents` and the `rsg-components` alias) and registers our plugins. We’re trying to keep this config minimal to reduce clashes with the user’s configuration.
 
-The Node-side helpers the plugin uses to find components, run react-docgen and split Markdown files live in [src/loaders/utils](https://github.com/styleguidist/react-styleguidist/tree/master/src/loaders/utils) (the folder keeps its historical name).
+The Node-side helpers the plugin uses to find components, run react-docgen and split Markdown files live in [src/loaders/utils](../src/loaders/utils) (the folder keeps its historical name).
 
 ### Hot module replacement
 
@@ -108,7 +108,7 @@ function ExamplePlaceholderRenderer({ classes }) {
 export default Styled(styles)(ExamplePlaceholderRenderer)
 ```
 
-Check available theme variables in [src/client/styles/theme.ts](https://github.com/styleguidist/react-styleguidist/blob/master/src/client/styles/theme.ts).
+Check available theme variables in [src/client/styles/theme.ts](../src/client/styles/theme.ts).
 
 Because of isolation and theming you need to explicitly declare `fontFamily`, `fontSize` and `color`. Add `isolate: false` to your hover styles, otherwise you’ll have to repeat base non-hover styles.
 

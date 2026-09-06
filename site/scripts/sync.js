@@ -1,63 +1,82 @@
-// Get docs from the docs folder and each preset and task
+// Generate site/docs/*.md (gitignored) from the repo-root docs/*.md.
+//
+// Run as `npm run sync` from site/, before `docusaurus start|build`. The conventions
+// (title from the H1, sidebar label and id from the leading `<!-- Label #id -->`
+// comment, Readme.md excluded) are documented in ./docs.js, which is also what
+// remark.js uses to rewrite links, so the two can never disagree.
+//
+// Besides adding front matter, this script adapts GitHub-flavoured Markdown to MDX 3:
+// - the header comment is removed (MDX rejects HTML comments),
+// - `> **Tip:** text` blockquotes become `:::tip` admonitions,
+// - `<br>` becomes `<br />` (MDX needs self-closing void elements),
+// - `<https://example.com>` autolinks become `[https://example.com](https://example.com)`
+//   (GitHub renders them, MDX reads the `<` as the start of a JSX tag and fails),
+// - the H1 is removed (Docusaurus renders the title from front matter).
 
-const { readFileSync, writeFileSync, emptyDirSync } = require('fs-extra');
-const glob = require('glob');
-const { kebabCase } = require('lodash');
+const { rmSync, mkdirSync, writeFileSync } = require('node:fs');
+const path = require('node:path');
+const { listDocs, REPO_URL, REPO_BRANCH } = require('./docs');
 
-const DEST_DIR = 'docs';
+const DEST_DIR = path.resolve(__dirname, '..', 'docs');
 
-const read = (file) => readFileSync(file, 'utf8');
-
-const write = (file, contents) => writeFileSync(`${DEST_DIR}/${file}.md`, contents);
-
-const getTitle = (contents) => contents.match(/^#\s*(.*?)$/m) || [];
-
-const getSidebarTitle = (contents) => contents.match(/^<!--\s*(.*?)(?:\s*#([\w-]+))?\s*-->/) || [];
-
-const stripTitle = (contents) => contents.replace(/^#.*?$/m, '');
+// GitHub-style "> **Word:** text" callouts to Docusaurus admonitions. Docusaurus 3 has
+// five types (note, tip, info, warning, danger); `caution` still works but is deprecated
+// and logs a warning on every build, so it is mapped to `warning` here.
+const ADMONITIONS = {
+	note: 'note',
+	tip: 'tip',
+	info: 'info',
+	warning: 'warning',
+	caution: 'warning',
+	danger: 'danger',
+};
 
 const markdownToDocusaurus = (contents) =>
-	contents.replace(
-		/^>\s*\*\*(\w+):\*\*\s*(.*?)$/gm,
-		(_, $1, $2) => `:::${$1.toLowerCase()}\n${$2}\n:::`
-	);
+	contents.replace(/^>\s*\*\*(\w+):\*\*\s*(.*?)$/gm, (line, word, text) => {
+		const type = ADMONITIONS[word.toLowerCase()];
+		// Unknown words (e.g. "> **Example:**") stay ordinary blockquotes.
+		return type ? `:::${type}\n${text}\n:::` : line;
+	});
 
 const htmlToXml = (contents) => contents.replace(/<br>/g, '<br />');
 
-const getEditUrl = (relativePath) =>
-	`https://github.com/styleguidist/react-styleguidist/edit/master/${relativePath.replace(
-		'../docs',
-		'docs'
-	)}`;
+// Apply `transform` to the prose only, leaving fenced code blocks untouched (an autolink
+// inside a code sample must stay exactly as written).
+const outsideCodeBlocks = (contents, transform) =>
+	contents
+		.split(/^(```[\s\S]*?^```[ \t]*)$/m)
+		.map((chunk, index) => (index % 2 === 0 ? transform(chunk) : chunk))
+		.join('');
 
-const template = ({ id, title, sidebarLabel, editUrl, contents }) => `---
+const autolinksToLinks = (contents) =>
+	outsideCodeBlocks(contents, (prose) => prose.replace(/<(https?:\/\/[^\s>]+)>/g, '[$1]($1)'));
+
+const stripTitle = (contents) => contents.replace(/^#\s+.*$/m, '');
+
+const stripHeaderComment = (contents, headerComment) =>
+	headerComment ? contents.replace(headerComment, '') : contents;
+
+const getEditUrl = (filename) => `${REPO_URL}/edit/${REPO_BRANCH}/docs/${filename}`;
+
+// JSON.stringify produces a valid YAML double-quoted scalar, so titles containing
+// ":" or "#" (which would otherwise break the front matter) are safe.
+const yaml = (value) => JSON.stringify(value);
+
+const template = ({ id, title, sidebarLabel, filename, headerComment, contents }) => `---
 id: ${id}
-title: ${title}
-sidebar_label: ${sidebarLabel}
-custom_edit_url: ${getEditUrl(editUrl)}
+title: ${yaml(title)}
+sidebar_label: ${yaml(sidebarLabel)}
+custom_edit_url: ${getEditUrl(filename)}
 ---
 
-${stripTitle(htmlToXml(markdownToDocusaurus(contents)))}`;
+${stripTitle(autolinksToLinks(htmlToXml(markdownToDocusaurus(stripHeaderComment(contents, headerComment)))))}`;
 
-emptyDirSync(DEST_DIR);
+rmSync(DEST_DIR, { recursive: true, force: true });
+mkdirSync(DEST_DIR, { recursive: true });
 
 console.log('Syncing docs...');
 
-const docs = glob.sync('../docs/*.md');
-docs.forEach((filepath) => {
-	console.log(`👉 ${filepath}`);
-	const contents = read(filepath);
-	const [, title] = getTitle(contents);
-	const [, sidebarLabel = title, customId] = getSidebarTitle(contents);
-	const id = customId || kebabCase(sidebarLabel);
-	write(
-		id,
-		template({
-			id,
-			title,
-			sidebarLabel,
-			editUrl: filepath,
-			contents,
-		})
-	);
-});
+for (const doc of listDocs()) {
+	console.log(`👉 docs/${doc.filename} -> ${doc.id}`);
+	writeFileSync(path.join(DEST_DIR, `${doc.id}.md`), template(doc));
+}

@@ -187,3 +187,38 @@ Undefined extensions (default)
 	const actual = chunkify(markdown, undefined, undefined);
 	expect(actual).toMatchSnapshot();
 });
+
+// WebStorm writes two-word fence languages such as ```typescript jsx (upstream
+// issue #1540). remark keeps only the first word as the language and hands the
+// rest to parseExample as modifiers, so these must still render as playgrounds.
+it('should render two-word fence languages as a playground', () => {
+	const markdown = `
+\`\`\`typescript jsx
+<h3>Hello typescript jsx playground!</h3>
+\`\`\`
+
+\`\`\`javascript jsx
+<h3>Hello javascript jsx playground!</h3>
+\`\`\`
+`;
+
+	const actual = chunkify(markdown);
+	expect(actual).toHaveLength(2);
+	expect(actual.every((chunk) => chunk.type === 'code')).toBe(true);
+	expect(actual.map((chunk) => chunk.content)).toEqual([
+		'<h3>Hello typescript jsx playground!</h3>',
+		'<h3>Hello javascript jsx playground!</h3>',
+	]);
+});
+
+it('should still only highlight a two-word fence language marked static', () => {
+	const markdown = `
+\`\`\`typescript jsx static
+<h3>Hello static typescript jsx!</h3>
+\`\`\`
+`;
+
+	const actual = chunkify(markdown);
+	expect(actual).toHaveLength(1);
+	expect(actual[0].type).toBe('markdown');
+});

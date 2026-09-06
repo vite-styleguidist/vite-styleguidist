@@ -73,18 +73,18 @@ export function StyleGuideRenderer({ classes, title, homepageUrl, children }) {
 						<nav className={classes.nav}>
 							<a
 								className={classes.headerLink}
-								href="https://github.com/styleguidist/react-styleguidist/tree/master/docs"
+								href="https://github.com/vite-styleguidist/vite-styleguidist/blob/main/docs/Readme.md"
 							>
 								Docs
 							</a>
 							<a
 								className={classes.headerLink}
-								href="https://github.com/styleguidist/react-styleguidist"
+								href="https://github.com/vite-styleguidist/vite-styleguidist"
 							>
 								GitHub
 							</a>
-							<a className={classes.headerLink} href="https://gitter.im/styleguidist/styleguidist">
-								Gitter
+							<a className={classes.headerLink} href="https://github.com/vite-styleguidist/vite-styleguidist/discussions">
+								Discussions
 							</a>
 						</nav>
 					</div>
@@ -93,7 +93,7 @@ export function StyleGuideRenderer({ classes, title, homepageUrl, children }) {
 			<main className={classes.content}>
 				{children}
 				<footer className={classes.footer}>
-					<Markdown text={`Created with [React Styleguidist](${homepageUrl}) ❤️`} />
+					<Markdown text={`Created with [Vite Styleguidist](${homepageUrl}) ❤️`} />
 				</footer>
 			</main>
 		</div>

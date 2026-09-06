@@ -187,6 +187,12 @@ export default async function makeViteConfig(
 		plugins,
 		resolve: {
 			alias: getAliases(config),
+			// Styleguidist’s own client code lives inside node_modules/vite-styleguidist. When that
+			// package is a symlink (`file:` dependency, `npm link`, pnpm) Vite would resolve React from
+			// the real path, i.e. the library’s own node_modules, while the user’s components get the
+			// project’s copy: two Reacts, and every hook-using example fails with “Cannot read
+			// properties of null (reading 'useState')”. Dedupe pins these to the project root.
+			dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
 		},
 		define: {
 			'process.env.STYLEGUIDIST_ENV': JSON.stringify(env),

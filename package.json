@@ -1,18 +1,23 @@
 {
-  "name": "react-styleguidist",
-  "description": "React components style guide generator",
-  "version": "11.0.0-beta2",
-  "homepage": "https://github.com/styleguidist/react-styleguidist",
+  "name": "vite-styleguidist",
+  "description": "Isolated React component development environment with a living style guide, powered by Vite. A maintained fork of React Styleguidist.",
+  "version": "0.0.0-development",
+  "homepage": "https://vite-styleguidist.github.io/vite-styleguidist/",
   "author": {
-    "name": "Artem Sapegin",
-    "url": "http://sapegin.me/"
+    "name": "Mihail-Gabriel Alexe"
   },
+  "contributors": [
+    {
+      "name": "Artem Sapegin",
+      "url": "https://sapegin.me/"
+    }
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/styleguidist/react-styleguidist.git"
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
   },
   "bugs": {
-    "url": "https://github.com/styleguidist/react-styleguidist/issues"
+    "url": "https://github.com/vite-styleguidist/vite-styleguidist/issues"
   },
   "license": "MIT",
   "type": "module",
@@ -24,16 +29,19 @@
       "default": "./lib/scripts/index.js"
     },
     "./lib/*": "./lib/*",
-    "./templates/*": "./templates/*",
     "./package.json": "./package.json"
   },
   "bin": {
-    "styleguidist": "./lib/bin/styleguidist.js"
+    "styleguidist": "lib/bin/styleguidist.js"
   },
   "files": [
     "lib",
     "templates"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": "^22.12.0 || >=24.0.0"
   },
@@ -85,9 +93,15 @@
     "react-dom": ">=18.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@eslint/js": "^9.39.5",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "@styled-system/theme-get": "^5.1.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
@@ -104,7 +118,7 @@
     "@types/styled-system__theme-get": "^5.0.4",
     "@types/type-detect": "^4.0.3",
     "@vitest/coverage-v8": "^4.1.11",
-    "danger": "^14.0.7",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "deepfreeze": "^2.0.0",
     "dog-names": "^3.0.1",
     "eslint": "^9.39.5",
@@ -123,17 +137,16 @@
     "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "semantic-release": "^25.0.9",
     "styled-components": "^6.5.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.11"
   },
   "scripts": {
-    "prepare": "husky",
     "pretest": "npm run lint && npm run typecheck",
     "typecheck": "tsc -p . --noEmit",
     "test": "npm run test:unit",
-    "posttest": "npm run format",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -141,19 +154,20 @@
     "start:customised": "node lib/bin/styleguidist.js server --config examples/customised/styleguide.config.js",
     "start:sections": "node lib/bin/styleguidist.js server --config examples/sections/styleguide.config.js",
     "start:ui": "node lib/bin/styleguidist.js server",
-    "lint": "eslint . --cache --fix",
+    "lint": "eslint . --cache",
+    "lint:fix": "eslint . --cache --fix",
     "compile": "node scripts/clean-lib.js && tsc -p tsconfig.build.json && node scripts/copy-assets.js",
     "compile:watch": "tsc -p tsconfig.build.json --watch",
     "prepublishOnly": "npm run compile",
     "build:basic": "node lib/bin/styleguidist.js build --config examples/basic/styleguide.config.js",
     "build:customised": "node lib/bin/styleguidist.js build --config examples/customised/styleguide.config.js",
     "build:sections": "node lib/bin/styleguidist.js build --config examples/sections/styleguide.config.js",
-    "test:browser:pre": "npm i --no-save puppeteer",
+    "test:browser:pre": "npm i --no-save puppeteer@25.10.0",
     "test:browser:basic": "node test/browser.js examples/basic/styleguide",
     "test:browser:customised": "node test/browser.js examples/customised/styleguide",
     "test:browser:sections": "node test/browser.js examples/sections/styleguide",
     "format": "prettier --log-level warn --write \"**/*.{js,md}\"",
-    "test:cypress:pre": "npm i --no-save cypress@15.21.1 wait-on",
+    "test:cypress:pre": "npm i --no-save cypress@15.21.1 wait-on@9.1.0",
     "test:cypress:open": "cypress open",
     "test:cypress:run": "cypress run",
     "test:cypress:startServer": "node test/run.server.js",
@@ -167,7 +181,8 @@
     "build:styled-components": "node lib/bin/styleguidist.js build --config examples/styled-components/styleguide.config.js",
     "test:browser:styled-components": "node test/browser.js examples/styled-components/styleguide",
     "build:vite": "node lib/bin/styleguidist.js build --config examples/vite/styleguide.config.js",
-    "test:browser:vite": "node test/browser.js examples/vite/styleguide"
+    "test:browser:vite": "node test/browser.js examples/vite/styleguide",
+    "hooks:install": "husky"
   },
   "keywords": [
     "react",
@@ -179,7 +194,9 @@
     "generator",
     "component",
     "components",
-    "vite"
+    "vite",
+    "styleguidist",
+    "react-styleguidist"
   ],
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx}": [
@@ -188,9 +205,5 @@
     "*.{js,mjs,cjs,ts,tsx,md,css,json}": [
       "prettier --write"
     ]
-  },
-  "funding": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/styleguidist"
   }
 }

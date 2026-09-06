@@ -22,7 +22,7 @@ export const WelcomeRenderer: React.FunctionComponent<WelcomeProps> = ({ classes
 		<div className={classes.root}>
 			<Markdown
 				text={`
-# Welcome to React Styleguidist!
+# Welcome to Vite Styleguidist!
 
 **We couldn’t find any components** using these patterns:
 

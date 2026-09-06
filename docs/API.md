@@ -9,7 +9,7 @@ First, you need to initialize the API for your style guide config.
 Using a JavaScript object:
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 const styleguide = styleguidist({
   logger: {
     warn: console.warn,
@@ -32,20 +32,20 @@ const styleguide = styleguidist({
 Using a config file:
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 const styleguide = styleguidist('../styleguide.config.js')
 ```
 
 Or auto searching a config file:
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 const styleguide = styleguidist()
 ```
 
 See all available [config options](Configuration.md).
 
-> **Info:** Styleguidist is an ES module. CommonJS code can still `require('react-styleguidist')` on the supported Node.js versions (20.19 or 22.12 and newer), the result is the same `styleguidist` function.
+> **Info:** Styleguidist is an ES module. CommonJS code can still `require('vite-styleguidist')` on the supported Node.js versions (22.12 or newer; Node 23 is not supported, 24 and later are, see [Compatibility](Compatibility.md)), the result is the same `styleguidist` function.
 
 ## Methods
 
@@ -66,7 +66,7 @@ See all available [config options](Configuration.md).
 #### Example
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 const styleguide = styleguidist('../styleguide.config.js')
 await styleguide.build()
 console.log(
@@ -92,7 +92,7 @@ console.log(
 #### Example
 
 ```javascript
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 const server = await styleguidist('../styleguide.config.js').server()
 console.log(`Listening at ${server.resolvedUrls.local[0]}`)
 ```
@@ -111,7 +111,7 @@ console.log(`Listening at ${server.resolvedUrls.local[0]}`)
 
 ```javascript
 import { createServer } from 'vite'
-import styleguidist from 'react-styleguidist'
+import styleguidist from 'vite-styleguidist'
 
 const config = await styleguidist().makeViteConfig('development')
 const server = await createServer(config)

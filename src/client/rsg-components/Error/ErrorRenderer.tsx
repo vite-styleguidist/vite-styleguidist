@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
+import { BUGS } from '../../../scripts/consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ fontFamily, fontSize, color, space }: Rsg.Theme) => ({
@@ -34,15 +35,12 @@ export const ErrorRenderer: React.FunctionComponent<ErrorProps> = ({ classes, er
 			</pre>
 			<div className={classes.message}>
 				<p>
-					This may be due to an error in a component you are overriding, or a bug in React
+					This may be due to an error in a component you are overriding, or a bug in Vite
 					Styleguidist.
 				</p>
 				<p>
 					If you believe this is a bug,&nbsp;
-					<a
-						style={{ color: 'inherit' }}
-						href="https://github.com/styleguidist/react-styleguidist/issues"
-					>
+					<a style={{ color: 'inherit' }} href={BUGS}>
 						please submit an issue
 					</a>
 					.

@@ -1,0 +1,35 @@
+# Issue form, see https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+# The `enhancement` label is inherited from upstream and exists in the repository.
+name: Feature request
+description: Suggest an idea or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Describing the problem you are trying to solve, not only the solution you have in mind, makes it much easier to find the right design together. For a bigger change it is worth opening the request before writing the code, so we can agree on the approach first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation and why the current behaviour doesn’t work for you. “I’m always frustrated when…” is a fine start.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Config options, API shape, examples of the expected output, known drawbacks, all welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Other ways to solve the problem, including workarounds you use today, and why they aren’t good enough.
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I’m willing to open a pull request that implements this (see [CONTRIBUTING.md](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/.github/CONTRIBUTING.md)).

@@ -177,7 +177,7 @@ module.exports = {
 
 CSS, Sass and other files Vite understands don’t need any extra configuration.
 
-## How to use React Styleguidist with Preact?
+## How to use Styleguidist with Preact?
 
 You need to alias `react` and `react-dom` to `preact/compat`:
 
@@ -196,7 +196,7 @@ module.exports = {
 
 The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`.
 
-See the [Preact example style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/preact).
+See the [Preact example style guide](../examples/preact).
 
 ## How to change styles of a style guide?
 
@@ -234,7 +234,7 @@ module.exports = {
 }
 ```
 
-> **Info:** See available [theme variables](https://github.com/styleguidist/react-styleguidist/blob/master/src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts).
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
@@ -291,7 +291,7 @@ Each modification of `theme.js` or `styles.js` will trigger a hot module replace
 
 > **Caution:** These files are bundled for the browser and must be ES modules (`export default`), `module.exports` won’t work.
 
-Check out the [themed example](https://github.com/styleguidist/react-styleguidist/tree/master/examples/themed) on the github repo to learn more and try it out.
+Check out the [themed example](../examples/themed) to learn more and try it out.
 
 ```javascript
 module.exports = {
@@ -316,7 +316,7 @@ To use a CSS animation, you have to define its keyframe at the root of the rende
 
 ## How to change the layout of a style guide?
 
-You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](https://github.com/styleguidist/react-styleguidist/tree/master/src/client/rsg-components) to see what components are available.
+You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
 
 There’s also a special wrapper component — `Wrapper` — that wraps every example component. By default, it renders `children` as is but you can use it to provide custom logic.
 
@@ -379,7 +379,7 @@ const StyleGuideRenderer = ({
         {components}
         <footer className="footer">
           <Markdown
-            text={`Created with [React Styleguidist](${homepageUrl})`}
+            text={`Created with [Vite Styleguidist](${homepageUrl})`}
           />
         </footer>
       </div>
@@ -389,7 +389,7 @@ const StyleGuideRenderer = ({
 )
 ```
 
-We have [an example style guide](https://github.com/styleguidist/react-styleguidist/tree/master/examples/customised) with custom components.
+We have [an example style guide](../examples/customised) with custom components.
 
 ## How to change syntax highlighting colors?
 
@@ -449,21 +449,21 @@ Styleguidist’s own messages are controlled by the [logger](Configuration.md#lo
 
 ## How to use the production or development build of React?
 
-In some cases, you might need to use the development build of React instead of the default [production one](https://reactjs.org/docs/optimizing-performance.html#use-the-production-build). For example, this might be needed if you use React Native and make references to a React Native component’s PropTypes in your code. As React removes all PropTypes in its production build, your code will fail. By default, Styleguidist uses the development build for the dev server and the production one for static builds.
+By default, Styleguidist uses the development build of React for the dev server and the [production build](https://react.dev/learn/build-a-react-app-from-scratch#deploying-to-production) for static builds (`styleguidist build`). In some cases you might need the development build in a static style guide too, for example when your code reads another component’s `propTypes` at runtime: React strips `propTypes` from its production build, so code like this fails there with `Cannot read properties of undefined (reading 'isRequired')`:
 
 ```js
 import React from 'react'
-import { TextInput } from 'react-native'
+import Input from './Input'
 
-const CustomInput = ({ value }) => <TextInput value={value} />
+const CustomInput = ({ value }) => <Input value={value} />
 
 CustomInput.propTypes = {
-  // Will fail in a static build
-  value: TextInput.value.isRequired
+  // Will fail in a static build: Input.propTypes is undefined in production
+  value: Input.propTypes.value.isRequired
 }
 ```
 
-If you use code like the example above, you might see a `Cannot read property 'isRequired' of undefined` error. To avoid it, you need to tell Styleguidist to use React’s development build. To do this, set the `NODE_ENV` variable to `development` in your npm script.
+Styleguidist only sets `NODE_ENV` when it isn’t set already, so you can ask for the development build by setting the variable yourself in your npm script:
 
 ```json
 {
@@ -561,7 +561,7 @@ module.exports = {
 
 Styleguidist uses the `vite.config.js` next to your style guide config automatically, see [configuring Vite](Vite.md#reusing-your-projects-vite-config) for other cases.
 
-## How to use React Styleguidist with Redux, Relay or Styled Components?
+## How to use Styleguidist with Redux, Relay or Styled Components?
 
 See [working with third-party libraries](Thirdparties.md).
 
@@ -592,7 +592,7 @@ if (import.meta.env.DEV) {
 
 > **Info:** `import.meta.env.DEV` is `true` in the dev server and `false` in `styleguidist build`, so the check (and the library) never ends up in the static style guide.
 
-3. [Start your style guide server](https://react-styleguidist.js.org/docs/getting-started#3-start-your-style-guide) and open your browser’s developer tools console.
+3. [Start your style guide server](GettingStarted.md#3-start-your-style-guide) and open your browser’s developer tools console.
 
 If you are using Jest for testing you can also use [jest-axe](https://github.com/nickcolley/jest-axe).
 
@@ -630,9 +630,9 @@ It also allows you to write customized style guide components using TypeScript T
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      // remap rsg-components/anything to its version in react-styleguidist
+      // remap rsg-components/anything to its version in vite-styleguidist
       "rsg-components/*": [
-        "node_modules/react-styleguidist/lib/client/rsg-components/*"
+        "node_modules/vite-styleguidist/lib/client/rsg-components/*"
       ]
     }
   },
@@ -662,6 +662,119 @@ export default function SectionsRenderer({ children }) {
 }
 ```
 
+## How to test my components?
+
+Styleguidist documents and renders your components; it doesn’t run tests. But the two go together well: the same isolated, well-documented components are the easiest ones to test, and the examples you write in Markdown are a good list of the cases a test suite should cover. This section shows one setup that fits a Vite-era project: [Vitest](https://vitest.dev/) as the test runner and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to render components the way a user sees them. Styleguidist itself is tested this way, see the [developer guide](Development.md#testing).
+
+Install the tools:
+
+```bash
+npm install --save-dev vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event
+```
+
+Vitest reads your `vite.config.js` (or a `vitest.config.js`), so it uses the same plugins and aliases as your app and as Styleguidist. Add a `test` section with a browser-like environment and a setup file for the `jest-dom` matchers:
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./test/setup.js']
+  }
+})
+```
+
+```js
+// test/setup.js
+import '@testing-library/jest-dom/vitest'
+```
+
+> **Note:** Test files are excluded from the style guide by default: the [ignore](Configuration.md#ignore) option skips `__tests__` folders and `*.test.*` / `*.spec.*` files, so a `Button.test.jsx` next to `Button.jsx` won’t show up as a component.
+
+### Unit tests
+
+Unit tests check that a component behaves as documented in isolation. Render it, find elements the way a user would (by text, role or label, not by class name), and assert on what they see or what happens when they interact:
+
+```jsx
+// src/components/Button/Button.test.jsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import Button from './Button'
+
+test('renders the label', () => {
+  render(<Button>Click me</Button>)
+  expect(
+    screen.getByRole('button', { name: 'Click me' })
+  ).toBeInTheDocument()
+})
+
+test('calls onClick when clicked', async () => {
+  const onClick = vi.fn()
+  render(<Button onClick={onClick}>Click me</Button>)
+  await userEvent.click(screen.getByRole('button'))
+  expect(onClick).toHaveBeenCalledTimes(1)
+})
+```
+
+`vi.fn()` is Vitest’s mock function (the equivalent of `jest.fn()`), available globally when `globals: true` is set; otherwise import it from `vitest`. [`@testing-library/user-event`](https://testing-library.com/docs/user-event/intro) is a separate package that simulates real user interactions more faithfully than `fireEvent`.
+
+### Snapshot tests
+
+Snapshot tests capture the rendered markup and fail when it changes, which catches unintended visual regressions cheaply. Use React Testing Library’s `asFragment()` rather than `react-test-renderer`, which is deprecated and doesn’t support React 19:
+
+```jsx
+import { render } from '@testing-library/react'
+import Button from './Button'
+
+test('matches the snapshot', () => {
+  const { asFragment } = render(
+    <Button size="large">Click me</Button>
+  )
+  expect(asFragment()).toMatchSnapshot()
+})
+```
+
+Run `npx vitest -u` to update snapshots after an intentional change. Keep snapshots small (one component state per snapshot); a snapshot of a whole page fails on every change and gets updated without being read.
+
+### Integration tests
+
+Integration tests exercise several components together, or a component together with something it depends on, like an API. Mock the dependency at the boundary and wait for the asynchronous result:
+
+```jsx
+import { render, screen } from '@testing-library/react'
+import UserList from './UserList'
+
+beforeEach(() => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify([
+        { id: 1, name: 'Jane Doe' },
+        { id: 2, name: 'John Smith' }
+      ])
+    )
+  )
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+test('fetches and displays the users', async () => {
+  render(<UserList />)
+  expect(await screen.findByText('Jane Doe')).toBeInTheDocument()
+  expect(screen.getByText('John Smith')).toBeInTheDocument()
+})
+```
+
+`vi.spyOn(globalThis, 'fetch')` works for code that calls `fetch` directly; for a module like `axios` use [`vi.mock()`](https://vitest.dev/api/vi.html#vi-mock) instead. `findByText` waits for the element to appear, so there’s no need for an explicit `waitFor`.
+
+Run the tests with `npx vitest` (watch mode) or `npx vitest run` (once, for CI), and add `"test": "vitest run"` to your `package.json` scripts next to the `styleguide` scripts from [CLI commands](CLI.md#usage).
+
 ## What’s the difference between Styleguidist and Storybook?
 
 Both tools are good and mature, they have many similarities but also some distinctions that may make you choose one or the other. For me, the biggest distinction is how you describe component variations.
@@ -681,8 +794,6 @@ storiesOf('Button', module)
   .add('large size', () => <Button size="large">Push Me</Button>)
 ```
 
-<video controls muted playsinline alt="Storybook demo video"><source src="https://storybook.js.org/videos/storybook-hero-video-optimized.mp4" type="video/mp4" /></video>
-
 And with Styleguidist you write _examples_ in Markdown files:
 
     React button component example:
@@ -697,7 +808,7 @@ And with Styleguidist you write _examples_ in Markdown files:
     <Button size="large">Push Me</Button>
     ```
 
-![Styleguidist screenshot](https://camo.githubusercontent.com/7af8e5fc43288807978f28530656275008c5afbf/68747470733a2f2f64337676366c703535716a6171632e636c6f756466726f6e742e6e65742f6974656d732f32373142333732783130325330633035326933462f72656163742d7374796c6567756964697374372e676966)
+![Vite Styleguidist screenshot](https://raw.githubusercontent.com/vite-styleguidist/vite-styleguidist/main/site/static/img/workbench.jpg)
 
 Another important distinction is that Storybook shows only one variation of one component at a time but Styleguidist can show all variations of all components, all variations of a single component or one variation. It’s easier to create a style guide with Styleguidist but Storybook has more tools to develop components (though we’re working on that too).
 
@@ -709,11 +820,11 @@ Another important distinction is that Storybook shows only one variation of one 
 | Style guide¹ | No | Yes |
 | Customizable design | No | Yes |
 | Extra documentation² | No | Yes |
-| Plugins | Many | [In development](https://github.com/styleguidist/react-styleguidist/issues/354) |
+| Plugins | Many | No |
 | React | Yes | Yes |
 | Preact | Yes | Yes |
-| React Native | Yes | [react-native-web](https://github.com/styleguidist/react-styleguidist/issues/675) |
-| Vue | Yes | [Fork](https://github.com/vue-styleguidist/vue-styleguidist) |
+| React Native | Yes | No |
+| Vue | Yes | No ([Vue Styleguidist](https://github.com/vue-styleguidist/vue-styleguidist), the Vue port, is archived) |
 
 ¹ All components on a single page.<br> ² Include non-component documentation.
 

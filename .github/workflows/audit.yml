@@ -1,0 +1,27 @@
+name: Audit
+
+# Weekly check of the runtime dependency tree (what users actually install) for known
+# vulnerabilities. devDependencies are omitted: they never reach users, Dependabot keeps them
+# moving, and including them would only make the job cry wolf.
+on:
+  schedule:
+    # Mondays 06:00 UTC, before the working week starts in Europe.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Exit code is non-zero (job fails) for advisories rated high or critical.
+      - run: npm audit --omit=dev --audit-level=high

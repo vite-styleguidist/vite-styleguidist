@@ -1,0 +1,16 @@
+# Template chooser settings, see https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+#
+# blank_issues_enabled: false hides “Open a blank issue” from everyone except repository maintainers,
+# so every bug report arrives with the fields the forms ask for. The contact links route the things that
+# are not bugs or feature requests (questions, migration help, security reports) to the right place.
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/vite-styleguidist/vite-styleguidist/discussions
+    about: Ask usage questions in GitHub Discussions (Q&A category). Issues are for bugs and feature requests.
+  - name: Migrating from react-styleguidist
+    url: https://github.com/vite-styleguidist/vite-styleguidist/blob/main/docs/Migration.md
+    about: Upgrading from react-styleguidist@13.1.4 to vite-styleguidist@1.0.0? Start with the migration guide.
+  - name: Report a security vulnerability
+    url: https://github.com/vite-styleguidist/vite-styleguidist/security/advisories/new
+    about: Report security problems privately through GitHub, never in a public issue. See SECURITY.md for what to expect.

@@ -1,7 +1,7 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import styles from './Column.module.css';
+
+// Thin wrappers over Infima's grid (`.row` / `.col--N`), which the classic theme ships.
 
 export const Row = ({ children, className, as: Component = 'div', ...rest }) => (
 	<Component className={clsx('row', className)} {...rest}>
@@ -9,12 +9,7 @@ export const Row = ({ children, className, as: Component = 'div', ...rest }) => 
 	</Component>
 );
 
-Row.propTypes = {
-	children: PropTypes.node.isRequired,
-	className: PropTypes.string,
-	as: PropTypes.string,
-};
-
+// size: 1..12 (Infima columns); order: 2 puts the column last on wide screens only
 export const Column = ({ children, size, order, className, as: Component = 'div', ...rest }) => (
 	<Component
 		className={clsx('col', `col--${size}`, order && styles[`col--order-${order}`], className)}
@@ -23,11 +18,3 @@ export const Column = ({ children, size, order, className, as: Component = 'div'
 		{children}
 	</Component>
 );
-
-Column.propTypes = {
-	children: PropTypes.node.isRequired,
-	size: PropTypes.oneOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).isRequired,
-	order: PropTypes.oneOf([2]),
-	className: PropTypes.string,
-	as: PropTypes.string,
-};

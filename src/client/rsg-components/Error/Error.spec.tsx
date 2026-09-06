@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { ErrorRenderer } from './ErrorRenderer.js';
+import { BUGS } from '../../../scripts/consts.js';
 
 it('renderer should render error message', () => {
 	const error = { toString: () => 'error' };
@@ -10,10 +11,7 @@ it('renderer should render error message', () => {
 	// Error message followed by the component stack
 	expect(container.querySelector('pre')?.textContent).toBe('errorinfo');
 	expect(container).toHaveTextContent(
-		'This may be due to an error in a component you are overriding, or a bug in React Styleguidist.'
+		'This may be due to an error in a component you are overriding, or a bug in Vite Styleguidist.'
 	);
-	expect(getByRole('link', { name: 'please submit an issue' })).toHaveAttribute(
-		'href',
-		'https://github.com/styleguidist/react-styleguidist/issues'
-	);
+	expect(getByRole('link', { name: 'please submit an issue' })).toHaveAttribute('href', BUGS);
 });

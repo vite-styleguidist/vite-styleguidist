@@ -7,6 +7,11 @@
 /* You can override the default Infima variables here. */
 :root {
 	--color-base: #252525;
+	/* Infima leaves the light-mode page background transparent (so that it can be embedded),
+	   which means the page shows the browser's canvas colour: dark, in a viewer that emulates
+	   a dark colour scheme, with our dark text on top. The site has no dark theme (the colour
+	   switch is disabled in docusaurus.config.js), so paint the background explicitly. */
+	--ifm-background-color: var(--ifm-color-white);
 	--ifm-color-gray-0: var(--ifm-color-white);
 	--ifm-color-gray-100: #f5f5f5;
 	--ifm-color-gray-200: #ebebeb;
@@ -55,19 +60,6 @@
 	--ifm-h4-font-size: 1.2rem;
 }
 
-.DocSearch-Button.DocSearch-Button {
-	--docsearch-muted-color: var(--ifm-color-gray-600);
-	--docsearch-key-gradient: transparent;
-	--docsearch-key-shadow: 0 0 0 1px var(--docsearch-muted-color);
-	--docsearch-searchbox-shadow: 0 0 0 2px var(--ifm-navbar-background-color),
-		0 0 0 4px var(--ifm-button-background-color);
-
-	border-radius: var(--ifm-button-border-radius);
-}
-.DocSearch-Button-Key.DocSearch-Button-Key {
-	padding: 0;
-}
-
 a:focus {
 	outline: solid 2px;
 	outline-offset: 2px;
@@ -84,14 +76,9 @@ video {
 	border-color: var(--ifm-link-hover-color);
 }
 .button:focus {
-	box-shadow: 0 0 0 2px var(--ifm-button-background-color), 0 0 0 4px var(--ifm-link-hover-color);
-}
-
-.docusaurus-highlight-code-line {
-	background-color: rgb(72, 77, 91);
-	display: block;
-	margin: 0 calc(-1 * var(--ifm-pre-padding));
-	padding: 0 var(--ifm-pre-padding);
+	box-shadow:
+		0 0 0 2px var(--ifm-button-background-color),
+		0 0 0 4px var(--ifm-link-hover-color);
 }
 
 /* Colors from https://getbootstrap.com/docs/4.5/components/alerts/ */

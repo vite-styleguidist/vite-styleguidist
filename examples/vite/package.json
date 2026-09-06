@@ -1,13 +1,16 @@
 {
-  "name": "react-styleguidist-example-vite",
-  "description": "React styleguidist example in a Vite app",
+  "name": "vite-styleguidist-example-vite",
+  "description": "Vite Styleguidist example in a Vite app",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://github.com/styleguidist/react-styleguidist",
+  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
+  "author": {
+    "name": "Mihail-Gabriel Alexe"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/styleguidist/react-styleguidist.git"
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
   },
   "license": "MIT",
   "engines": {
@@ -27,7 +30,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.0",
-    "react-styleguidist": "file:../../",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vite-styleguidist": "file:../../"
   }
 }

@@ -1,14 +1,18 @@
 <!-- Getting started #getting-started -->
 
-# Getting started with React Styleguidist
+# Getting started with Vite Styleguidist
 
 ## 1. Install Styleguidist
 
 ```bash
-npm install --save-dev react-styleguidist
+npm install --save-dev vite-styleguidist
 ```
 
-Styleguidist needs React 18 or newer and Node.js 20.19 or 22.12 and newer. It comes with [Vite](https://vite.dev/) to compile your components, you don’t need a bundler in your project.
+> **Note:** While 1.0 is in beta, the command above installs the latest `1.0.0-next.N` prerelease (npm points `latest` at the first version ever published, and no stable version exists yet). To be explicit, install from the `next` dist-tag: `npm install --save-dev vite-styleguidist@next`.
+
+Styleguidist needs React 18 or newer and Node.js 22.12 or newer (Node 23 is not supported; 24 and later are), see [Compatibility](Compatibility.md). It comes with [Vite](https://vite.dev/) to compile your components, you don’t need a bundler in your project.
+
+> **Note:** Vite Styleguidist is a maintained fork of React Styleguidist. If you are upgrading from `react-styleguidist` 13.x, see the [migration guide](Migration.md).
 
 ## 2. Configure your style guide
 
@@ -32,4 +36,4 @@ See how to [document your components](Documenting.md).
 
 - [Solutions for common problems and questions](Cookbook.md)
 - [Configuring Styleguidist with third-party tools](Thirdparties.md)
-- [Upgrading from a webpack-based version](Migration.md)
+- [Upgrading from react-styleguidist 13.x](Migration.md)

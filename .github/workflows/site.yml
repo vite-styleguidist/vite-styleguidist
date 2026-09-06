@@ -1,0 +1,90 @@
+# Build the docs site (site/) together with the example style guides and publish it to
+# GitHub Pages at https://vite-styleguidist.github.io/vite-styleguidist/.
+#
+# One-time setup in the repository settings: Pages -> Build and deployment -> Source
+# must be "GitHub Actions". Nothing else is needed; the `github-pages` environment is
+# created on the first run.
+
+name: Docs site
+
+on:
+  push:
+    # `next` too: during a beta the site documents the prerelease, and there is no reason to
+    # keep the docs offline until the stable release lands on main. Pages has a single
+    # deployment slot, so whichever branch was pushed last is what is live.
+    branches:
+      - main
+      - next
+    # The site embeds docs/ and the examples, and the examples are built with the
+    # package from src/, so any of those can change what gets published.
+    paths:
+      - docs/**
+      - site/**
+      - examples/**
+      - src/**
+      - .github/workflows/site.yml
+  workflow_dispatch:
+
+# Least privilege per job: the build job installs ~1,300 packages and only needs to read
+# the repository; only the deploy job may touch Pages.
+permissions:
+  contents: read
+
+# Only one deployment at a time; do not cancel a running one so that a deployment that
+# already started is not left half-finished.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Forks (contributor forks, and the old react-styleguidist fork this project grew out of)
+    # have neither Pages enabled nor the publishing credentials; run only in the canonical repo.
+    if: github.repository == 'vite-styleguidist/vite-styleguidist'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          # Two lockfiles: the repository root (package + examples) and the site.
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
+
+      - uses: actions/configure-pages@v6
+
+      - name: Install the site
+        run: npm ci
+        working-directory: site
+
+      # deploy.sh runs `npm ci` + `npm run compile` at the repository root, builds all
+      # the example style guides into site/static/examples/, then syncs the docs and
+      # builds the site into site/build.
+      - name: Build the examples and the site
+        run: bash scripts/deploy.sh
+        working-directory: site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/build
+
+  deploy:
+    needs: build
+    if: github.repository == 'vite-styleguidist/vite-styleguidist'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

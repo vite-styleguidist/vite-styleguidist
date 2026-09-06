@@ -6,6 +6,7 @@
 
 - `styleguidist server`: Run dev server.
 - `styleguidist build`: Generate a static HTML style guide.
+- `styleguidist help`: Print the list of commands and options (running `styleguidist` without a command does the same).
 
 ## Options
 

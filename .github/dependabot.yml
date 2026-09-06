@@ -1,0 +1,79 @@
+# Dependabot version updates: one weekly sweep, grouped so a routine week produces a
+# handful of PRs instead of dozens. Security updates are a separate GitHub feature that
+# does not read this file (enable "Dependabot security updates" under Settings > Code
+# security and analysis).
+#
+# Only minor + patch bumps are grouped; majors arrive as individual PRs because each one
+# deserves its own review (and, for the package itself, may be a breaking change for users).
+version: 2
+updates:
+  # The package itself (dependencies, devDependencies, and the release/lint tooling).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The documentation site is its own npm project.
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The eight examples built in CI. Listing them under one entry lets Dependabot open a
+  # single PR that bumps the same dependency across all of them (e.g. a new React major),
+  # which is how they should move anyway. They have no lockfiles, so with the caret ranges
+  # they use only out-of-range (major) versions produce a PR.
+  # The `file:../../` link back to the package is ignored by Dependabot.
+  - package-ecosystem: npm
+    directories:
+      - /examples/basic
+      - /examples/customised
+      - /examples/express
+      - /examples/preact
+      - /examples/sections
+      - /examples/styled-components
+      - /examples/themed
+      - /examples/vite
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The actions used by .github/workflows/*.yml (actions/checkout, actions/setup-node, ...).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      github-actions:
+        patterns:
+          - '*'

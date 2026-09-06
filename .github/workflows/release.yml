@@ -1,24 +1,102 @@
-name: Semantic Release
+name: Release
 
+# Every push to a release branch runs semantic-release (release.config.js decides whether the
+# commits since the last tag warrant a version, and which one). `main` publishes to npm's
+# `latest` dist-tag, `next` publishes prereleases to the `next` dist-tag.
 on:
   push:
     branches:
-      - master
+      - main
+      - next
+  # semantic-release is idempotent (it re-reads the tags and npm), so a failed release can be
+  # retried from the Actions tab instead of pushing an empty commit.
+  workflow_dispatch:
+
+# What semantic-release needs from GITHUB_TOKEN:
+# - contents: write       push the release tag and create the GitHub Release (nothing is
+#                         committed back, see release.config.js)
+# - issues: write         comment on the issues a release closes
+# - pull-requests: write  comment on the pull requests a release includes
+# - id-token: write       mint the OIDC token that npm trusted publishing exchanges for a
+#                         short-lived publish token (see the npm authentication note below)
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+# Never run two releases at once (they would race on the tag and the npm publish), and never
+# cancel one that is in flight: a half-finished release is worse than a queued one.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
+    # Forks (contributor forks, and the old react-styleguidist fork this project grew out of)
+    # must never publish; only the canonical repository has the credentials and the tags; run only in the canonical repo.
+    # RELEASES_ENABLED is a repository variable (Settings > Secrets and variables > Actions >
+    # Variables). It is "false" until the very first version has been published by hand and the
+    # npm trusted publisher exists (see the release checklist in docs/Maintenance.md); before
+    # that every run would fail at verifyConditions. It also works as a pause switch: set it
+    # to "false" to stop publishing without touching the code, "true" to resume.
+    if: github.repository == 'vite-styleguidist/vite-styleguidist' && vars.RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
+          # semantic-release needs the whole history and every tag to find the previous release.
+          fetch-depth: 0
+          # Do not leave GITHUB_TOKEN in .git/config: semantic-release authenticates its own
+          # pushes with the token from the environment.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          # Node 24 (Active LTS) rather than the 22 used elsewhere: npm trusted publishing needs
+          # npm >= 11.5.1, and Node 22.x still bundles npm 10.9. @semantic-release/npm does bring
+          # its own npm 11 and prefers it (execa `preferLocal`), but the runner's npm should be
+          # capable as well so that any manual `npm whoami`/`npm publish` debugging behaves the same.
+          #
+          # No `registry-url` here on purpose. With it, setup-node writes an .npmrc containing
+          # `_authToken=${NODE_AUTH_TOKEN}` (v7 no longer fills that in with a dummy value), and
+          # @semantic-release/npm copies any existing auth line into the .npmrc it hands to
+          # `npm publish`, mistaking the placeholder for a real token and skipping NPM_TOKEN. The
+          # plugin manages registry and authentication itself, so setup-node must not.
+          node-version: '24'
           cache: npm
 
       - run: npm ci
 
-      - run: npx semantic-release
+      # Supply-chain check before anything gets published: every installed package must carry a
+      # valid registry signature (and, where published with provenance, a valid attestation).
+      - run: npm audit signatures
+
+      # Refuse to release a commit that does not pass the checks CI runs on the same push.
+      # CI and Release start at the same time, so without this a red commit could still ship.
+      # `npm test` runs lint + typecheck first (pretest), then the unit tests, which need lib/.
+      - name: Verify before releasing
+        run: |
+          npm run compile
+          npm test
+
+      - name: Release
+        run: npx --no-install semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # npm authentication, in order of preference:
+          #
+          # 1. Trusted publishing (OIDC), no secret at all. On npmjs.com, under the package's
+          #    Settings > Trusted Publisher, register: GitHub Actions, organization/user
+          #    `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no
+          #    environment. The plugin then exchanges this job's OIDC token for a publish token
+          #    and npm attaches provenance attestations automatically. The package must already
+          #    exist on npm before a trusted publisher can be configured, which is why the very
+          #    first publish uses option 2.
+          #
+          # 2. NPM_TOKEN repository secret (a granular automation token with publish rights for
+          #    this package). @semantic-release/npm tries OIDC first and only reads NPM_TOKEN when
+          #    that fails, so this line is harmless while the secret is unset: the release simply
+          #    stops with ENONPMTOKEN until one of the two options is configured.
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

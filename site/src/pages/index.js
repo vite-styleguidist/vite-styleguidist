@@ -1,28 +1,35 @@
-import React from 'react';
 import clsx from 'clsx';
 import Layout from '@theme/Layout';
-import PropTypes from 'prop-types';
 import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import useBaseUrl from '@docusaurus/useBaseUrl';
+import { useBaseUrlUtils } from '@docusaurus/useBaseUrl';
 import { VisuallyHidden } from '../components/VisuallyHidden';
 import { Row, Column } from '../components/Column';
 import { Stack } from '../components/Stack';
 import { ImageLink } from '../components/ImageLink';
 import styles from './index.module.css';
 
-const features = [
+// The example style guides are built from this repository's examples/ folder by
+// scripts/deploy.sh and served next to the site under <baseUrl>/examples/<name>/.
+// Every href and image below goes through `withBaseUrl` because the site is served from
+// a sub-path on GitHub Pages; a bare `/img/...` would point at the domain root.
+const example = (name) => `examples/${name}/`;
+
+const getFeatures = (withBaseUrl) => [
 	{
 		title: 'Development environment',
 		subtitle:
 			'Focus on one component at a time, see all its variants and work faster with hot reload',
 		paragraphs: [
-			'Supports JavaScript, TypeScript and Flow',
-			'Works with Create React App out of the box',
+			'Reuses your project’s Vite config, so components render exactly as they do in your app',
+			'JSX, TypeScript, CSS modules and static assets work out of the box',
 		],
 		figure: (
-			<ImageLink href="https://react-styleguidist.js.org/examples/basic/">
-				<img src="/img/workbench.jpg" alt="React Styleguidist example style guide" />
+			<ImageLink href={withBaseUrl(example('basic'))}>
+				<img
+					src={withBaseUrl('img/workbench.jpg')}
+					alt="A single component with its props table and live example in Vite Styleguidist"
+				/>
 			</ImageLink>
 		),
 	},
@@ -37,13 +44,19 @@ const features = [
 		figure: (
 			<Row>
 				<Column size={6}>
-					<ImageLink href="https://cdds.netlify.app/styleguide/">
-						<img src="/img/styleguide1.jpg" alt="Component-driven.io style guide" />
+					<ImageLink href={withBaseUrl(example('sections'))}>
+						<img
+							src={withBaseUrl('img/example-sections.jpg')}
+							alt="Example style guide organized in sections"
+						/>
 					</ImageLink>
 				</Column>
 				<Column size={6}>
-					<ImageLink href="https://tamiadev.github.io/tamia/">
-						<img src="/img/styleguide2.jpg" alt="React Styleguidist example style guide" />
+					<ImageLink href={withBaseUrl(example('customised'))}>
+						<img
+							src={withBaseUrl('img/example-customised.jpg')}
+							alt="Example style guide with a customized theme and layout"
+						/>
 					</ImageLink>
 				</Column>
 			</Row>
@@ -52,35 +65,52 @@ const features = [
 	{
 		title: 'Interactive playground',
 		subtitle: 'See how components react to different props and data right in the browser',
-		paragraphs: ['Find the right combination of props and copy the code'],
+		paragraphs: [
+			'Find the right combination of props and copy the code',
+			'Works with any app: the style guide is bundled by Vite, whatever your app uses',
+		],
 		figure: (
-			<ImageLink href="https://react-kawaii.now.sh/" className={styles.featureFigureKawaii}>
-				<img src="/img/playground1.png" alt="React Kawaii docs" />
+			<ImageLink href="https://react-kawaii.vercel.app/" className={styles.featureFigureKawaii}>
+				<img src={withBaseUrl('img/playground1.png')} alt="React Kawaii documentation" />
 			</ImageLink>
 		),
 	},
 ];
 
-const examples = [
+// Live style guides. The first four are this repository's own examples, built and
+// deployed with every release; the other two are third-party projects built with the
+// original React Styleguidist that were still online when the fork launched, labelled
+// as such so nobody mistakes them for this project's output. Check them before each release and drop dead ones.
+const getExamples = (withBaseUrl) => [
 	{
-		title: 'Example style guide',
-		href: 'https://react-styleguidist.js.org/examples/basic/',
-		image: '/img/example1.png',
+		title: 'Basic example',
+		href: withBaseUrl(example('basic')),
+		image: withBaseUrl('img/example-basic.jpg'),
 	},
 	{
-		title: 'Dialog components',
+		title: 'Sections example',
+		href: withBaseUrl(example('sections')),
+		image: withBaseUrl('img/example-sections.jpg'),
+	},
+	{
+		title: 'Customised example',
+		href: withBaseUrl(example('customised')),
+		image: withBaseUrl('img/example-customised.jpg'),
+	},
+	{
+		title: 'Themed example',
+		href: withBaseUrl(example('themed')),
+		image: withBaseUrl('img/example-themed.jpg'),
+	},
+	{
+		title: 'Dialog components (built with React Styleguidist)',
 		href: 'https://dialogs.github.io/dialog-web-components/',
-		image: '/img/example2.png',
+		image: withBaseUrl('img/example2.png'),
 	},
 	{
-		title: 'Everydayhero Constructicon',
-		href: 'https://everydayhero.github.io/constructicon/',
-		image: '/img/example3.png',
-	},
-	{
-		title: 'Re-bulma',
+		title: 'Re-bulma (built with React Styleguidist)',
 		href: 'https://bokuweb.github.io/re-bulma/',
-		image: '/img/example4.png',
+		image: withBaseUrl('img/example4.png'),
 	},
 ];
 
@@ -107,37 +137,16 @@ function Feature({ title, subtitle, paragraphs, figure, flipped }) {
 	);
 }
 
-Feature.propTypes = {
-	title: PropTypes.node.isRequired,
-	subtitle: PropTypes.node.isRequired,
-	paragraphs: PropTypes.arrayOf(PropTypes.node).isRequired,
-	figure: PropTypes.node.isRequired,
-	flipped: PropTypes.bool.isRequired,
-};
-
-function Resource({ href, title, cover }) {
-	return (
-		<Link to={href} className="col col--6">
-			<img src={useBaseUrl(cover)} alt={title} />
-		</Link>
-	);
-}
-
-Resource.propTypes = {
-	href: PropTypes.string.isRequired,
-	title: PropTypes.string.isRequired,
-	cover: PropTypes.string.isRequired,
-};
-
 function Home() {
-	const context = useDocusaurusContext();
-	const { siteConfig = {} } = context;
+	const { siteConfig } = useDocusaurusContext();
+	const { withBaseUrl } = useBaseUrlUtils();
+	const features = getFeatures(withBaseUrl);
+	const examples = getExamples(withBaseUrl);
 	return (
 		<Layout title={`${siteConfig.title}: ${siteConfig.tagline}`} description={siteConfig.tagline}>
 			<header className={clsx('hero', styles.heroBanner)}>
 				<Stack gap="l" className="container">
 					<Stack gap="m" className="container">
-						<img src={useBaseUrl('img/logo.svg')} alt="" width={300} />
 						<h1 className="hero__title">{siteConfig.title}</h1>
 						<p className="hero__subtitle">{siteConfig.tagline}</p>
 					</Stack>
@@ -146,27 +155,32 @@ function Home() {
 							Get Started
 						</Link>
 					</div>
+					<p className={styles.lineage}>
+						Vite Styleguidist is a maintained fork of React Styleguidist. It is not affiliated with
+						or endorsed by the original React Styleguidist maintainers.{' '}
+						<Link to="/docs/fork">About this fork</Link>
+					</p>
 				</Stack>
 			</header>
 			<main className={styles.main}>
 				<div className="container">
 					<section className={styles.section}>
-						<VisuallyHidden as="h2">React Styleguidist features</VisuallyHidden>
+						<VisuallyHidden as="h2">Vite Styleguidist features</VisuallyHidden>
 						<Stack gap="xl">
 							{features.map((feature, index) => (
-								<Feature key={feature.title} flipped={index % 2} {...feature} />
+								<Feature key={feature.title} flipped={index % 2 === 1} {...feature} />
 							))}
 						</Stack>
 					</section>
 					<section className={styles.section}>
 						<h2>See it in action</h2>
 						<Row>
-							{examples.map((example) => (
-								<Column key={example.href} size={3}>
-									<ImageLink href={example.href}>
+							{examples.map((item) => (
+								<Column key={item.href} size={4}>
+									<ImageLink href={item.href}>
 										<Stack gap="xs">
-											<img src={example.image} alt="" />
-											<div>{example.title}</div>
+											<img src={item.image} alt="" />
+											<div>{item.title}</div>
 										</Stack>
 									</ImageLink>
 								</Column>

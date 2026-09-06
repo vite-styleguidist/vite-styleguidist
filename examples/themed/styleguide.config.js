@@ -13,7 +13,7 @@ module.exports = {
 		'rsg-example': path.resolve(__dirname, 'src'),
 	},
 	ribbon: {
-		url: 'https://github.com/styleguidist/react-styleguidist',
+		url: 'https://github.com/vite-styleguidist/vite-styleguidist',
 	},
 	theme: 'styleguide.theme.js',
 	styles: 'styleguide.styles.js',

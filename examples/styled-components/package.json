@@ -1,16 +1,15 @@
 {
-  "name": "react-styleguidist-example-styled-components",
-  "description": "React styleguidist styled-components example",
+  "name": "vite-styleguidist-example-styled-components",
+  "description": "Vite Styleguidist styled-components example",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://github.com/styleguidist/react-styleguidist",
+  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
   "author": {
-    "name": "Artem Sapegin",
-    "url": "http://sapegin.me/"
+    "name": "Mihail-Gabriel Alexe"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/styleguidist/react-styleguidist.git"
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
   },
   "license": "MIT",
   "engines": {
@@ -35,7 +34,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/styled-system__theme-get": "^5.0.7",
-    "react-styleguidist": "file:../../",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vite-styleguidist": "file:../../"
   }
 }

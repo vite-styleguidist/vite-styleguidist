@@ -4,7 +4,7 @@
 
 ## Finding components
 
-By default Styleguidist will search components using this [glob pattern](https://github.com/isaacs/node-glob#glob-primer): `src/components/**/*.{js,jsx,ts,tsx}`.
+By default Styleguidist will search components using this [glob pattern](https://github.com/isaacs/node-glob#glob-primer): `src/@(components|Components)/**/*.{js,jsx,ts,tsx}`, so both `src/components` and `src/Components` work. (On Windows, where the file system is case-insensitive and both spellings would match the same files twice, the default is `src/components/**/*.{js,jsx,ts,tsx}`.)
 
 It will pick up files like:
 
@@ -12,10 +12,11 @@ It will pick up files like:
 - `src/components/Button/Button.js`,
 - `src/components/Button/index.js`.
 
-But will ignore tests:
+But will ignore tests and type declarations:
 
 - `__tests__` folder,
-- files containing `.test.js` or `.spec.js` (or same for `.jsx`, `.ts` and `.tsx`).
+- files containing `.test.js` or `.spec.js` (or same for `.jsx`, `.ts` and `.tsx`),
+- `.d.ts` files.
 
 If it doesn’t work for you, create a `styleguide.config.js` file in your project’s root folder and configure the patterns to fit your project structure.
 

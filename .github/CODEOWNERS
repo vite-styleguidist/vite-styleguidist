@@ -1,0 +1,32 @@
+# Code owners are automatically requested for review on pull requests that touch matching paths,
+# and the branch ruleset can require their approval.
+#
+# Today every line names the same person, so this file changes nothing about who reviews what.
+# It exists so that the moment a second maintainer joins, the sensitive surfaces below can be routed
+# to a specific reviewer by editing one line here instead of relying on everyone remembering.
+#
+# The handle is the maintainer's current GitHub account. It may move to a personal (non-employer)
+# account before or after the first release; when that happens, every line here must change
+# together, and the ruleset's "require code owner review" setting will pick it up automatically.
+#
+# Syntax: the LAST matching pattern wins, so keep the catch-all first and the specific paths after it.
+
+# Everything, by default.
+* @mihail-alexe-nutanix
+
+# CI and release automation: a change here can publish to npm or run with elevated tokens.
+/.github/workflows/ @mihail-alexe-nutanix
+
+# This file itself: whoever owns CODEOWNERS controls review routing.
+/.github/CODEOWNERS @mihail-alexe-nutanix
+
+# Package identity, dependency surface and the lockfile that CI installs from.
+/package.json @mihail-alexe-nutanix
+/package-lock.json @mihail-alexe-nutanix
+
+# The Vite integration is the core of the fork and the part most likely to break user builds.
+/src/vite/ @mihail-alexe-nutanix
+
+# Legal and security policy: changes here are never "just docs".
+/License.md @mihail-alexe-nutanix
+/SECURITY.md @mihail-alexe-nutanix

@@ -23,7 +23,7 @@ Read more in [About this fork](docs/Fork.md), or in the [compatibility and suppo
 
 Vite Styleguidist is a component development environment with a hot reloaded dev server and a living style guide that you can share with your team. It lists component `propTypes` and shows live, editable usage examples based on Markdown files. Because it’s powered by Vite, JSX, TypeScript, CSS modules and static assets work out of the box, whatever bundler your app uses. Try the [basic example](examples/basic) to see it in action.
 
-![Vite Styleguidist in action](https://user-images.githubusercontent.com/1703219/74945569-51c6ad00-543b-11ea-8351-f4d86860893a.gif)
+![Vite Styleguidist in action](site/static/img/workbench.jpg)
 
 ## Usage
 

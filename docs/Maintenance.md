@@ -159,7 +159,7 @@ Any commit of a `feat` type merged into a release branch is published as a _mino
 
 ### Major releases
 
-Any commit with a `BREAKING CHANGE:` footer (and a `!` in the header) merged into a release branch is published as a _major_ release as soon as CI passes. On `next` it produces the first prerelease of the next major (`2.0.0-next.0`); on `main` it publishes the major directly, which is why breaking changes should go through `next` first.
+Any commit with a `BREAKING CHANGE:` footer (and a `!` in the header) merged into a release branch is published as a _major_ release as soon as CI passes. On `next` it produces the first prerelease of the next major (`2.0.0-next.1`); on `main` it publishes the major directly, which is why breaking changes should go through `next` first.
 
 ### Release checklist
 

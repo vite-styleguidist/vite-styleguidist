@@ -101,7 +101,7 @@ npm run test:cypress:open
 
 We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/): `type(optional scope): summary`, all lowercase, no trailing period.
 
-- Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `build`.
+- Types: `feat`, `fix`, `perf`, `docs`, `chore`, `refactor`, `test`, `ci`, `build`, `style`, `revert`. Only `feat`, `fix` and `perf` (and anything breaking) produce a release, see [Commit message conventions](../docs/Maintenance.md#commit-message-conventions).
 - A breaking change gets a `!` after the type or scope (`feat!: drop node 20`) and a `BREAKING CHANGE:` footer explaining what breaks and how to migrate.
 - Examples: `fix: keep single-line jsx examples on one line`, `docs(configuration): document the vite option`, `chore: update dev dependencies`.
 

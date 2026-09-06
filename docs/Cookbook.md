@@ -794,8 +794,6 @@ storiesOf('Button', module)
   .add('large size', () => <Button size="large">Push Me</Button>)
 ```
 
-<video controls muted playsinline alt="Storybook demo video"><source src="https://storybook.js.org/videos/storybook-hero-video-optimized.mp4" type="video/mp4" /></video>
-
 And with Styleguidist you write _examples_ in Markdown files:
 
     React button component example:

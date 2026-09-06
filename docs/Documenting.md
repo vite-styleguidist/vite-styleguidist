@@ -134,7 +134,7 @@ MyComponent.propTypes = {
    *
    * @ignore
    */
-  hiddenProp: React.PropTypes.string
+  hiddenProp: PropTypes.string
 }
 ```
 

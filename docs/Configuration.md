@@ -37,7 +37,7 @@ Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile e
 
 ## `components`
 
-Type: `String`, `Function` or `Array`, default: `src/components/**/*.{js,jsx,ts,tsx}`
+Type: `String`, `Function` or `Array`, default: `src/@(components|Components)/**/*.{js,jsx,ts,tsx}` (see [Locating components](Components.md) for the Windows fallback)
 
 - when `String`: a [glob pattern](https://github.com/isaacs/node-glob#glob-primer) that matches all your component modules.
 - when `Function`: a function that returns an array of module paths.

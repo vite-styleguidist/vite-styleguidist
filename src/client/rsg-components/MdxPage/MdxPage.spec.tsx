@@ -119,11 +119,12 @@ test('should catch a missing MDX reference and report it inside the page', () =>
 			return <Callout />;
 		};
 
-		const { getByRole, queryByRole } = render(
+		const { getByRole, getByText, queryByRole, queryByText } = render(
 			<Provider>
 				<MdxPage
 					chunk={{ type: 'mdx', Content: Broken, examples: [] }}
 					name="Button"
+					file="src/components/Button/Readme.mdx"
 					exampleMode="collapse"
 				/>
 			</Provider>
@@ -133,6 +134,12 @@ test('should catch a missing MDX reference and report it inside the page', () =>
 		const status = getByRole('status');
 		expect(status).toHaveTextContent('Button: Expected component `Callout` to be defined');
 		expect(queryByRole('heading')).toBeNull();
+
+		// The whole page failed, not one example, so the panel says so and names the .mdx file
+		expect(getByText('This page failed to render'));
+		expect(getByText('Fix the page in src/components/Button/Readme.mdx.'));
+		expect(queryByText('This example failed to render')).toBeNull();
+		expect(queryByText('Fix the example in its Markdown file.')).toBeNull();
 	} finally {
 		console.error = consoleError;
 	}

@@ -11,6 +11,8 @@ export interface MdxPageProps {
 	chunk: Rsg.MdxExample;
 	/** Name of the component or section the page documents. */
 	name?: string;
+	/** Path of the `.mdx` file, named in the error panel when the page fails to render. */
+	file?: string;
 	/** `exampleMode` of the owner, passed on to every playground of the page. */
 	exampleMode?: string;
 	/**
@@ -31,6 +33,7 @@ export interface MdxPageProps {
 const MdxPage: React.FunctionComponent<MdxPageProps> = ({
 	chunk,
 	name,
+	file,
 	exampleMode,
 	indexOffset = 0,
 }) => {
@@ -44,7 +47,7 @@ const MdxPage: React.FunctionComponent<MdxPageProps> = ({
 		// The boundary is inside the renderer so a failing page still occupies its normal place
 		// in the layout, and outside <Content> so it catches everything the page renders.
 		<MdxPageRenderer name={name}>
-			<MdxPageError name={name}>
+			<MdxPageError name={name} file={file}>
 				<MdxPageContext.Provider value={context}>
 					<Content components={components} />
 				</MdxPageContext.Provider>
@@ -56,6 +59,7 @@ const MdxPage: React.FunctionComponent<MdxPageProps> = ({
 MdxPage.propTypes = {
 	chunk: PropTypes.any.isRequired,
 	name: PropTypes.string,
+	file: PropTypes.string,
 	exampleMode: PropTypes.string,
 	indexOffset: PropTypes.number,
 };

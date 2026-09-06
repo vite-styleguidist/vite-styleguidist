@@ -4,6 +4,12 @@ import PlaygroundError from 'rsg-components/PlaygroundError';
 interface MdxPageErrorProps {
 	/** Name of the component or section the page documents, shown in the message. */
 	name?: string;
+	/**
+	 * Path of the `.mdx` file, named in the hint so the visitor knows which file to open. It is
+	 * optional because the compiled page does not carry its own path yet; without it the hint
+	 * still says the failure is in the page’s `.mdx` file rather than in an example.
+	 */
+	file?: string;
 	children?: React.ReactNode;
 }
 
@@ -33,13 +39,21 @@ export default class MdxPageError extends Component<MdxPageErrorProps, MdxPageEr
 
 	public render() {
 		const { error } = this.state;
-		const { name, children } = this.props;
+		const { name, file, children } = this.props;
 		if (!error) {
 			return children;
 		}
 		const message = `${name ? `${name}: ` : ''}${error.message || String(error)}`;
-		// `editable: false` — there is no editor for the page itself, so the panel’s hint points
-		// at the source file, which is where an MDX authoring error has to be fixed.
-		return <PlaygroundError message={message} editable={false} />;
+		// The failing unit here is the whole page, not one example, and there is no editor to
+		// point at: MDX fails while rendering the prose, so the panel gets its own title and a
+		// hint naming the `.mdx` file instead of PlaygroundError’s “fix it in its Markdown file”.
+		return (
+			<PlaygroundError
+				message={message}
+				editable={false}
+				title="This page failed to render"
+				hint={file ? `Fix the page in ${file}.` : 'Fix the page in its .mdx file.'}
+			/>
+		);
 	}
 }

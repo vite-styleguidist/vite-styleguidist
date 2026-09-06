@@ -59,15 +59,33 @@ interface PlaygroundErrorProps extends JssInjectedProps {
 	 * has to point at the Markdown file instead of at an editor that is not on the page.
 	 */
 	editable?: boolean;
+	/**
+	 * Panel title. Defaults to the playground copy: this component was written for one
+	 * editable example inside a `.md` file. A caller whose failing unit is not an example —
+	 * an MDX page, which fails as a whole — passes its own title instead.
+	 */
+	title?: string;
+	/**
+	 * The line under the message, telling the visitor where to fix the failure. Defaults to
+	 * the playground copy chosen by `editable`; pass a hint that names the actual source file
+	 * when the panel stands for something other than a playground.
+	 */
+	hint?: string;
 }
 
 export const PlaygroundErrorRenderer: React.FunctionComponent<PlaygroundErrorProps> = ({
 	classes,
 	message,
 	editable = true,
+	// Defaults live here rather than in the JSX so the playground copy is unchanged for every
+	// caller that does not pass them: PlaygroundError’s own rendering must stay byte-identical.
+	title = 'This example failed to render',
+	hint = editable
+		? 'Fix the code in the editor below; the preview updates as you type.'
+		: 'Fix the example in its Markdown file.',
 }) => (
 	<div className={classes.root}>
-		<div className={classes.title}>This example failed to render</div>
+		<div className={classes.title}>{title}</div>
 		{/*
 		 * Only the message is a live region, and a polite one: the panel is unmounted and
 		 * remounted on every debounced run while the visitor types, so an assertive region
@@ -78,11 +96,7 @@ export const PlaygroundErrorRenderer: React.FunctionComponent<PlaygroundErrorPro
 		<pre className={classes.message} role="status">
 			{message}
 		</pre>
-		<div className={classes.hint}>
-			{editable
-				? 'Fix the code in the editor below; the preview updates as you type.'
-				: 'Fix the example in its Markdown file.'}
-		</div>
+		<div className={classes.hint}>{hint}</div>
 	</div>
 );
 
@@ -90,6 +104,8 @@ PlaygroundErrorRenderer.propTypes = {
 	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
 	message: PropTypes.string.isRequired,
 	editable: PropTypes.bool,
+	title: PropTypes.string,
+	hint: PropTypes.string,
 };
 
 export default Styled<PlaygroundErrorProps>(styles)(PlaygroundErrorRenderer);

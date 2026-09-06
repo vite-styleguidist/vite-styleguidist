@@ -3,16 +3,21 @@ import PropTypes from 'prop-types';
 import cx from 'clsx';
 import Heading from 'rsg-components/Heading';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
+import { Styles } from 'jss';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ color, space }: Rsg.Theme) => ({
+const styles = ({ color, space }: Rsg.Theme): Styles => ({
 	wrapper: {
 		display: 'flex',
 		flexDirection: 'row',
 		alignItems: 'center',
-		marginBottom: space[1],
+		gap: space[2],
+		// The spacing below a heading belongs to its container (the component header,
+		// the section header), which stacks it with the path line or the description
+		marginBottom: 0,
 	},
 	toolbar: {
+		flexShrink: 0,
 		marginLeft: 'auto',
 	},
 	sectionName: {

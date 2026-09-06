@@ -28,10 +28,14 @@ const Section: React.FunctionComponent<{
 		usageMode,
 	} = section;
 
-	const contentJsx = Array.isArray(content) ? (
-		<Examples examples={content} name={name} exampleMode={exampleMode} />
-	) : null;
-	const componentsJsx = components && (
+	// A section without a Markdown file still carries `content: []`; an empty Examples
+	// block would take a gap of its own in the section layout
+	const contentJsx =
+		Array.isArray(content) && content.length > 0 ? (
+			<Examples examples={content} name={name} exampleMode={exampleMode} />
+		) : null;
+	// Same for `components` and `sections`: the loader sets them to [] on leaf sections
+	const componentsJsx = components && components.length > 0 && (
 		<Components
 			usageMode={usageMode}
 			exampleMode={exampleMode}
@@ -40,7 +44,9 @@ const Section: React.FunctionComponent<{
 		/>
 	);
 
-	const sectionsJsx = sections && <Sections sections={sections} depth={depth + 1} />;
+	const sectionsJsx = sections && sections.length > 0 && (
+		<Sections sections={sections} depth={depth + 1} />
+	);
 
 	return (
 		<SectionRenderer

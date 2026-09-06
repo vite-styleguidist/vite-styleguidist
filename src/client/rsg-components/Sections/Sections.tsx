@@ -7,10 +7,11 @@ import type * as Rsg from '../../../typings/index.js';
 const Sections: React.FunctionComponent<{
 	sections: Rsg.Section[];
 	depth: number;
+	/** The list on the root page; by default the list at depth 1 (StyleGuide renders it so) */
 	root?: boolean;
-}> = ({ sections, depth }) => {
+}> = ({ sections, depth, root = depth === 1 }) => {
 	return (
-		<SectionsRenderer>
+		<SectionsRenderer root={root}>
 			{sections
 				.filter((section) => !section.externalLink)
 				.map((section, idx) => (

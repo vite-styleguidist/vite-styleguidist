@@ -244,3 +244,16 @@ it('should keep the fence language on playground chunks', () => {
 	const codeChunks = chunkify(markdown).filter((chunk) => chunk.type === 'code');
 	expect(codeChunks.map((chunk) => (chunk as Rsg.CodeExample).lang)).toEqual(['tsx', undefined]);
 });
+
+test('should keep GFM task list markers unescaped', () => {
+	// remark-stringify escapes a `[` that opens a list item, which would hide the task
+	// marker from markdown-to-jsx and render `- [x] Coffee` as literal text
+	const result = chunkify('- [x] Coffee\n- [ ] Pizza\n');
+
+	expect(result).toEqual([
+		{
+			type: 'markdown',
+			content: '* [x] Coffee\n* [ ] Pizza',
+		},
+	]);
+});

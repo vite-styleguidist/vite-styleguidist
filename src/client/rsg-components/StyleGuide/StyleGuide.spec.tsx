@@ -66,7 +66,7 @@ test('should render components', () => {
 
 test('should render welcome screen', () => {
 	const { getByText } = render(<StyleGuide {...defaultProps} welcomeScreen />);
-	expect(getByText('Welcome to Vite Styleguidist!')).toBeInTheDocument();
+	expect(getByText('No components found yet')).toBeInTheDocument();
 });
 
 test('should render a sidebar if showSidebar is not set', () => {

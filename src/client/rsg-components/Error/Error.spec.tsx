@@ -8,6 +8,8 @@ it('renderer should render error message', () => {
 	const info = { componentStack: 'info' };
 	const { container, getByRole } = render(<ErrorRenderer classes={{}} error={error} info={info} />);
 
+	expect(getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument();
+
 	// Error message followed by the component stack
 	expect(container.querySelector('pre')?.textContent).toBe('errorinfo');
 	expect(container).toHaveTextContent(

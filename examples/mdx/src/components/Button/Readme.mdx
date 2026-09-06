@@ -1,0 +1,75 @@
+import Callout from '../../docs/Callout'
+
+This page is written in MDX. The prose around the playgrounds is a React tree, so it can use components, and every fenced code block still behaves exactly as it does in a `.md` file.
+
+<Callout kind="info">
+  This box is a `Callout` component, imported at the top of `Readme.mdx` and used as a JSX element. A `.md` page cannot do that — it can only put a component inside a playground, where it is editable source code rather than page furniture.
+</Callout>
+
+A fence in a playground language, with no modifiers, is an interactive example:
+
+```jsx
+<Button>Push Me</Button>
+```
+
+The `padded` modifier puts space between the components rendered by one playground:
+
+```jsx padded
+<Button size="small">Small</Button>
+<Button>Normal</Button>
+<Button size="large">Large</Button>
+```
+
+The `noeditor` modifier renders the example without its editor:
+
+```jsx noeditor
+<Button color="deeppink">Look, no editor</Button>
+```
+
+A JSON settings object passes props to the example wrapper, here a CSS class that gives the preview a chequerboard background:
+
+```js { "props": { "className": "checks" } }
+<Button>I am transparent!</Button>
+```
+
+The `static` modifier turns a playground language into highlighted source code, so an import line can be shown without running it:
+
+```jsx static
+import Button from 'rsg-example/components/Button'
+```
+
+TypeScript fences are playgrounds too: `ts` and `tsx` are compiled in the browser by Sucrase, which strips the types.
+
+```tsx
+const sizes: ('small' | 'normal' | 'large')[] = ['small', 'normal', 'large']
+;<div>
+  {sizes.map(size => (
+    <Button key={size} size={size}>
+      {size}
+    </Button>
+  ))}
+</div>
+```
+
+Every other language is highlighted at build time and never executed:
+
+```html
+<button class="button">Push Me</button>
+```
+
+### Sizes
+
+GitHub-flavoured Markdown is on by default in MDX pages, so tables and task lists work the same way they do in `.md`:
+
+| `size`   | Font size | Use it for                        |
+| -------- | --------- | --------------------------------- |
+| `small`  | 10px      | Dense toolbars                    |
+| `normal` | 14px      | Everything else                   |
+| `large`  | 18px      | The single main action of a page  |
+
+### What this page exercises
+
+- [x] Playgrounds with and without modifiers
+- [x] A `tsx` fence and a non-playground `html` fence
+- [x] A component imported by the page and used as a JSX element
+- [ ] Nothing else: `Badge` is still documented in plain Markdown

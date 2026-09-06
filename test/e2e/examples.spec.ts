@@ -2,7 +2,7 @@
 // and must render without a JavaScript error. Replaces the puppeteer script test/browser.js
 // and the eight `test:browser:*` npm scripts that ran it (see ADR 0009).
 //
-// The examples must be built first (`npm run build:basic` ... `npm run build:vite`, exactly
+// The examples must be built first (`npm run build:basic` ... `npm run build:mdx`, exactly
 // what the CI integration job does); a missing build fails on the render assertion, and the
 // browser console attached to the report shows the 404s.
 import http from 'node:http';
@@ -23,6 +23,7 @@ const EXAMPLES = [
 	'preact',
 	'styled-components',
 	'vite',
+	'mdx',
 ];
 
 const EXAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../examples');
@@ -35,8 +36,8 @@ const RUNTIME_ERROR = /TypeError|ReferenceError|Invalid hook call|Minified React
 
 // The builds are served over HTTP rather than opened from file:// URLs: Vite emits
 // `<script type="module">`, which browsers refuse to run from the file system. One
-// worker-scoped static server (sirv is already a runtime dependency) covers all eight
-// builds, because they reference their assets relatively (`./build/...`), so each is
+// worker-scoped static server (sirv is already a runtime dependency) covers every
+// build, because they reference their assets relatively (`./build/...`), so each is
 // reachable at /<name>/styleguide/.
 const test = base.extend<{}, { examplesServer: string }>({
 	examplesServer: [

@@ -97,7 +97,7 @@ jobs:
     name: Examples and end-to-end tests
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
-    # The eight example builds dominate now that the browser is a cached ~0.5 GB download
+    # The nine example builds dominate now that the browser is a cached ~0.5 GB download
     # instead of ~1.7 GB of Cypress plus puppeteer binaries fetched on every run.
     timeout-minutes: 30
     steps:
@@ -123,6 +123,7 @@ jobs:
           npm run build:preact
           npm run build:styled-components
           npm run build:vite
+          npm run build:mdx
 
       # Playwright's browser builds are coupled to the installed @playwright/test version, so
       # the cache key is derived from the version `npm ci` resolved from package-lock.json,
@@ -139,9 +140,9 @@ jobs:
       # headless Chromium needs are installed (via passwordless sudo on the hosted runners).
       - run: npx playwright install --with-deps chromium
 
-      # The dev-server suite (test/e2e/core.spec.ts, component.spec.ts) and the smoke test of
-      # the eight builds above (test/e2e/examples.spec.ts); playwright.config.ts starts and
-      # stops the dev server itself.
+      # The dev-server suite (test/e2e/core.spec.ts, component.spec.ts), the smoke test of the
+      # nine builds above (test/e2e/examples.spec.ts) and the MDX checks against the mdx build
+      # (test/e2e/mdx.spec.ts); playwright.config.ts starts and stops the dev server itself.
       - run: npm run test:e2e
 
       # Screenshots, traces and the HTML report of a failed run, so a red job can be diagnosed
@@ -161,7 +162,7 @@ jobs:
     # project's react-dom (createRoot on 18+, ReactDOM.render on 16.14 and 17; see
     # docs/decisions/0013-react-16-support.md). `integration` above only exercises the modern
     # one with the React 19 from the lockfile, so this job swaps React and repeats the compile,
-    # the eight example builds and the browser tests on the oldest supported version, on 17 and
+    # the nine example builds and the browser tests on the oldest supported version, on 17 and
     # on 18. The unit tests are not run here: @testing-library/react 16 needs React 18 or 19.
     # 17.0.2 takes the same legacy branch as 16.14.0 and has never behaved differently in it,
     # but it is a supported version with its own event system, so it is kept; the entries run
@@ -232,6 +233,7 @@ jobs:
           npm run build:preact
           npm run build:styled-components
           npm run build:vite
+          npm run build:mdx
 
       # Same browser cache as `integration`, see the comments there.
       - name: Read the installed Playwright version

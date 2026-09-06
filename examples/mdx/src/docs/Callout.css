@@ -1,0 +1,33 @@
+.callout {
+	margin: 1em 0;
+	padding: 0.75em 1em;
+	border-left: 4px solid;
+	border-radius: 0.2em;
+}
+
+.callout-info {
+	border-left-color: #4a7fb5;
+	background-color: #eef4fb;
+}
+
+.callout-warning {
+	border-left-color: #b58a4a;
+	background-color: #fbf5ee;
+}
+
+.callout-kind {
+	display: block;
+	margin-bottom: 0.25em;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #555;
+}
+
+.callout-body > :first-child {
+	margin-top: 0;
+}
+
+.callout-body > :last-child {
+	margin-bottom: 0;
+}

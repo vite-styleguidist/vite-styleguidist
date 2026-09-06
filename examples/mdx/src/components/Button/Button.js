@@ -1,0 +1,39 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+
+import './Button.css';
+
+/**
+ * A button, documented in MDX.
+ */
+export default function Button({ size = 'normal', color = '#333', disabled, onClick, children }) {
+	const styles = {
+		color,
+		fontSize: Button.sizes[size],
+	};
+
+	return (
+		<button className="button" style={styles} onClick={onClick} disabled={disabled}>
+			{children}
+		</button>
+	);
+}
+
+Button.propTypes = {
+	/** Button label */
+	children: PropTypes.node.isRequired,
+	/** The color of the label */
+	color: PropTypes.string,
+	/** The size of the button */
+	size: PropTypes.oneOf(['small', 'normal', 'large']),
+	/** Disable the button */
+	disabled: PropTypes.bool,
+	/** Gets called when the user clicks on the button */
+	onClick: PropTypes.func,
+};
+
+Button.sizes = {
+	small: '10px',
+	normal: '14px',
+	large: '18px',
+};

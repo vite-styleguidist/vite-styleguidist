@@ -1,0 +1,32 @@
+{
+  "name": "vite-styleguidist-example-mdx",
+  "description": "Vite Styleguidist MDX example",
+  "version": "1.0.0",
+  "private": true,
+  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
+  "author": {
+    "name": "Mihail-Gabriel Alexe"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "scripts": {
+    "styleguide": "styleguidist server",
+    "styleguide:build": "styleguidist build"
+  },
+  "dependencies": {
+    "prop-types": "^15.8.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@mdx-js/mdx": "^3.1.1",
+    "remark-gfm": "^4.0.1",
+    "vite-styleguidist": "file:../../"
+  }
+}

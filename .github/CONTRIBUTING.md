@@ -123,6 +123,7 @@ Please don’t report security vulnerabilities in public issues or pull requests
 ```bash
 npm run start:customised # if making changes to examples/customised
 npm run start:sections # if making changes to examples/sections
+npm run start:mdx # if making changes to examples/mdx or to MDX support
 ```
 
 See the `scripts` section of the top level [package.json](../package.json). If an example doesn't have a script just point to its config:

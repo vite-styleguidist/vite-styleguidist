@@ -175,6 +175,7 @@
     "start": "node lib/bin/styleguidist.js server --config examples/basic/styleguide.config.js",
     "start:customised": "node lib/bin/styleguidist.js server --config examples/customised/styleguide.config.js",
     "start:sections": "node lib/bin/styleguidist.js server --config examples/sections/styleguide.config.js",
+    "start:mdx": "node lib/bin/styleguidist.js server --config examples/mdx/styleguide.config.js",
     "start:ui": "node lib/bin/styleguidist.js server",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",

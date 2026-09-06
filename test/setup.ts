@@ -36,6 +36,44 @@ if (typeof window !== 'undefined') {
 	}
 }
 
+// Web storage: Node 22+ defines its own `localStorage`/`sessionStorage` globals, which
+// are undefined (and print an ExperimentalWarning on access) unless the process runs
+// with --localstorage-file, and they shadow jsdom's implementation on the test global.
+// Components that remember a choice (ThemeToggle) need a working Storage, so replace
+// Node's accessor with an in-memory one. Only accessor properties are replaced: a
+// value property means a real implementation is already in place.
+if (typeof window !== 'undefined') {
+	const createMemoryStorage = (): Storage => {
+		const store = new Map<string, string>();
+		return {
+			get length() {
+				return store.size;
+			},
+			key: (index: number) => Array.from(store.keys())[index] ?? null,
+			getItem: (key: string) => (store.has(key) ? (store.get(key) as string) : null),
+			setItem: (key: string, value: string) => {
+				store.set(String(key), String(value));
+			},
+			removeItem: (key: string) => {
+				store.delete(key);
+			},
+			clear: () => {
+				store.clear();
+			},
+		};
+	};
+	for (const name of ['localStorage', 'sessionStorage']) {
+		const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
+		if (!descriptor || descriptor.get) {
+			Object.defineProperty(globalThis, name, {
+				value: createMemoryStorage(),
+				configurable: true,
+				writable: true,
+			});
+		}
+	}
+}
+
 // `classes(styles)` returns a class-name map whose values equal the rule keys,
 // so renderer snapshots don't depend on generated JSS class names.
 globalThis.classes = (styles) =>

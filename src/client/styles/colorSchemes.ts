@@ -12,6 +12,33 @@
  * theme.spec.ts checks.
  */
 
+import type { ColorScheme } from '../../typings/RsgTheme.js';
+
+/*
+ * The colour-scheme handshake between the generated HTML (src/vite/html.ts), the
+ * global variable sheet (cssVariables.ts) and the toggle (rsg-components/ThemeToggle).
+ * This module has no side effects on purpose so that the Node side can import it.
+ */
+
+/** Every valid `colorScheme` config value, in the order the toggle shows them. */
+export const COLOR_SCHEMES: ColorScheme[] = ['system', 'light', 'dark'];
+
+/**
+ * `<html>` attribute holding the APPLIED scheme: `"light"`, `"dark"`, or absent to
+ * follow the operating system. The variable sheet selects on it.
+ */
+export const COLOR_SCHEME_ATTRIBUTE = 'data-rsg-theme';
+
+/**
+ * `<html>` attribute holding the CONFIGURED scheme (the `colorScheme` option), written
+ * by the inline script so the toggle knows whether the scheme is forced without the
+ * config having to reach the client.
+ */
+export const COLOR_SCHEME_CONFIG_ATTRIBUTE = 'data-rsg-color-scheme';
+
+/** localStorage key of the visitor’s choice (`system`, `light` or `dark`). */
+export const COLOR_SCHEME_STORAGE_KEY = 'rsg-color-scheme';
+
 /** The default (light) palette: the values the style guide has always shipped with. */
 export const light = {
 	base: '#333',

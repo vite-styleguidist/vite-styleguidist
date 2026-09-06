@@ -1,12 +1,5 @@
 import jss from './setupjss.js';
-import { light, dark, cssVariableName } from './colorSchemes.js';
-
-/**
- * Attribute on `<html>` that holds the applied colour scheme: `"light"`, `"dark"`,
- * or absent to follow the operating system (ADR 0011). Written before the first
- * paint by the inline script in src/vite/html.ts and by the ThemeToggle component.
- */
-export const COLOR_SCHEME_ATTRIBUTE = 'data-rsg-theme';
+import { light, dark, cssVariableName, COLOR_SCHEME_ATTRIBUTE } from './colorSchemes.js';
 
 type Palette = Record<string, string>;
 

@@ -8,7 +8,7 @@ import type { Documentation, PropDescriptor } from './RsgDocgen.js';
 import type { PropsObject } from './RsgPropsObject.js';
 import type { CodeExample } from './RsgExample.js';
 import type { ConfigSection, Section } from './RsgSection.js';
-import type { Theme } from './RsgTheme.js';
+import type { ColorScheme, Theme } from './RsgTheme.js';
 
 export type StyleguidistEnv = 'development' | 'production';
 
@@ -27,6 +27,8 @@ export interface ExamplesModuleOptions {
 interface BaseStyleguidistConfig {
 	assetsDir: string | string[];
 	tocMode: ExpandMode;
+	/** Initial colour scheme of the UI; `light`/`dark` force it and hide the toggle. */
+	colorScheme: ColorScheme;
 	/** Options passed to sucrase's `transform()` to compile examples in the browser. */
 	compilerConfig: SucraseOptions;
 	components: (() => string[]) | string | string[];

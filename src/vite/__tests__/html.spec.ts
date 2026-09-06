@@ -134,6 +134,7 @@ describe('renderHtml', () => {
 		expect(html).toBe('<title>Pizza Style Guide</title>');
 		expect(template).toHaveBeenCalledWith({
 			lang: 'en',
+			colorScheme: 'system',
 			title: 'Pizza Style Guide',
 			container: 'pizza',
 			publicPath: './',

@@ -8,6 +8,7 @@ import kleur from 'kleur';
 import { builtinResolvers, defaultHandlers } from 'react-docgen';
 import type { Handler, Resolver } from 'react-docgen';
 import { DEFAULT_COMPILER_CONFIG } from '../../client/utils/compileCode.js';
+import { COLOR_SCHEMES } from '../../client/styles/colorSchemes.js';
 import FindAnnotatedExportsResolver from '../../loaders/utils/FindAnnotatedExportsResolver.js';
 import getUserPackageJson from '../utils/getUserPackageJson.js';
 import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive.js';
@@ -64,6 +65,21 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	// `components` is a shortcut for { sections: [{ components }] },
 	// see `sections` below
+	colorScheme: {
+		type: 'string',
+		default: 'system',
+		example: 'dark',
+		process: (value?: string): string | undefined => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value !== undefined && !COLOR_SCHEMES.includes(value as Rsg.ColorScheme)) {
+				throw new StyleguidistError(
+					`${kleur.bold('colorScheme')} config option must be one of ${COLOR_SCHEMES.map((scheme) => `"${scheme}"`).join(', ')}, got ${JSON.stringify(value)}.`,
+					'colorScheme'
+				);
+			}
+			return value;
+		},
+	},
 	components: {
 		type: ['string', 'function', 'array'],
 		example: 'components/**/[A-Z]*.js',

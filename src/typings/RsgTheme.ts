@@ -85,3 +85,10 @@ export interface Theme {
 	sidebarWidth: number;
 	buttonTextTransform: string;
 }
+
+/**
+ * Colour scheme of the style guide UI: `system` follows `prefers-color-scheme` and
+ * shows a toggle, `light` and `dark` force that scheme (ADR 0011). Used by the
+ * `colorScheme` config option and stored as the visitor’s choice in localStorage.
+ */
+export type ColorScheme = 'system' | 'light' | 'dark';

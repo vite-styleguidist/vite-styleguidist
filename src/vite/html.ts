@@ -1,4 +1,10 @@
 import isFunction from 'lodash/isFunction.js';
+import {
+	COLOR_SCHEMES,
+	COLOR_SCHEME_ATTRIBUTE,
+	COLOR_SCHEME_CONFIG_ATTRIBUTE,
+	COLOR_SCHEME_STORAGE_KEY,
+} from '../client/styles/colorSchemes.js';
 import type * as Rsg from '../typings/index.js';
 
 /**
@@ -38,6 +44,8 @@ export interface TemplateContext {
 	/** URLs of stylesheets to load. */
 	css: string[];
 	favicon?: string;
+	/** The `colorScheme` config option (`system` when omitted). */
+	colorScheme?: Rsg.ColorScheme;
 	head?: {
 		meta?: Attrs[];
 		links?: Attrs[];
@@ -74,6 +82,31 @@ const renderRaw = (raw?: string | string[]): string =>
 	Array.isArray(raw) ? raw.join('\n') : raw || '';
 
 /**
+ * Inline script that applies the colour scheme before the first paint (ADR 0011).
+ *
+ * It runs in `<head>`, before any stylesheet, so a visitor who chose dark never sees
+ * a light frame first. It writes the configured scheme into `<html>` for the
+ * ThemeToggle component, then applies the visitor’s stored choice (only when the
+ * config leaves the choice open) or the forced scheme as the attribute the variable
+ * sheet selects on. `system` means no attribute: the media query decides. Kept
+ * dependency-free and ES5 on purpose; the constants are shared with the client code.
+ */
+export function colorSchemeScript(colorScheme: Rsg.ColorScheme): string {
+	return [
+		'(function(){',
+		`var root=document.documentElement,scheme=${JSON.stringify(colorScheme)};`,
+		`root.setAttribute(${JSON.stringify(COLOR_SCHEME_CONFIG_ATTRIBUTE)},scheme);`,
+		`if(scheme==="system"){try{scheme=localStorage.getItem(${JSON.stringify(COLOR_SCHEME_STORAGE_KEY)})}catch(error){}}`,
+		`if(scheme==="light"||scheme==="dark"){root.setAttribute(${JSON.stringify(COLOR_SCHEME_ATTRIBUTE)},scheme)}`,
+		'})()',
+	].join('');
+}
+
+/** `<meta name="color-scheme">` content: which schemes the page supports. */
+const colorSchemeMeta = (colorScheme: Rsg.ColorScheme): string =>
+	colorScheme === 'system' ? 'light dark' : colorScheme;
+
+/**
  * Default HTML template (mirrors @vxna/mini-html-webpack-template).
  */
 export function defaultTemplate(context: TemplateContext): string {
@@ -83,6 +116,7 @@ export function defaultTemplate(context: TemplateContext): string {
 		title,
 		container,
 		favicon,
+		colorScheme = 'system',
 		head = {},
 		body = {},
 		attrs = {},
@@ -95,6 +129,8 @@ export function defaultTemplate(context: TemplateContext): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="${colorSchemeMeta(colorScheme)}">
+<script>${colorSchemeScript(colorScheme)}</script>
 <title>${title}</title>
 ${favicon ? `<link rel="icon" type="image/x-icon" href="${favicon}">` : ''}
 ${renderTags('meta', head.meta)}
@@ -129,6 +165,8 @@ export default function renderHtml(
 		...templateContext,
 		title: config.title,
 		container: config.mountPointId,
+		// The schema validates the option; the guard only covers hand-built configs
+		colorScheme: COLOR_SCHEMES.includes(config.colorScheme) ? config.colorScheme : 'system',
 		...assets,
 	};
 	return template(context);

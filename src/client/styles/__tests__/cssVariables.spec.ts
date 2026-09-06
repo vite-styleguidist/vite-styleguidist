@@ -1,5 +1,6 @@
 import jss from '../setupjss.js';
-import { createVariableStyles, COLOR_SCHEME_ATTRIBUTE } from '../cssVariables.js';
+import { createVariableStyles } from '../cssVariables.js';
+import { COLOR_SCHEME_ATTRIBUTE } from '../colorSchemes.js';
 
 const palettes = {
 	light: { base: '#333', baseBackground: '#fff' },

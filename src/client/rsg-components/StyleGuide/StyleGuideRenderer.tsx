@@ -6,6 +6,7 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import cx from 'clsx';
 import Ribbon from 'rsg-components/Ribbon';
 import Version from 'rsg-components/Version';
+import ThemeToggle from 'rsg-components/ThemeToggle';
 import type * as Rsg from '../../../typings/index.js';
 
 const styles = ({ color, fontFamily, fontSize, sidebarWidth, mq, space, maxWidth }: Rsg.Theme) => ({
@@ -89,6 +90,7 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 					<header className={classes.logo}>
 						<Logo>{title}</Logo>
 						{version && <Version>{version}</Version>}
+						<ThemeToggle />
 					</header>
 					{toc}
 				</div>

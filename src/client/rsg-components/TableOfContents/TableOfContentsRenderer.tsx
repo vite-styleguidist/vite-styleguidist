@@ -1,38 +1,159 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import cx from 'clsx';
 import { Styles } from 'jss';
+import { FiSearch } from 'react-icons/fi';
+import Link from 'rsg-components/Link';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
+import {
+	SIDEBAR_PANEL_ID,
+	SIDEBAR_SEARCH_ID,
+	useSidebar,
+} from 'rsg-components/StyleGuide/SidebarContext';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ space, color, fontFamily, fontSize, borderRadius }: Rsg.Theme): Styles => ({
+// The small-screen chip row: 44 px touch targets (Mobile artboard)
+const TOUCH_TARGET = 44;
+
+const styles = ({
+	space,
+	color,
+	fontFamily,
+	fontSize,
+	fontWeight,
+	lineHeight,
+	borderRadius,
+	transition,
+	mq,
+}: Rsg.Theme): Styles => ({
 	root: {
 		fontFamily: fontFamily.base,
 	},
+	// A rule of its own so that the element is isolated from the host page's styles
+	nav: {},
 	search: {
-		padding: space[2],
+		padding: [[12, 12, space[0]]],
+	},
+	// Positions the search icon over the input
+	field: {
+		position: 'relative',
+	},
+	icon: {
+		position: 'absolute',
+		top: '50%',
+		left: 10,
+		width: 16,
+		height: 16,
+		marginTop: -8,
+		color: color.light,
+		pointerEvents: 'none',
 	},
 	input: {
 		display: 'block',
 		width: '100%',
-		padding: space[1],
+		height: 36,
+		// Room for the 16 px icon at 10 px from the left edge
+		padding: [[0, 10, 0, 34]],
 		color: color.base,
 		backgroundColor: color.baseBackground,
 		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
+		fontSize: 14,
+		lineHeight: lineHeight.base,
 		border: [[1, color.border, 'solid']],
 		borderRadius,
-		transition: 'all ease-in-out .1s',
+		transition: `border-color ${transition.fast}, box-shadow ${transition.fast}`,
 		'&:focus': {
 			isolate: false,
 			borderColor: color.link,
-			boxShadow: [[0, 0, 0, 2, color.focus]],
+			boxShadow: [[0, 0, 0, 3, color.focus]],
 			outline: 0,
 		},
 		'&::placeholder': {
 			isolate: false,
 			fontFamily: fontFamily.base,
-			fontSize: fontSize.base,
+			fontSize: 14,
 			color: color.light,
+			// Firefox dims placeholders by default; the token already has the right contrast
+			opacity: 1,
+		},
+	},
+	// The live region under the search; collapses when there is nothing to say
+	noMatch: {
+		padding: [[space[0], space[1]]],
+		fontSize: fontSize.small,
+		lineHeight: lineHeight.base,
+		color: color.light,
+		'&:empty': {
+			isolate: false,
+			display: 'none',
+		},
+	},
+	// Search + list. Always visible on wide screens; on small ones a scrollable panel
+	// that the header's menu button opens (see StyleGuide/SidebarContext)
+	panel: {
+		[mq.small]: {
+			maxHeight: '60vh',
+			overflowY: 'auto',
+			overscrollBehavior: 'contain',
+			borderTop: [[1, color.border, 'solid']],
+		},
+	},
+	isCollapsed: {
+		[mq.small]: {
+			display: 'none',
+		},
+	},
+	// Horizontally scrollable row of the top-level entries, small screens only
+	chips: {
+		display: 'none',
+		[mq.small]: {
+			display: 'flex',
+			gap: space[1],
+			padding: [[12, space[2]]],
+			overflowX: 'auto',
+			WebkitOverflowScrolling: 'touch',
+			borderTop: [[1, color.border, 'solid']],
+		},
+	},
+	chip: {
+		// Doubled class: outranks the Link component's own `&:link` colour rules
+		'&&, &&:link, &&:visited': {
+			isolate: false,
+			flexShrink: 0,
+			display: 'inline-flex',
+			alignItems: 'center',
+			height: TOUCH_TARGET,
+			padding: [[0, 12]],
+			borderRadius,
+			fontSize: 14,
+			fontWeight: fontWeight.normal,
+			lineHeight: lineHeight.base,
+			color: color.base,
+			background: 'transparent',
+			textDecoration: 'none',
+			whiteSpace: 'nowrap',
+			transition: `background-color ${transition.fast}, color ${transition.fast}`,
+		},
+		'&&:hover': {
+			isolate: false,
+			color: color.base,
+			background: color.selectedBackground,
+		},
+		'&&:focus-visible': {
+			isolate: false,
+			outline: 0,
+			boxShadow: [
+				[0, 0, 0, 1, color.link],
+				[0, 0, 0, 3, color.focus],
+			],
+		},
+	},
+	isSelectedChip: {
+		'&&, &&:link, &&:visited, &&:hover': {
+			isolate: false,
+			color: color.link,
+			fontWeight: fontWeight.bold,
+			background: color.selectedBackground,
 		},
 	},
 });
@@ -41,6 +162,10 @@ interface TableOfContentsRendererProps extends JssInjectedProps {
 	children?: React.ReactNode;
 	searchTerm: string;
 	onSearchTermChange(term: string): void;
+	/** False when the search term filtered every entry out */
+	hasMatches?: boolean;
+	/** The top-level entries, shown as a chip row on small screens */
+	chips?: Rsg.TOCItem[];
 }
 
 export const TableOfContentsRenderer: React.FunctionComponent<TableOfContentsRendererProps> = ({
@@ -48,21 +173,53 @@ export const TableOfContentsRenderer: React.FunctionComponent<TableOfContentsRen
 	children,
 	searchTerm,
 	onSearchTermChange,
+	hasMatches = true,
+	chips = [],
 }) => {
+	const { isPanelOpen, closePanel } = useSidebar();
 	return (
 		<div>
 			<div className={classes.root}>
-				<nav>
-					<div className={classes.search}>
-						<input
-							value={searchTerm}
-							className={classes.input}
-							placeholder="Filter by name"
-							aria-label="Filter by name"
-							onChange={(event) => onSearchTermChange(event.target.value)}
-						/>
+				<nav className={classes.nav}>
+					{chips.length > 0 && (
+						<div className={classes.chips}>
+							{chips.map((item) => (
+								<Link
+									key={item.slug}
+									className={cx(classes.chip, { [classes.isSelectedChip]: item.selected })}
+									href={item.href}
+									target={item.shouldOpenInNewTab ? '_blank' : undefined}
+									aria-current={item.selected ? 'true' : undefined}
+									onClick={closePanel}
+								>
+									{item.visibleName}
+								</Link>
+							))}
+						</div>
+					)}
+					<div
+						id={SIDEBAR_PANEL_ID}
+						className={cx(classes.panel, { [classes.isCollapsed]: !isPanelOpen })}
+					>
+						<div className={classes.search}>
+							<div className={classes.field}>
+								<FiSearch className={classes.icon} aria-hidden="true" />
+								<input
+									id={SIDEBAR_SEARCH_ID}
+									value={searchTerm}
+									className={classes.input}
+									placeholder="Filter by name"
+									aria-label="Filter by name"
+									autoComplete="off"
+									onChange={(event) => onSearchTermChange(event.target.value)}
+								/>
+							</div>
+							<div className={classes.noMatch} aria-live="polite">
+								{searchTerm && !hasMatches ? `No component matches “${searchTerm}”.` : null}
+							</div>
+						</div>
+						{children}
 					</div>
-					{children}
 				</nav>
 			</div>
 		</div>
@@ -74,6 +231,8 @@ TableOfContentsRenderer.propTypes = {
 	children: PropTypes.any,
 	searchTerm: PropTypes.string.isRequired,
 	onSearchTermChange: PropTypes.func.isRequired,
+	hasMatches: PropTypes.bool,
+	chips: PropTypes.array,
 };
 
 export default Styled<TableOfContentsRendererProps>(styles)(TableOfContentsRenderer);

@@ -2,39 +2,114 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import cx from 'clsx';
 import Link from 'rsg-components/Link';
+import { Styles } from 'jss';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import { useStyleGuideContext } from 'rsg-components/Context';
+import { useSidebar } from 'rsg-components/StyleGuide/SidebarContext';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ color, fontFamily, fontSize, space, mq }: Rsg.Theme) => ({
+const styles = ({
+	color,
+	fontFamily,
+	fontSize,
+	fontWeight,
+	lineHeight,
+	space,
+	borderRadius,
+	transition,
+}: Rsg.Theme): Styles => ({
 	list: {
+		display: 'flex',
+		flexDirection: 'column',
+		gap: 2,
 		margin: 0,
-		paddingLeft: space[2],
-	},
-	item: {
-		color: color.base,
-		display: 'block',
-		margin: [[space[1], 0, space[1], 0]],
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
+		padding: [[space[1], 12]],
 		listStyle: 'none',
-		overflow: 'hidden',
-		textOverflow: 'ellipsis',
-	},
-	isChild: {
-		[mq.small]: {
-			display: 'inline-block',
-			margin: [[0, space[1], 0, 0]],
+		// A section's own entries sit flush under its label (Main artboard); only
+		// deeper levels indent
+		'& &': {
+			isolate: false,
+			padding: 0,
+		},
+		'& & &': {
+			isolate: false,
+			paddingLeft: space[2],
 		},
 	},
-	heading: {
+	item: {
+		display: 'block',
+		margin: 0,
 		color: color.base,
-		marginTop: space[1],
 		fontFamily: fontFamily.base,
-		fontWeight: 'bold',
+		fontSize: fontSize.base,
+		lineHeight: lineHeight.base,
+		listStyle: 'none',
 	},
-	isSelected: {
-		fontWeight: 'bold',
+	// Kept for `styles` overrides: leaf items used to render inline on small screens,
+	// which the chip row in TableOfContents replaces
+	isChild: {},
+	// Marker on the item whose link is the current route (see $link)
+	isSelected: {},
+	link: {
+		// Doubled class: outranks the Link component's own `&:link` colour rules
+		// whichever sheet is attached later
+		'&&, &&:link, &&:visited': {
+			isolate: false,
+			display: 'block',
+			padding: [[6, space[1]]],
+			borderRadius,
+			color: color.base,
+			background: 'transparent',
+			textDecoration: 'none',
+			overflow: 'hidden',
+			textOverflow: 'ellipsis',
+			whiteSpace: 'nowrap',
+			transition: `background-color ${transition.fast}, color ${transition.fast}`,
+		},
+		// Hover uses the selection surface too; the selected item is told apart by its
+		// colour and weight
+		'&&:hover': {
+			isolate: false,
+			color: color.base,
+			background: color.selectedBackground,
+		},
+		'&&:focus-visible': {
+			isolate: false,
+			outline: 0,
+			boxShadow: [
+				[0, 0, 0, 1, color.link],
+				[0, 0, 0, 3, color.focus],
+			],
+		},
+		'$isSelected > &&, $isSelected > &&:link, $isSelected > &&:visited, $isSelected > &&:hover': {
+			isolate: false,
+			color: color.link,
+			fontWeight: fontWeight.bold,
+			background: color.selectedBackground,
+		},
+	},
+	// The link of a section that has children: a small uppercase group label
+	heading: {
+		'&&, &&:link, &&:visited': {
+			isolate: false,
+			padding: [[10, space[1], space[0]]],
+			fontSize: 11,
+			fontWeight: fontWeight.bold,
+			letterSpacing: '0.06em',
+			textTransform: 'uppercase',
+			color: color.light,
+			background: 'transparent',
+		},
+		'&&:hover': {
+			isolate: false,
+			color: color.base,
+			background: 'transparent',
+		},
+		// 14 px between a group and whatever precedes it (the first label keeps 10)
+		'$item + $item > &&': {
+			isolate: false,
+			paddingTop: 14,
+		},
 	},
 });
 
@@ -56,6 +131,7 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 	const {
 		config: { tocMode },
 	} = useStyleGuideContext();
+	const { closePanel } = useSidebar();
 
 	// Hooks must be called unconditionally; sections only collapse in `tocMode: 'collapse'`
 	const [isOpen, setOpen] = React.useState(!!initialOpen);
@@ -69,10 +145,15 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 			key={href}
 		>
 			<Link
-				className={cx(heading && classes.heading)}
+				className={cx(classes.link, heading && classes.heading)}
 				href={href}
-				onClick={() => setOpen(!open)}
+				onClick={() => {
+					setOpen(!open);
+					// Small screens: following a link closes the panel that holds the list
+					closePanel();
+				}}
 				target={shouldOpenInNewTab ? '_blank' : undefined}
+				aria-current={selected ? 'true' : undefined}
 				data-testid="rsg-toc-link"
 			>
 				{visibleName}

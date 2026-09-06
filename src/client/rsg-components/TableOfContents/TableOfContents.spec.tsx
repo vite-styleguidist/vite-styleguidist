@@ -3,6 +3,7 @@ import { render, fireEvent } from '@testing-library/react';
 import TableOfContents from './TableOfContents.js';
 import { TableOfContentsRenderer } from './TableOfContentsRenderer.js';
 import Context from '../Context/index.js';
+import SidebarContext, { SIDEBAR_PANEL_ID } from '../StyleGuide/SidebarContext.js';
 
 const components = [
 	{
@@ -153,7 +154,7 @@ it('should render components of a single top section as root', () => {
 });
 
 it('should open the link in a new tab only for external links', () => {
-	const { getByText } = render(
+	const { getAllByTestId } = render(
 		<TableOfContents
 			sections={[
 				{
@@ -180,9 +181,63 @@ it('should open the link in a new tab only for external links', () => {
 		/>
 	);
 
-	expect(getByText('Intro')).not.toHaveAttribute('target');
-	expect(getByText('Chapter')).not.toHaveAttribute('target');
-	expect(getByText('Docs')).toHaveAttribute('target', '_blank');
+	// The small-screen chip row repeats the top-level entries, so query the list itself
+	const [intro, chapter, docs] = getAllByTestId('rsg-toc-link');
+	expect(intro).toHaveTextContent('Intro');
+	expect(intro).not.toHaveAttribute('target');
+	expect(chapter).not.toHaveAttribute('target');
+	expect(docs).toHaveTextContent('Docs');
+	expect(docs).toHaveAttribute('target', '_blank');
+});
+
+it('should announce when nothing matches the search term', () => {
+	const { getByPlaceholderText, queryAllByTestId, getByText, queryByText } = render(
+		<TableOfContents sections={sections} />
+	);
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'Toolt' } });
+	expect(queryAllByTestId('rsg-toc-link')).toHaveLength(0);
+	const message = getByText('No component matches “Toolt”.');
+	expect(message.closest('[aria-live="polite"]')).not.toBeNull();
+
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'put' } });
+	expect(queryByText(/No component matches/)).not.toBeInTheDocument();
+});
+
+it('should list the top-level entries as chips and mark the current subtree', () => {
+	const { container } = render(
+		<TableOfContents sections={sections} loc={{ pathname: '', hash: '#input' }} />
+	);
+	// Chips are the links that are not list links; they keep listing every top-level
+	// entry, whichever is selected below them
+	const chips = Array.from(container.querySelectorAll('a')).filter(
+		(link) => !link.hasAttribute('data-testid')
+	);
+	expect(chips.map((chip) => chip.textContent)).toEqual(['Introduction', 'Buttons', 'Forms']);
+	expect(chips.map((chip) => chip.getAttribute('aria-current'))).toEqual([null, null, 'true']);
+});
+
+it('should keep the chips while the list is filtered', () => {
+	const { container, getByPlaceholderText } = render(<TableOfContents sections={sections} />);
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'frm' } });
+	const chips = Array.from(container.querySelectorAll('a')).filter(
+		(link) => !link.hasAttribute('data-testid')
+	);
+	expect(chips.map((chip) => chip.textContent)).toEqual(['Introduction', 'Buttons', 'Forms']);
+});
+
+it('should render the panel with the id the menu button controls, collapsed when the sidebar says so', () => {
+	const closePanel = vi.fn();
+	const { container, getAllByTestId } = render(
+		<SidebarContext.Provider value={{ isPanelOpen: false, closePanel }}>
+			<TableOfContents sections={sections} />
+		</SidebarContext.Provider>
+	);
+	const panel = container.querySelector(`#${SIDEBAR_PANEL_ID}`) as HTMLElement;
+	expect(panel).not.toBeNull();
+	expect(panel.className).toMatch(/rsg--isCollapsed-\d+/);
+	// Following a list link asks the sidebar to close the panel
+	fireEvent.click(getAllByTestId('rsg-toc-link')[0]);
+	expect(closePanel).toHaveBeenCalled();
 });
 
 /**

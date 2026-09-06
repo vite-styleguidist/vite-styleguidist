@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, within } from '@testing-library/react';
+import { render, within, fireEvent } from '@testing-library/react';
 import StyleGuide, { StyleGuideProps } from './StyleGuide.js';
 import slots from '../slots/index.js';
 import { DisplayModes } from '../../consts.js';
@@ -80,6 +80,56 @@ test('should render a sidebar if showSidebar is not set', () => {
 		'http://localhost/#bar',
 	]);
 	expect(links.map((node) => node.textContent)).toEqual(['Foo', 'Bar']);
+});
+
+test('should render the sidebar before the content, with a menu button that controls the panel', () => {
+	const { getByTestId, getByRole, getByLabelText, container } = render(
+		<StyleGuide {...defaultProps} sections={sections} allSections={sections} />
+	);
+	const sidebar = getByTestId('sidebar');
+	// Small screens turn the sidebar into a header bar, so it must precede the content
+	expect(sidebar.compareDocumentPosition(getByRole('main'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+	// The header buttons exist for small screens only (display: none above the
+	// breakpoint), and a hidden element has no accessible name, so query the attribute
+	const menu = getByLabelText('Menu');
+	const panel = container.querySelector(`#${menu.getAttribute('aria-controls')}`);
+	expect(panel).not.toBeNull();
+	expect(menu).toHaveAttribute('aria-expanded', 'false');
+	fireEvent.click(menu);
+	expect(menu).toHaveAttribute('aria-expanded', 'true');
+	expect(sidebar.className).toMatch(/rsg--isOpen-\d+/);
+	fireEvent.keyDown(document, { key: 'Escape' });
+	expect(menu).toHaveAttribute('aria-expanded', 'false');
+
+	// The search button opens the panel and focuses the filter input
+	fireEvent.click(getByLabelText('Search'));
+	expect(menu).toHaveAttribute('aria-expanded', 'true');
+	expect(getByRole('textbox', { name: 'Filter by name' })).toHaveFocus();
+});
+
+test('should render the ribbon inline in the sidebar footer, and as a pill without a sidebar', () => {
+	const ribbon = { url: 'https://example.com/repo' };
+	const { getByTestId, getByRole, rerender } = render(
+		<StyleGuide
+			{...defaultProps}
+			config={{ ...config, ribbon }}
+			sections={sections}
+			allSections={sections}
+		/>
+	);
+	const inline = within(getByTestId('sidebar')).getByRole('link', { name: 'GitHub' });
+	expect(inline.className).toMatch(/rsg--inlineLink-\d+/);
+
+	rerender(
+		<StyleGuide
+			{...defaultProps}
+			config={{ ...config, ribbon, showSidebar: false }}
+			sections={sections}
+			allSections={sections}
+		/>
+	);
+	expect(getByRole('link', { name: 'GitHub' }).className).toMatch(/rsg--link-\d+/);
 });
 
 test('should not render a sidebar if showSidebar is false', () => {

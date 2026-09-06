@@ -12,6 +12,17 @@ interface TableOfContentsProps {
 	loc?: { hash: string; pathname: string };
 }
 
+interface RenderedLevel {
+	content: React.ReactElement;
+	containsSelected: boolean;
+	/**
+	 * The entries of this level for the small-screen chip row: `selected` also covers an
+	 * entry whose subtree holds the current route, so the chip of the current section
+	 * stays highlighted while one of its components is shown.
+	 */
+	items: Rsg.TOCItem[];
+}
+
 export default class TableOfContents extends Component<TableOfContentsProps> {
 	public state = {
 		searchTerm: '',
@@ -22,12 +33,13 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 		useRouterLinks = false,
 		hashPath: string[] = [],
 		useHashId = false
-	): { content: React.ReactElement; containsSelected: boolean } {
+	): RenderedLevel {
 		// Match selected component in both basic routing and pagePerSection routing.
 		const { hash, pathname } = this.props.loc ?? window.location;
 		const windowHash = pathname + (useRouterLinks ? hash : getHash(hash));
 
 		let childrenContainSelected = false;
+		const items: Rsg.TOCItem[] = [];
 		const processedItems = sections.map((section) => {
 			const children = [...(section.sections || []), ...(section.components || [])];
 			const sectionDepth = section.sectionDepth || 0;
@@ -48,12 +60,15 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 				childrenContainSelected = true;
 			}
 
+			const shouldOpenInNewTab = !!section.external && !!section.externalLink;
+			items.push({ ...section, selected: selected || containsSelected, shouldOpenInNewTab });
+
 			return {
 				...section,
 				heading: !!section.name && children.length > 0,
 				content,
 				selected,
-				shouldOpenInNewTab: !!section.external && !!section.externalLink,
+				shouldOpenInNewTab,
 				initialOpen: this.props.tocMode !== 'collapse' || containsSelected || section.expand,
 				forcedOpen: !!this.state.searchTerm.length,
 			};
@@ -61,10 +76,15 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 		return {
 			content: <ComponentsList items={processedItems} />,
 			containsSelected: childrenContainSelected,
+			items,
 		};
 	}
 
-	private renderSections() {
+	private renderSections(): {
+		content: React.ReactElement;
+		chips: Rsg.TOCItem[];
+		hasMatches: boolean;
+	} {
 		const { searchTerm } = this.state;
 		const { sections, useRouterLinks } = this.props;
 		// If there is only one section, we treat it as a root section
@@ -79,21 +99,34 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 					? sections[0].sections
 					: sections[0].components
 				: sections;
-		const filtered = firstLevel
-			? filterSectionsByName(firstLevel as Rsg.TOCItem[], searchTerm)
-			: firstLevel || [];
+		const topLevel = (firstLevel || []) as Rsg.TOCItem[];
 
-		return this.renderLevel(filtered, useRouterLinks).content;
+		if (!searchTerm) {
+			const { content, items } = this.renderLevel(topLevel, useRouterLinks);
+			return { content, chips: items, hasMatches: true };
+		}
+
+		// The chip row keeps listing every top-level entry while the list is filtered, so
+		// the two come from separate passes (the unfiltered one only for its items)
+		const filtered = filterSectionsByName(topLevel, searchTerm);
+		return {
+			content: this.renderLevel(filtered, useRouterLinks).content,
+			chips: this.renderLevel(topLevel, useRouterLinks).items,
+			hasMatches: filtered.length > 0,
+		};
 	}
 
 	public render() {
 		const handleSearchTermChange = (searchTerm: string) => this.setState({ searchTerm });
+		const { content, chips, hasMatches } = this.renderSections();
 		return (
 			<TableOfContentsRenderer
 				searchTerm={this.state.searchTerm}
 				onSearchTermChange={handleSearchTermChange}
+				hasMatches={hasMatches}
+				chips={chips.filter((item) => item.visibleName)}
 			>
-				{this.renderSections()}
+				{content}
 			</TableOfContentsRenderer>
 		);
 	}

@@ -304,18 +304,19 @@ Type: `Object`, optional
 Extra components available to every [MDX](Documenting.md#mdx) page, as a map of name to the module that default-exports the component. They are merged over the default element map, so an entry can either add a shortcode that any `.mdx` file may use without importing it, or replace how an HTML element of the prose is rendered:
 
 ```javascript
-const path = require('path')
 module.exports = {
   mdxComponents: {
     // Usable as <Callout kind="info"> in any .mdx file, no import needed
-    Callout: path.join(__dirname, 'styleguide/components/Callout'),
+    Callout: 'styleguide/components/Callout',
     // Every table of every MDX page is rendered by this component
-    table: path.join(__dirname, 'styleguide/components/Table')
+    table: 'styleguide/components/Table'
   }
 }
 ```
 
-Paths may omit the extension, Vite resolves them like any import. Lowercase keys are HTML element names; capitalised keys are components an `.mdx` file can use as JSX elements. Without this option a page imports what it needs itself, which is the usual way — reach for `mdxComponents` when the same component belongs on many pages.
+Each value is a module path and is resolved like a [styles](#styles) or [theme](#theme) path: relative to the style guide config file, so the entries above are `styleguide/components/Callout` and `styleguide/components/Table` next to the config. An absolute path (`path.join(__dirname, 'styleguide/components/Callout')`) works too, and the extension may be omitted — Vite resolves the rest like any import. The module is imported into the style guide’s browser bundle and must default-export the component.
+
+Lowercase keys are HTML element names; capitalised keys are components an `.mdx` file can use as JSX elements. Without this option a page imports what it needs itself, which is the usual way — reach for `mdxComponents` when the same component belongs on many pages.
 
 ## `minimize`
 

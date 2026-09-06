@@ -188,13 +188,15 @@ Three things are worth knowing before you write the first page:
 To share a component between pages without importing it in each one, register it with [mdxComponents](Configuration.md#mdxcomponents):
 
 ```javascript
-const path = require('path')
 module.exports = {
   mdxComponents: {
-    Callout: path.join(__dirname, 'styleguide/components/Callout')
+    // Path to the module that default-exports the component, relative to this config file
+    Callout: 'styleguide/components/Callout'
   }
 }
 ```
+
+Every `.mdx` page can then write `<Callout>` without importing it.
 
 A complete style guide doing all of this — MDX component pages, an MDX section page, and one component still documented in `Readme.md` — is in the [MDX example](../examples/mdx).
 

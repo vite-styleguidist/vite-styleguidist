@@ -11,7 +11,8 @@
  * `buildManifest()` is pure (given a config and the section tree it reads files but
  * touches nothing else) and deterministic apart from `generatedAt`: sections and
  * components come in sidebar order, so two builds of the same sources produce the same
- * JSON. The renderers turn the manifest into the two text formats.
+ * JSON (set SOURCE_DATE_EPOCH to pin the timestamp too). The renderers turn the manifest
+ * into the two text formats.
  *
  * The files are emitted by the build and served by the dev server, see ./plugin.ts and
  * the `machineReadable` config option.
@@ -56,7 +57,11 @@ export type ManifestTags = Record<string, ManifestTag[]>;
 
 export interface ManifestProp {
 	name: string;
-	/** The type, printed the way the props table shows it (`string`, `oneOf: a | b`, `func`, …). */
+	/**
+	 * The type and its values on one line, like the props table’s type and description
+	 * columns combined: `string`, `oneOf: a | b`, `shape { id: number }`, `func`, or a
+	 * Flow/TypeScript annotation as written.
+	 */
 	type: string;
 	required: boolean;
 	/** The default value as written in the source (`'#333'`, `42`, `() => {}`), `null` when there is none. */
@@ -125,8 +130,11 @@ export interface ManifestSection {
 	/** `null` for the implicit section created by the `components` shortcut. */
 	name: string | null;
 	slug: string;
-	/** Link to the section in the style guide, relative to the style guide root. */
-	href: string;
+	/**
+	 * Link to the section in the style guide, relative to the style guide root; `null` for
+	 * the unnamed section the `components` shortcut creates, which renders no heading.
+	 */
+	href: string | null;
 	/** The `description` of the section config (Markdown), if any. */
 	description: string | null;
 	/** The section’s content page (Markdown), if any: playgrounds are written back as fenced code. */
@@ -154,7 +162,16 @@ export interface DocsManifest {
  * otherwise take seconds per request. Builds don’t need it (they run once).
  */
 export interface ManifestCache {
-	docs: Map<string, { key: string; docs: Rsg.PropsObject }>;
+	docs: Map<
+		string,
+		{
+			key: string;
+			docs: Rsg.PropsObject;
+			/** The file an `@example` doclet points at (absolute), and whether it existed at parse time */
+			exampleFile: string | null;
+			exampleFileExists: boolean;
+		}
+	>;
 	examples: Map<string, { key: string; chunks: Chunk[] }>;
 }
 
@@ -162,7 +179,7 @@ export const createManifestCache = (): ManifestCache => ({ docs: new Map(), exam
 
 export interface BuildManifestOptions {
 	cache?: ManifestCache;
-	/** The `generatedAt` timestamp (defaults to now); tests pass a fixed date. */
+	/** The `generatedAt` timestamp (defaults to now, or to SOURCE_DATE_EPOCH when set); tests pass a fixed date. */
 	now?: Date;
 }
 
@@ -172,6 +189,26 @@ type Chunk = Rsg.CodeExample | Rsg.MarkdownExample;
 const fileKey = (file: string): string => {
 	const stat = fs.statSync(file);
 	return `${stat.mtimeMs}:${stat.size}`;
+};
+
+/**
+ * The file an `@example` doclet points at, resolved like getProps() resolves it (relative
+ * to the component), or `null` when the component has no such doclet.
+ */
+const exampleDocletFile = (file: string, docs: Rsg.PropsObject): string | null => {
+	const doclet = docs.doclets?.example;
+	return typeof doclet === 'string' && doclet.trim()
+		? path.resolve(path.dirname(file), doclet.trim())
+		: null;
+};
+
+/**
+ * Reproducible builds: the SOURCE_DATE_EPOCH convention
+ * (https://reproducible-builds.org/specs/source-date-epoch/) pins `generatedAt`.
+ */
+const defaultNow = (): Date => {
+	const epoch = process.env.SOURCE_DATE_EPOCH;
+	return epoch && /^\d+$/.test(epoch) ? new Date(Number(epoch) * 1000) : new Date();
 };
 
 // ---------------------------------------------------------------------------
@@ -192,26 +229,49 @@ export function unhighlight(markdown: string): string {
 	const output: string[] = [];
 	let index = 0;
 	while (index < lines.length) {
-		const fence = lines[index].match(/^(`{3,}|~{3,})\s*(\S*)/);
+		// remark re-serialises the Markdown before the loaders highlight it, so a fence inside
+		// a list item or a blockquote, and every code line in it, carries the same prefix of
+		// indentation and `>` markers; capturing the prefix finds those blocks too
+		const fence = lines[index].match(/^([ \t>]*)(`{3,}|~{3,})\s*(\S*)/);
 		if (!fence) {
 			output.push(lines[index++]);
 			continue;
 		}
 		// A fenced block ends at a line made of the same fence character, at least as long
-		// (CommonMark), or at the end of the text
-		const [, marker, lang] = fence;
-		const closing = new RegExp(`^${marker[0]}{${marker.length},}\\s*$`);
+		// (CommonMark), behind at most the same prefix, or at the end of the text
+		const [, prefix, marker, lang] = fence;
+		const closing = new RegExp(
+			`^[ \\t>]{0,${prefix.length}}${marker[0]}{${marker.length},}\\s*$`
+		);
 		output.push(lines[index++]);
 		const code: string[] = [];
 		while (index < lines.length && !closing.test(lines[index])) {
 			code.push(lines[index++]);
 		}
-		output.push(languages.has(lang) ? stripTokens(code.join('\n')) : code.join('\n'));
+		output.push(languages.has(lang) ? unhighlightBlock(code, prefix) : code.join('\n'));
 		if (index < lines.length) {
 			output.push(lines[index++]);
 		}
 	}
 	return output.join('\n');
+}
+
+/**
+ * Strip the token markup of one block. The list-item or blockquote prefix is removed from
+ * every line first, so that a `>` marker is never taken for the end of a tag, and put back
+ * afterwards; a blank line inside a blockquote is a bare `>`, hence the loose match.
+ */
+function unhighlightBlock(code: string[], prefix: string): string {
+	if (!prefix) {
+		return stripTokens(code.join('\n'));
+	}
+	const stripped = code.map((line) =>
+		line.startsWith(prefix) ? line.slice(prefix.length) : line.replace(/^[ \t>]*/, '')
+	);
+	return stripTokens(stripped.join('\n'))
+		.split('\n')
+		.map((line) => (line ? prefix + line : prefix.trimEnd()))
+		.join('\n');
 }
 
 /**
@@ -286,8 +346,12 @@ function printPropTypesType(type: any): string {
 			return `oneOfType: ${
 				Array.isArray(type.value) ? type.value.map(printPropTypesType).join(' | ') : type.value
 			}`;
-		case 'arrayOf':
-			return `${printPropTypesType(type.value)}[]`;
+		case 'arrayOf': {
+			// Parenthesised when the element type has spaces, otherwise `oneOf: a | b[]` would
+			// read as an array of `b`
+			const element = printPropTypesType(type.value);
+			return /\s/.test(element) ? `(${element})[]` : `${element}[]`;
+		}
 		case 'objectOf':
 			return `objectOf: ${printPropTypesType(type.value)}`;
 		case 'instanceOf':
@@ -459,15 +523,26 @@ class ManifestBuilder {
 
 	/** Component documentation, straight from the props virtual module generator. */
 	private readDocs(file: string): Rsg.PropsObject {
-		// The docs also depend on whether the examples file exists (see getExamples()),
-		// so a Readme.md that appears later must invalidate the memo too
+		// The docs also depend on whether the examples file exists (see getExamples()) and
+		// on whether the file an `@example` doclet names exists (see getProps()), so a
+		// Readme.md or an examples file that appears later must invalidate the memo too
 		const key = `${fileKey(file)}|${this.config.getExampleFilename(file) || ''}`;
 		const cached = this.cache?.docs.get(file);
-		if (cached && cached.key === key) {
+		if (
+			cached &&
+			cached.key === key &&
+			(cached.exampleFile === null || fs.existsSync(cached.exampleFile) === cached.exampleFileExists)
+		) {
 			return cached.docs;
 		}
 		const { docs } = generatePropsModule(this.config, file, fs.readFileSync(file, 'utf8'));
-		this.cache?.docs.set(file, { key, docs });
+		const exampleFile = exampleDocletFile(file, docs);
+		this.cache?.docs.set(file, {
+			key,
+			docs,
+			exampleFile,
+			exampleFileExists: exampleFile !== null && fs.existsSync(exampleFile),
+		});
 		return docs;
 	}
 
@@ -541,18 +616,22 @@ class ManifestBuilder {
 				useHashId: section.sectionDepth === 0,
 				hashPath: [...link.hashPath, section.name || '-'],
 			};
+			// The unnamed section of the `components` shortcut renders no heading, so there is
+			// nothing on the page to link to
 			const href =
 				section.href ||
-				getUrl(
-					{
-						name: section.name,
-						slug: section.slug,
-						anchor: !link.useRouterLinks,
-						hashPath: link.useRouterLinks ? link.hashPath : false,
-						useSlugAsIdParam: link.useRouterLinks ? link.useHashId : false,
-					},
-					LINK_LOCATION
-				);
+				(section.name
+					? getUrl(
+							{
+								name: section.name,
+								slug: section.slug,
+								anchor: !link.useRouterLinks,
+								hashPath: link.useRouterLinks ? link.hashPath : false,
+								useSlugAsIdParam: link.useRouterLinks ? link.useHashId : false,
+							},
+							LINK_LOCATION
+						)
+					: null);
 			return {
 				name: section.name || null,
 				slug: section.slug || '',
@@ -594,7 +673,7 @@ export function buildManifest(
 		source: 'vite-styleguidist',
 		name: config.title,
 		version: config.version || null,
-		generatedAt: (options.now || new Date()).toISOString(),
+		generatedAt: (options.now || defaultNow()).toISOString(),
 		sections: builder.sections(sections, {
 			useRouterLinks: !!config.pagePerSection,
 			useHashId: false,
@@ -683,13 +762,15 @@ export function renderLlmsTxt(manifest: DocsManifest, options: RenderOptions = {
 	lines.push('');
 
 	const pages = flattenSections(manifest.sections).filter(
-		(section) => section.name && (section.content || section.description)
+		(section) => section.name && section.href && (section.content || section.description)
 	);
 	if (pages.length > 0) {
 		lines.push('## Sections', '');
 		pages.forEach((section) => {
 			const note = firstLine(section.description || section.content || '');
-			lines.push(`- [${section.name}](${link(section.href, options)})${note ? `: ${note}` : ''}`);
+			lines.push(
+				`- [${section.name}](${link(section.href as string, options)})${note ? `: ${note}` : ''}`
+			);
 		});
 		lines.push('');
 	}
@@ -707,6 +788,37 @@ export function renderLlmsTxt(manifest: DocsManifest, options: RenderOptions = {
 /** A Markdown heading of the given level, capped at 6 like Markdown itself. */
 const heading = (level: number, text: string): string =>
 	`${'#'.repeat(Math.min(level, 6))} ${text}`;
+
+/**
+ * Demote the ATX headings of an embedded Markdown text by `by` levels (capped at 6 like
+ * Markdown itself), so that a content page starting with `# Title`, or a description with
+ * a `## Usage` heading, nests under its section or component in llms-full.txt instead of
+ * restarting the outline. Headings inside fenced code blocks are left alone.
+ */
+export function shiftHeadings(markdown: string, by: number): string {
+	if (by <= 0) {
+		return markdown;
+	}
+	let fence: string | null = null;
+	return markdown
+		.split('\n')
+		.map((line) => {
+			const marker = line.match(/^[ \t>]*(`{3,}|~{3,})/);
+			if (fence) {
+				if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length) {
+					fence = null;
+				}
+				return line;
+			}
+			if (marker) {
+				fence = marker[1];
+				return line;
+			}
+			const atx = line.match(/^(#{1,6})(?=\s|$)/);
+			return atx ? '#'.repeat(Math.min(6, atx[1].length + by)) + line.slice(atx[1].length) : line;
+		})
+		.join('\n');
+}
 
 /** A table cell: no pipes, no line breaks. */
 const cell = (text: string | null | undefined): string =>
@@ -741,7 +853,7 @@ function renderComponent(component: ManifestComponent, level: number): string[] 
 			: component.name;
 	const lines: string[] = [heading(level, title), '', `Source: ${code(component.filePath)}`, ''];
 	if (component.description.trim()) {
-		lines.push(component.description.trim(), '');
+		lines.push(shiftHeadings(component.description.trim(), level), '');
 	}
 	const tags = renderTags(component.tags);
 	if (tags.length > 0) {
@@ -800,12 +912,12 @@ function renderComponent(component: ManifestComponent, level: number): string[] 
 		lines.push(heading(level + 1, 'Examples'), '');
 		component.examples.forEach((example) => {
 			if (example.description.trim()) {
-				lines.push(example.description.trim(), '');
+				lines.push(shiftHeadings(example.description.trim(), level + 1), '');
 			}
 			lines.push(`\`\`\`${example.lang}`, example.code, '```', '');
 		});
 		if (component.notes.trim()) {
-			lines.push(component.notes.trim(), '');
+			lines.push(shiftHeadings(component.notes.trim(), level + 1), '');
 		}
 	}
 	return lines;
@@ -819,11 +931,14 @@ function renderSection(section: ManifestSection, level: number): string[] {
 	if (named) {
 		lines.push(heading(level, section.name as string), '');
 	}
+	// Headings in the section’s own prose nest under its heading (or under the parent’s,
+	// for the unnamed section)
+	const own = named ? level : level - 1;
 	if (section.description) {
-		lines.push(section.description.trim(), '');
+		lines.push(shiftHeadings(section.description.trim(), own), '');
 	}
 	if (section.content && section.content.trim()) {
-		lines.push(section.content.trim(), '');
+		lines.push(shiftHeadings(section.content.trim(), own), '');
 	}
 	const childLevel = named ? level + 1 : level;
 	section.components.forEach((component) => {

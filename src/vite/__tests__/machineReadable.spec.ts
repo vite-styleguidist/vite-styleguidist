@@ -17,6 +17,7 @@ import {
 	printPropType,
 	flattenComponents,
 	MACHINE_READABLE_FILES,
+	shiftHeadings,
 } from '../machineReadable.js';
 import type { DocsManifest, ManifestComponent } from '../machineReadable.js';
 import type * as Rsg from '../../typings/index.js';
@@ -192,6 +193,22 @@ describe('buildManifest', () => {
 	it('should be deterministic', () => {
 		const again = buildManifest(config, collectSections(config), { now: NOW });
 		expect(again).toEqual(manifest);
+	});
+
+	it('should pin generatedAt to SOURCE_DATE_EPOCH when set', () => {
+		vi.stubEnv('SOURCE_DATE_EPOCH', '1700000000');
+		try {
+			expect(buildManifest(config, collectSections(config)).generatedAt).toBe(
+				'2023-11-14T22:13:20.000Z'
+			);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
+	it('should not link the unnamed section the components shortcut creates', () => {
+		expect(manifest.sections[0].name).toBeNull();
+		expect(manifest.sections[0].href).toBeNull();
 	});
 
 	it('should honor skipComponentsWithoutExample', () => {
@@ -407,7 +424,7 @@ Some **intro** text.
 		expect(documented.props.map((prop) => [prop.name, prop.type])).toEqual([
 			['size', 'oneOf: s | l'],
 			['dict', 'objectOf: bool'],
-			['items', 'shape { id: number (required), label: string }[]'],
+			['items', '(shape { id: number (required), label: string })[]'],
 			['onClick', 'func'],
 			['union', 'oneOfType: string | number'],
 			['when', 'instanceOf: Date'],
@@ -554,6 +571,51 @@ describe('unhighlight', () => {
 	it('should handle unterminated fences', () => {
 		expect(unhighlight('```js\n<span class="token keyword">const</span> a')).toBe('```js\nconst a');
 	});
+
+	it('should find fences inside list items and blockquotes', () => {
+		const highlighted = [
+			'1. Install it:',
+			'',
+			'   ```bash',
+			'   <span class="token function">npm</span> install',
+			'',
+			'   <span class="token function">npm</span> test',
+			'   ```',
+			'',
+			'> ```html',
+			'> <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>b</span><span class="token punctuation">></span></span>',
+			'>',
+			'> <span class="token comment">&lt;!-- a > b --></span>',
+			'> ```',
+		].join('\n');
+		expect(unhighlight(highlighted)).toBe(
+			[
+				'1. Install it:',
+				'',
+				'   ```bash',
+				'   npm install',
+				'',
+				'   npm test',
+				'   ```',
+				'',
+				'> ```html',
+				'> <b>',
+				'>',
+				'> <!-- a > b -->',
+				'> ```',
+			].join('\n')
+		);
+	});
+});
+
+describe('shiftHeadings', () => {
+	it('should demote headings outside fenced code, capped at six', () => {
+		const text = '# Title\n\ntext\n\n```md\n# code\n```\n\n###### Deep\n#not a heading';
+		expect(shiftHeadings(text, 2)).toBe(
+			'### Title\n\ntext\n\n```md\n# code\n```\n\n###### Deep\n#not a heading'
+		);
+		expect(shiftHeadings(text, 0)).toBe(text);
+	});
 });
 
 describe('toManifestExamples', () => {
@@ -580,6 +642,11 @@ describe('printPropType', () => {
 	it('should print PropTypes like the props table', () => {
 		expect(printPropType(prop({ name: 'string' }))).toBe('string');
 		expect(printPropType(prop({ name: 'arrayOf', value: { name: 'string' } }))).toBe('string[]');
+		expect(
+			printPropType(
+				prop({ name: 'arrayOf', value: { name: 'enum', value: [{ value: "'a'" }, { value: "'b'" }] } })
+			)
+		).toBe('(oneOf: a | b)[]');
 		expect(printPropType(prop({ name: 'enum', value: 'Object.keys(x)', computed: true }))).toBe(
 			'oneOf: Object.keys(x)'
 		);
@@ -700,6 +767,31 @@ describe('renderers', () => {
 		expect(renderLlmsTxt(nested)).toContain(
 			'## Sections\n\n- [Components](index.html#section-components): All of them'
 		);
+	});
+
+	it('should demote headings inside content pages and descriptions', () => {
+		const button = manifest.sections[0].components.find((component) => component.name === 'Button');
+		const nested: DocsManifest = {
+			...manifest,
+			sections: [
+				{
+					name: 'Guides',
+					slug: 'guides',
+					href: 'index.html#guides',
+					description: null,
+					content: '# Getting started\n\nIntro\n\n```md\n# not a heading\n```\n\n## Install',
+					components: [{ ...(button as ManifestComponent), description: '## Usage\n\nText' }],
+					sections: [],
+				},
+			],
+		};
+		const text = renderLlmsFullTxt(nested);
+		expect(text).toContain(
+			'\n## Guides\n\n### Getting started\n\nIntro\n\n```md\n# not a heading\n```\n\n#### Install\n'
+		);
+		expect(text).toContain('\n### Button\n');
+		// A `##` in the description of a level-3 component nests two levels below it
+		expect(text).toContain('\n##### Usage\n\nText\n');
 	});
 
 	it('should render docs.json as pretty JSON', () => {

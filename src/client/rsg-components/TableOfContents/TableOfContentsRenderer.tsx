@@ -185,7 +185,7 @@ export const TableOfContentsRenderer: React.FunctionComponent<TableOfContentsRen
 			<div className={classes.root}>
 				<nav className={classes.nav}>
 					{chips.length > 0 && (
-						<div className={classes.chips}>
+						<div className={classes.chips} role="group" aria-label="Sections">
 							{chips.map((item) => (
 								<Link
 									key={item.slug}

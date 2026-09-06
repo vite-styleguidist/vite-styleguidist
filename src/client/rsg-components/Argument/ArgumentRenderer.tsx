@@ -8,9 +8,16 @@ import Group from 'react-group';
 import doctrine from 'doctrine';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ space }: Rsg.Theme) => ({
+export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
 	block: {
 		marginBottom: space[2],
+	},
+	// The colon between `name` and `type`: monospace like its neighbours, in the secondary
+	// colour so the two coloured tokens stay the focus
+	punctuation: {
+		fontFamily: fontFamily.monospace,
+		fontSize: fontSize.small,
+		color: color.light,
 	},
 });
 
@@ -46,7 +53,7 @@ export const ArgumentRenderer: React.FunctionComponent<ArgumentPropsWithClasses>
 			{name && (
 				<span>
 					<Name>{name}</Name>
-					{type && ':'}
+					{type && <span className={classes.punctuation}>:</span>}
 				</span>
 			)}
 			{type && (

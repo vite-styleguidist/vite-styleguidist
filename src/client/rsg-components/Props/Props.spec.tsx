@@ -163,11 +163,11 @@ describe('props columns', () => {
 		const { container } = renderJs(['color: PropTypes.string.isRequired']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`
-		"Prop name: color 
-		Type: string 
-		Default: Required 
-		Description:"
-	`);
+			"Prop name: color * 
+			Type: string 
+			Default: Required 
+			Description:"
+		`);
 	});
 
 	test('should render PropTypes.arrayOf', () => {
@@ -619,11 +619,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: string']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: string 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: string 
+				Default: Required 
+				Description:"
+			`);
 		});
 
 		test('should render optional type string', () => {
@@ -676,16 +676,16 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: MyEnum'], [], [options.enum.declaration]);
 			if (options.enum.expect.type === 'enum') {
 				expect(getText(container)).toMatchInlineSnapshot(`
-					"Prop name: foo 
-					Type: ${options.enum.expect.type} 
+					"Prop name: foo * 
+					Type: enum 
 					Default: Required 
 					Description: 
 					 One of: One , Two"
 				`);
 			} else {
 				expect(getText(container)).toMatchInlineSnapshot(`
-					"Prop name: foo 
-					Type: ${options.enum.expect.type} 
+					"Prop name: foo * 
+					Type: MyEnum 
 					Default: Required 
 					Description:"
 				`);
@@ -705,11 +705,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: React.ReactNode']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: React.ReactNode 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: React.ReactNode 
+				Default: Required 
+				Description:"
+			`);
 		});
 
 		test('should render unknown when a relevant prop type is not assigned', () => {
@@ -727,11 +727,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: 1']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: 1 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: 1 
+				Default: Required 
+				Description:"
+			`);
 		});
 	});
 });

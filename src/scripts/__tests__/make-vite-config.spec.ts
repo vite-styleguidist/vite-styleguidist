@@ -133,6 +133,10 @@ describe('getReactRootFlavor', () => {
 		['17.0.2', 'legacy'],
 		['18.3.1', 'modern'],
 		['19.2.8', 'modern'],
+		// The experimental channel is 19-based and has no render(), despite the 0 major
+		['0.0.0-experimental-abc', 'modern'],
+		// A version we cannot parse tells us nothing: prefer the API that still exists
+		['garbage', 'modern'],
 	])('should pick the root API for react-dom %s', (version, flavor) => {
 		const dir = createProject(version);
 		try {

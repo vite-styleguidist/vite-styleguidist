@@ -103,7 +103,12 @@ export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
 		logger.debug('Cannot resolve react-dom from the project, mounting with createRoot()');
 		return 'modern';
 	}
-	const flavor = parseInt(version, 10) >= 18 ? 'modern' : 'legacy';
+	// A major of 0 is React's experimental channel (`0.0.0-experimental-<hash>-<date>`), which
+	// tracks the newest React and no longer exports `render()`; an unparseable version is a
+	// custom build we know nothing about. Both are safer on the modern branch: `createRoot()`
+	// has existed since 18 and is the only API the experimental builds still ship.
+	const major = parseInt(version, 10);
+	const flavor = major >= 18 || major === 0 || Number.isNaN(major) ? 'modern' : 'legacy';
 	logger.debug(
 		`Found react-dom ${version}, mounting with ${
 			flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'

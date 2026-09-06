@@ -63,7 +63,18 @@ describe('config file formats', () => {
 
 	it('should explain how to fix CommonJS syntax in an ES module package', () => {
 		process.chdir(testApp('cjs-in-esm'));
-		expect(() => getConfig()).toThrow(/uses CommonJS \(module\.exports\)[\s\S]*\.cjs extension/);
+		expect(() => getConfig()).toThrow(
+			/uses the CommonJS `module`[\s\S]*"type": "module"[\s\S]*styleguide\.config\.cjs/
+		);
+	});
+
+	// A `require()` on line 1 (the shape the Cookbook recipes use) throws before
+	// `module.exports` is reached, so the message has to name the global that actually failed
+	it('should explain how to fix a CommonJS require() in an ES module package', () => {
+		process.chdir(testApp('require-in-esm'));
+		expect(() => getConfig()).toThrow(
+			/uses the CommonJS `require`[\s\S]*export default[\s\S]*import\.meta\.url[\s\S]*styleguide\.config\.cjs/
+		);
 	});
 });
 

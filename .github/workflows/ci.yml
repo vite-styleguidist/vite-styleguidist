@@ -94,10 +94,12 @@ jobs:
       - run: npm run test:unit
 
   integration:
-    name: Examples, browser smoke test and Cypress
+    name: Examples and end-to-end tests
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The eight example builds dominate now that the browser is a cached ~0.5 GB download
+    # instead of ~1.7 GB of Cypress plus puppeteer binaries fetched on every run.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -122,24 +124,35 @@ jobs:
           npm run build:styled-components
           npm run build:vite
 
-      - name: Check that examples really work - no JS errors on load
-        run: |
-          npm run test:browser:pre
-          npm run test:browser:basic
-          npm run test:browser:customised
-          npm run test:browser:sections
-          npm run test:browser:themed
-          npm run test:browser:express
-          npm run test:browser:preact
-          npm run test:browser:styled-components
-          npm run test:browser:vite
+      # Playwright's browser builds are coupled to the installed @playwright/test version, so
+      # the cache key is derived from the version `npm ci` resolved from package-lock.json,
+      # not from the range in package.json; a Dependabot bump invalidates the cache by itself.
+      - name: Read the installed Playwright version
+        id: playwright
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Idempotent: on a cache hit the download is skipped and only the OS packages that
+      # headless Chromium needs are installed (via passwordless sudo on the hosted runners).
+      - run: npx playwright install --with-deps chromium
 
-      - name: Run Cypress tests
-        run: |
-          npm run test:cypress:pre
-          npm run test:cypress:startServer &
-          npm run test:cypress:startServer:post
-          npm run test:cypress:run
+      # The dev-server suite (test/e2e/core.spec.ts, component.spec.ts) and the smoke test of
+      # the eight builds above (test/e2e/examples.spec.ts); playwright.config.ts starts and
+      # stops the dev server itself.
+      - run: npm run test:e2e
+
+      # Screenshots, traces and the HTML report of a failed run, so a red job can be diagnosed
+      # without reproducing it locally. Green runs upload nothing.
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   tarball:
     name: Install from the packed tarball

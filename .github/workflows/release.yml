@@ -8,9 +8,13 @@ on:
     branches:
       - main
       - next
+  # semantic-release is idempotent (it re-reads the tags and npm), so a failed release can be
+  # retried from the Actions tab instead of pushing an empty commit.
+  workflow_dispatch:
 
 # What semantic-release needs from GITHUB_TOKEN:
-# - contents: write       push the tag and the chore(release) commit, create the GitHub Release
+# - contents: write       push the release tag and create the GitHub Release (nothing is
+#                         committed back, see release.config.js)
 # - issues: write         comment on the issues a release closes
 # - pull-requests: write  comment on the pull requests a release includes
 # - id-token: write       mint the OIDC token that npm trusted publishing exchanges for a

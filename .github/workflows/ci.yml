@@ -9,6 +9,8 @@ on:
     branches:
       - main
       - next
+    # `edited` re-runs the PR-title check when a rejected title is fixed; the other jobs skip it.
+    types: [opened, synchronize, reopened, edited]
 
 # Least privilege: nothing in CI writes to the repository. Releasing has its own workflow.
 permissions:
@@ -22,10 +24,15 @@ concurrency:
 jobs:
   lint:
     name: Lint and typecheck
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -44,6 +51,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -59,6 +70,7 @@ jobs:
 
   test:
     name: Unit tests (Node ${{ matrix.node-version }})
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -68,6 +80,10 @@ jobs:
           - '24'
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
@@ -79,10 +95,15 @@ jobs:
 
   integration:
     name: Examples, browser smoke test and Cypress
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -122,6 +143,7 @@ jobs:
 
   tarball:
     name: Install from the packed tarball
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     # Every other job reaches the package through `file:../../` links or Vite aliases, which
     # bypass the `exports` map entirely. This job installs the real tarball into a scratch
     # project and builds a style guide whose `styleguideComponents` override deep-imports a
@@ -132,6 +154,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -215,18 +241,21 @@ jobs:
     # deploy workflow only runs after a merge to main. Building here gives pull requests the signal.
     # The example builds are not needed: the landing page links to them with plain <a> tags.
     name: Docs site build
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
-        working-directory: site
-      - run: npm run sync
         working-directory: site
       - run: npm run build
         working-directory: site

@@ -21,10 +21,10 @@ on:
       - .github/workflows/site.yml
   workflow_dispatch:
 
+# Least privilege per job: the build job installs ~1,300 packages and only needs to read
+# the repository; only the deploy job may touch Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Only one deployment at a time; do not cancel a running one so that a deployment that
 # already started is not left half-finished.
@@ -35,8 +35,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -67,6 +71,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

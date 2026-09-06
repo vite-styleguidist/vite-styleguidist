@@ -13,13 +13,19 @@ export const styles = ({
 	lineHeight,
 	borderRadius,
 	transition,
+	mq,
 }: Rsg.Theme): Styles => ({
-	// The corner pill: shown when there is no sidebar (isolated views, `showSidebar: false`)
+	// The corner pill: shown when there is no sidebar (isolated views, `showSidebar: false`).
+	// Bottom-right, because the top-right corner belongs to the isolated view's exit
+	// button; hidden on small screens, where the Mobile artboard shows no ribbon at all.
 	root: {
 		position: 'fixed',
-		top: space[2],
+		bottom: space[2],
 		right: space[2],
 		zIndex: 999,
+		[mq.small]: {
+			display: 'none',
+		},
 	},
 	link: {
 		display: 'inline-flex',

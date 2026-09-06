@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Playground from 'rsg-components/Playground';
 import Markdown from 'rsg-components/Markdown';
+import MdxPage from 'rsg-components/MdxPage';
 import Heading from 'rsg-components/Heading';
 import ExamplesRenderer from 'rsg-components/Examples/ExamplesRenderer';
 import { useStyleGuideContext } from 'rsg-components/Context';
@@ -46,6 +47,19 @@ const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 						);
 					case 'markdown':
 						return <Markdown text={example.content} key={index} />;
+					// A whole `.mdx` page arrives as a single chunk: its prose is one compiled React
+					// tree, and its playgrounds are rendered from inside it by `RsgPlayground`.
+					// Keyed on `codeRevision` like the playgrounds above, so a hot update of the
+					// file remounts the page (and clears its error boundary).
+					case 'mdx':
+						return (
+							<MdxPage
+								chunk={example}
+								name={name}
+								exampleMode={exampleMode}
+								key={`${codeRevision}/${index}`}
+							/>
+						);
 					default:
 						return null;
 				}

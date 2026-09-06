@@ -56,3 +56,32 @@ test('should not render an example with unknown type', () => {
 	);
 	expect(getByTestId('button-examples')).toBeEmptyDOMElement();
 });
+
+test('should render an mdx page as a single chunk', () => {
+	const Content = ({ components = {} }: any) => {
+		const { p: P, RsgPlayground } = components as Record<string, any>;
+		return (
+			<>
+				<P>Mdx: Hello!</P>
+				<RsgPlayground index={0} />
+			</>
+		);
+	};
+	const mdxExamples: Rsg.Example[] = [
+		{
+			type: 'mdx',
+			Content,
+			examples: [{ type: 'code', content: '<button>Mdx code: OK</button>', evalInContext }],
+		},
+	];
+
+	const { getByText, getByTestId } = render(
+		<Provider>
+			<Examples examples={mdxExamples} name="button" exampleMode="collapse" />
+		</Provider>
+	);
+
+	expect(getByTestId('button-mdx-page')).toBeInTheDocument();
+	expect(getByText(/mdx: hello/i)).toBeInTheDocument();
+	expect(getByText(/mdx code: ok/i)).toBeInTheDocument();
+});

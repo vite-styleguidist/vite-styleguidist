@@ -204,6 +204,8 @@ gh release delete v1.2.3 --yes   # only if the GitHub release was created
 
 Then fix the cause and start the release workflow again from the Actions tab (`workflow_dispatch`). Check `npm view vite-styleguidist versions` first: if the npm publish did go through, keep the tag and create the GitHub release by hand instead.
 
+Pause releases while you clean up: `gh variable set RELEASES_ENABLED --body false` before touching branches or tags, `--body true` when the state is right again. Every push to `main` or `next` runs the release workflow, a reset of `main` included, and semantic-release tags whatever version it computes from the tags it finds at that moment; a stray stable tag on a commit that `next` contains makes the next prerelease jump a major version.
+
 ## Triage
 
 New issues and pull requests are looked at roughly once a week, see the capacity statement in [MAINTAINERS.md](../MAINTAINERS.md#capacity). A first pass gives every new issue:

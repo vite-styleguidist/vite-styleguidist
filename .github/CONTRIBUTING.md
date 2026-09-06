@@ -61,7 +61,7 @@ The browser tests (the example smoke test and the UI checks) are a separate suit
 
 ## End-to-end tests (Playwright)
 
-The unit tests run in jsdom. The end-to-end tests in `test/e2e/` run in a real headless Chromium through [Playwright](https://playwright.dev/) and cover two things: the style guide UI (isolated mode, the props table, editing an example in the code editor) against a dev server serving `examples/basic`, and a smoke test that opens each of the eight built example style guides and fails on any JavaScript error.
+The unit tests run in jsdom. The end-to-end tests in `test/e2e/` run in a real headless Chromium through [Playwright](https://playwright.dev/) and cover three things: the style guide UI (isolated mode, the props table, editing an example in the code editor) against a dev server serving `examples/basic`, a smoke test that opens each of the nine built example style guides and fails on any JavaScript error, and the MDX page of the built `examples/mdx` (that its prose renders an imported component and that a playground inside that prose still works).
 
 Install the browser once (`@playwright/test` itself comes with `npm ci`, only the ~0.5 GB Chromium build is downloaded separately):
 
@@ -81,6 +81,7 @@ npm run build:express
 npm run build:preact
 npm run build:styled-components
 npm run build:vite
+npm run build:mdx
 ```
 
 Then run everything:

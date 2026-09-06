@@ -56,6 +56,7 @@ The documentation lives at [vite-styleguidist.github.io/vite-styleguidist](https
 - [Style guide reusing the project’s Vite config](examples/vite)
 - [Preact](examples/preact)
 - [Styled-components and TypeScript](examples/styled-components)
+- [MDX documentation](examples/mdx)
 
 ## Showcase
 

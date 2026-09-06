@@ -14,6 +14,8 @@ interface PlaygroundProps {
 	name?: string;
 	exampleMode?: string;
 	code: string;
+	/** Fence language of the example as written in the Markdown (`jsx`, `tsx`, …), if any */
+	lang?: string | null;
 	settings: {
 		showcode?: boolean;
 		noeditor?: boolean;
@@ -76,7 +78,7 @@ class Playground extends Component<PlaygroundProps, PlaygroundState> {
 
 	public render() {
 		const { code, activeTab } = this.state;
-		const { evalInContext, index, name, settings, exampleMode } = this.props;
+		const { evalInContext, index, name, settings, exampleMode, lang } = this.props;
 		const { displayMode } = this.context as StyleGuideContextContents;
 		const isExampleHidden = exampleMode === ExampleModes.hide;
 		const isEditorHidden = settings.noeditor || isExampleHidden;
@@ -108,14 +110,17 @@ class Playground extends Component<PlaygroundProps, PlaygroundState> {
 						// `code` is the current source, `onChange` receives every edit and is
 						// debounced by `previewDelay`, and `evalInContext` is passed through for
 						// custom editors that evaluate code themselves; `exampleName` and
-						// `exampleIndex` let an editor label itself per example. Slot adds `name`,
-						// `active` and `onClick`. Keys are only ever added here, never removed or renamed.
+						// `exampleIndex` let an editor label itself per example; `lang` is the
+						// Markdown fence language, shown as the badge in the corner of the code area.
+						// Slot adds `name`, `active` and `onClick`. Keys are only ever added here,
+						// never removed or renamed.
 						props={{
 							code,
 							onChange: this.handleChange,
 							evalInContext,
 							exampleName: name,
 							exampleIndex: index,
+							lang,
 						}}
 					/>
 				}

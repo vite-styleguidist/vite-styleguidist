@@ -66,6 +66,9 @@ describe('Editor', () => {
 			borderRadius: 3,
 			fontFamily: { monospace: 'mono' },
 			fontSize: { small: 13 },
+			fontWeight: { bold: 600 },
+			transition: { fast: '150ms ease-in' },
+			mq: { small: '@media (max-width: 600px)' },
 		} as any;
 		const root = styles(theme).root as Record<string, any>;
 

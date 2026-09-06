@@ -31,4 +31,11 @@ export interface EditorProps {
 	exampleName?: string;
 	/** Index of the example in its Markdown file, the same number the isolated URL (#!/Name/index) uses */
 	exampleIndex?: number;
+	/**
+	 * Language of the example’s Markdown fence as written (`jsx`, `tsx`, `js`, …); `undefined`
+	 * for a bare ``` fence. The built-in editor shows it as the badge in the corner of the code
+	 * area (“JSX”, “TSX”). It is a label only: every playground example is compiled with the JSX
+	 * and TypeScript transforms regardless of the fence language.
+	 */
+	lang?: string | null;
 }

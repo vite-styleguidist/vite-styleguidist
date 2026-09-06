@@ -16,7 +16,8 @@ import { Styles } from 'jss';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import prismTheme from '../../styles/prismTheme.js';
 import prismHighlightStyle from './prismHighlightStyle.js';
-import editorFrame from './editorFrameStyles.js';
+import editorFrame, { codePadding, editorBadge } from './editorFrameStyles.js';
+import getLanguageLabel from './languageLabel.js';
 import type * as Rsg from '../../../typings/index.js';
 
 /**
@@ -31,15 +32,17 @@ import type * as Rsg from '../../../typings/index.js';
  * jss-plugin-isolate resets inherited properties on CodeMirror’s elements.
  */
 export const styles = (theme: Rsg.Theme): Styles => {
-	const { color, space, borderRadius } = theme;
+	const { color, borderRadius, fontWeight, transition } = theme;
 	return {
 		root: {
 			...editorFrame(theme),
+			// Positioned host for the language badge (`badge` below), which sits in the corner
+			position: 'relative',
 			'& .cm-editor': {
 				isolate: false,
 				border: [[1, color.border, 'solid']],
 				borderRadius,
-				transition: 'border-color ease-in-out .1s, box-shadow ease-in-out .1s',
+				transition: `border-color ${transition.fast}, box-shadow ${transition.fast}`,
 			},
 			// Same focus ring as the rest of the UI (TabButton, links): the border takes the link
 			// colour and a translucent halo is drawn around it. CodeMirror’s default is a dotted
@@ -48,7 +51,7 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				isolate: false,
 				outline: 0,
 				borderColor: color.link,
-				boxShadow: [[0, 0, 0, 2, color.focus]],
+				boxShadow: [[0, 0, 0, 3, color.focus]],
 			},
 			'& .cm-editor .cm-scroller': {
 				isolate: false,
@@ -58,7 +61,7 @@ export const styles = (theme: Rsg.Theme): Styles => {
 			},
 			'& .cm-editor .cm-content': {
 				isolate: false,
-				padding: space[2],
+				...codePadding(theme, { nested: true }),
 				color: color.codeBase,
 				// The base theme hardcodes a black caret, invisible on a dark `codeBackground`
 				caretColor: color.codeBase,
@@ -86,7 +89,7 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				isolate: false,
 				color: color.link,
 				textDecoration: 'none',
-				fontWeight: 'bold',
+				fontWeight: fontWeight.bold,
 			},
 			'& .cm-editor .cm-panels': {
 				isolate: false,
@@ -113,6 +116,10 @@ export const styles = (theme: Rsg.Theme): Styles => {
 			// so this is the very same rule set that styles static code blocks
 			...prismTheme({ color }),
 		},
+		// The fence-language badge (“JSX”, “TSX”) in the top-right corner of the frame. It is a
+		// sibling of CodeMirror’s host, never inside `.cm-content`, so the editor’s document and
+		// selection know nothing about it.
+		badge: editorBadge(theme),
 	};
 };
 
@@ -156,7 +163,7 @@ export function getEditorLabel(exampleName?: string, exampleIndex?: number): str
 		: `Code editor for ${exampleName}`;
 }
 
-export function Editor({ code, onChange, classes, exampleName, exampleIndex }: EditorProps) {
+export function Editor({ code, onChange, classes, exampleName, exampleIndex, lang }: EditorProps) {
 	const hostRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView | null>(null);
 	// Latest `onChange` without re-creating the view when the parent passes a new function
@@ -279,13 +286,23 @@ export function Editor({ code, onChange, classes, exampleName, exampleIndex }: E
 		});
 	}, [code]);
 
-	return <div className={classes.root} ref={hostRef} />;
+	// CodeMirror appends its `.cm-editor` to the host, which React never touches again; the
+	// badge is React’s, so the two live in separate elements under the styled root
+	return (
+		<div className={classes.root}>
+			<div ref={hostRef} />
+			<span className={classes.badge} aria-hidden="true">
+				{getLanguageLabel(lang)}
+			</span>
+		</div>
+	);
 }
 
 Editor.propTypes = {
 	code: PropTypes.string.isRequired,
 	onChange: PropTypes.func.isRequired,
 	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
+	lang: PropTypes.string,
 };
 
 export default Styled<EditorProps>(styles)(Editor);

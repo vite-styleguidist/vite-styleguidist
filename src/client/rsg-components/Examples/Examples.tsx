@@ -35,6 +35,7 @@ const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 						return (
 							<Playground
 								code={example.content}
+								lang={example.lang}
 								evalInContext={example.evalInContext}
 								key={`${codeRevision}/${index}`}
 								name={name}

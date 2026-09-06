@@ -194,7 +194,7 @@ module.exports = {
 }
 ```
 
-The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`. Keep the plain `react-dom` alias too: when the project’s `react-dom` is 16 or 17 (or absent), the style guide is mounted through `react-dom`’s `render`, which `preact/compat` provides as well.
+The aliases also cover `react-dom/client` and `react/jsx-runtime`, which resolve to `preact/compat/client` and `preact/compat/jsx-runtime`. Keep the plain `react-dom` alias too: when the project’s `react-dom` is 16 or 17 the style guide is mounted through `react-dom`’s `render`, which `preact/compat` provides as well; without a `react-dom` in the project it uses `createRoot` through the `react-dom/client` alias.
 
 See the [Preact example style guide](../examples/preact).
 
@@ -361,12 +361,13 @@ module.exports = {
 <script>${colorSchemeScript(colorScheme)}</script>
 <title>${title}</title>
 ${css
-      .map(file => `<link rel="stylesheet" href="${publicPath}${file}">`)
-      .join('')}
+  .map(file => `<link rel="stylesheet" href="${publicPath}${file}">`)
+  .join('')}
 </head>
 <body><div id="${container}"></div>${js
       .map(
-        file => `<script type="module" src="${publicPath}${file}"></script>`
+        file =>
+          `<script type="module" src="${publicPath}${file}"></script>`
       )
       .join('')}</body>
 </html>`
@@ -493,16 +494,22 @@ The component gets the current `code` and must call `onChange` with the whole so
 
 ```javascript
 // styleguide.config.js
-const path = require('path')
-module.exports = {
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+export default {
   styleguideComponents: {
-    Editor: path.join(__dirname, 'styleguide/components/Editor')
+    Editor: path.join(dirname, 'src/styleguide/Editor')
   }
 }
 ```
 
+The same config written with `require`, `__dirname` and `module.exports` works in a project without `"type": "module"` in its `package.json`, and in a `styleguide.config.cjs` file in any project.
+
 ```jsx
-// styleguide/components/Editor.js
+// src/styleguide/Editor.js
 import React from 'react'
 
 // A plain text area: no highlighting, but nothing to load either

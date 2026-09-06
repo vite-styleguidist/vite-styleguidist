@@ -242,9 +242,14 @@ The default appearance changed with 1.0: a warm neutral palette with a single te
 Other visible changes that came with the facelift, in case a custom stylesheet or test targets them:
 
 - The sidebar precedes the content in the DOM (it used to follow it) so small screens read navigation first; on small screens it is a sticky header with a menu button and a row of chips.
-- The `ribbon` renders as a link in the sidebar footer (a pill in the corner without a sidebar) and its default text is “GitHub”.
-- The path line’s copy button is named “Copy path”; the tooltip says “Copied to clipboard” after a click.
-- Static code blocks no longer wrap long lines: they scroll horizontally, like the editor.
+- A “Skip to content” link is the first focusable element of the page, visible only while focused.
+- The `ribbon` renders as a link in the sidebar footer (a pill in the corner without a sidebar) and its default text is “GitHub”. Its root element is a `div`, not a `footer`, so a `footer.rsg--root-…` selector no longer matches it.
+- The path line’s copy button is named “Copy path”; a status line (rule key `Pathline.copied`) says “Copied to clipboard” after a click. It is not the `Tooltip` component.
+- Static code blocks and the code editor no longer wrap long lines: both scroll horizontally.
+- Required props print a visible ` *` after the name in the props table, next to the “Required” marker in the default column.
+- An “Examples” heading is inserted above every component’s examples, one level below the component’s own heading.
+- The isolate button of the example toolbar has visible text, “Open isolated” and “Show all components”; the one in a section or component header stays icon-only.
+- Rows and bodies of Markdown tables carry generated class names, like the rest of the Markdown elements.
 - Inline code in prose is a chip on the code background; prop names, types and default values in tables stay plain.
 - `PlaygroundError.root` is now a panel (`div`) around the message `pre`; a `styles` override that styled the root as the `pre` should target `message`.
 - The missing-examples placeholder no longer expands inline instructions on click; it links to the docs.

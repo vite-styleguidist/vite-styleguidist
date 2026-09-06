@@ -574,12 +574,20 @@ Colors follow the [`theme`](#theme) option: the same `theme.color.code*` keys th
 You can replace the editor with your own component:
 
 ```javascript
-module.exports = {
+// styleguide.config.js
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+export default {
   styleguideComponents: {
-    Editor: path.join(__dirname, 'styleguide/components/Editor')
+    Editor: path.join(dirname, 'src/styleguide/Editor')
   }
 }
 ```
+
+The CommonJS form (`require`, `__dirname`, `module.exports`) works in a project without `"type": "module"`, and in a `styleguide.config.cjs` file in any project.
 
 When you do, CodeMirror is not part of your bundle at all. The component receives these props (the `EditorProps` type exported from `vite-styleguidist/lib/typings/index.d.ts`), and this list is a public contract: keys are only ever added, never removed or renamed:
 
@@ -593,7 +601,7 @@ When you do, CodeMirror is not part of your bundle at all. The component receive
 | `onClick` | `function`, optional | Tab click handler of the slot (its id is bound already). Not needed by an editor. |
 | `exampleName` | `string`, optional | Name of the component or section the example belongs to. The built-in editor uses it, with `exampleIndex`, for its accessible label. |
 | `exampleIndex` | `number`, optional | Index of the example in its Markdown file, the same number the isolated example URL uses. |
-| `lang` | `string`, optional | Fence language of the example (`jsx`, `tsx`, …), absent for a bare fence. The built-in editor shows it as the badge in the corner of the code area. |
+| `lang` | `string`, optional | Fence language of the example (`jsx`, `tsx`, …), absent for a bare fence. The built-in editor shows it as the badge in the corner of the code area, and labels a bare fence `JSX`, since every playground example is compiled with the JSX and TypeScript transforms. |
 
 See [How to replace the code editor?](Cookbook.md#how-to-replace-the-code-editor) in the cookbook for a minimal implementation.
 

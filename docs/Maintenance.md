@@ -138,6 +138,8 @@ Releases are automated with [semantic-release](https://semantic-release.gitbook.
 
 The `main` ruleset also requires ten CI checks, matched by job name: “Lint and typecheck”, “PR title is a Conventional Commit”, “Unit tests (Node 22)”, “Unit tests (Node 24)”, “Examples and end-to-end tests”, “React compatibility (React 16.14.0)”, “React compatibility (React 17.0.2)”, “React compatibility (React 18.3.1)”, “Install from the packed tarball” and “Docs site build”. Renaming a job in `ci.yml` must be mirrored in the ruleset (Settings › Rules › main), otherwise pull requests into `main` wait forever for a check that no longer reports; adding a job (the three React compatibility checks were added with [decision 0013](decisions/0013-react-16-support.md) and must be added to the ruleset by hand) is only enforced once the ruleset lists it.
 
+That ruleset gates pull requests into `main`, not pushes to `next`: `next` accepts direct pushes, and the release workflow runs on its own (`npm ci`, `npm run compile`, `npm test` — lint, typecheck and the unit tests on React 19) without waiting for `ci.yml`. So nothing stops a push to `next` from publishing a prerelease before the integration, React compatibility, tarball and docs-site jobs have said anything. When a change needs the full matrix first, push it with releases paused (`gh variable set RELEASES_ENABLED --body false`), wait for CI to go green on `next`, then re-enable the variable and start the release workflow from the Actions tab (`workflow_dispatch`).
+
 | Branch | npm dist-tag | Versions | Used for |
 | --- | --- | --- | --- |
 | `main` | `latest` | `1.x.y` stable releases | Everything after 1.0.0 that isn’t part of the next major. |

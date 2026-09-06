@@ -27,4 +27,8 @@ export interface EditorProps {
 	active?: boolean;
 	/** Tab click handler injected by Slot, the fill id is already bound as the first argument */
 	onClick?: (...args: any[]) => void;
+	/** Name of the component or section the example belongs to, for an accessible label */
+	exampleName?: string;
+	/** Index of the example in its Markdown file, the same number the isolated URL (#!/Name/index) uses */
+	exampleIndex?: number;
 }

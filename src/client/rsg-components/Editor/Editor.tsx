@@ -99,7 +99,20 @@ export interface EditorProps extends Rsg.EditorProps, JssInjectedProps {}
  * from the document (hot reload of the Markdown, a reset by a custom parent) replaces the text
  * while keeping the cursor offset.
  */
-export function Editor({ code, onChange, classes }: EditorProps) {
+/**
+ * One label per example, so a page with many code tabs open does not announce twenty
+ * identical “Code editor” textboxes. The index is the one the isolated URL uses.
+ */
+export function getEditorLabel(exampleName?: string, exampleIndex?: number): string {
+	if (!exampleName) {
+		return 'Code editor';
+	}
+	return typeof exampleIndex === 'number'
+		? `Code editor for ${exampleName} example ${exampleIndex}`
+		: `Code editor for ${exampleName}`;
+}
+
+export function Editor({ code, onChange, classes, exampleName, exampleIndex }: EditorProps) {
 	const hostRef = useRef<HTMLDivElement>(null);
 	const viewRef = useRef<EditorView | null>(null);
 	// Latest `onChange` without re-creating the view when the parent passes a new function
@@ -141,7 +154,7 @@ export function Editor({ code, onChange, classes }: EditorProps) {
 						indentWithTab,
 					]),
 					EditorView.contentAttributes.of({
-						'aria-label': 'Code editor',
+						'aria-label': getEditorLabel(exampleName, exampleIndex),
 						'aria-description': 'Press Escape, then Tab, to leave the editor',
 					}),
 					EditorView.updateListener.of((update) => {
@@ -167,6 +180,9 @@ export function Editor({ code, onChange, classes }: EditorProps) {
 			view.destroy();
 			viewRef.current = null;
 		};
+		// Mount-only on purpose: the view is created once per example, and an example’s name and
+		// index never change while it is mounted, so the label is read at mount time.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	useEffect(() => {

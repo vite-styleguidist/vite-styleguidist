@@ -50,6 +50,12 @@ describe('Editor', () => {
 		expect(textbox).toHaveAttribute('aria-description', expect.stringMatching(/Escape.*Tab/));
 	});
 
+	it('should label the editor after its example when Playground passes the name and index', () => {
+		const { getByRole } = render(<Editor {...props} exampleName="Button" exampleIndex={2} />);
+
+		expect(getByRole('textbox', { name: 'Code editor for Button example 2' })).toBeInTheDocument();
+	});
+
 	it('should replace the document when the code prop changes from outside', () => {
 		const onChange = vi.fn();
 		const { rerender, getByRole } = render(<Editor {...props} onChange={onChange} />);

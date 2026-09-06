@@ -589,6 +589,8 @@ When you do, CodeMirror is not part of your bundle at all. The component receive
 | `name` | `string`, optional | Id of the slot fill, `rsg-code-editor` for the built-in code tab. Not the example name. |
 | `active` | `boolean`, optional | Whether the tab is the active one; always `true` when the editor is rendered, since only the active tab is. |
 | `onClick` | `function`, optional | Tab click handler of the slot (its id is bound already). Not needed by an editor. |
+| `exampleName` | `string`, optional | Name of the component or section the example belongs to. The built-in editor uses it, with `exampleIndex`, for its accessible label. |
+| `exampleIndex` | `number`, optional | Index of the example in its Markdown file, the same number the isolated example URL uses. |
 
 See [How to replace the code editor?](Cookbook.md#how-to-replace-the-code-editor) in the cookbook for a minimal implementation.
 

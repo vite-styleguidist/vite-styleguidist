@@ -107,9 +107,16 @@ class Playground extends Component<PlaygroundProps, PlaygroundState> {
 						// src/typings/RsgEditor.ts, documented under styleguideComponents.Editor):
 						// `code` is the current source, `onChange` receives every edit and is
 						// debounced by `previewDelay`, and `evalInContext` is passed through for
-						// custom editors that evaluate code themselves. Slot adds `name`, `active`
-						// and `onClick`. Keys are only ever added here, never removed or renamed.
-						props={{ code, onChange: this.handleChange, evalInContext }}
+						// custom editors that evaluate code themselves; `exampleName` and
+						// `exampleIndex` let an editor label itself per example. Slot adds `name`,
+						// `active` and `onClick`. Keys are only ever added here, never removed or renamed.
+						props={{
+							code,
+							onChange: this.handleChange,
+							evalInContext,
+							exampleName: name,
+							exampleIndex: index,
+						}}
 					/>
 				}
 				toolbar={

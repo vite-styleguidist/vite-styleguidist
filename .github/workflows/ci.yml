@@ -154,6 +154,108 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  react-compat:
+    name: React compatibility (React ${{ matrix.react }})
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
+    # The style guide mounts through one of two React root implementations chosen from the
+    # project's react-dom (createRoot on 18+, ReactDOM.render on 16.14 and 17; see
+    # docs/decisions/0013-react-16-support.md). `integration` above only exercises the modern
+    # one with the React 19 from the lockfile, so this job swaps React and repeats the compile,
+    # the eight example builds and the browser tests on the oldest supported version, on 17 and
+    # on 18. The unit tests are not run here: @testing-library/react 16 needs React 18 or 19.
+    # 17.0.2 takes the same legacy branch as 16.14.0 and has never behaved differently in it,
+    # but it is a supported version with its own event system, so it is kept; the entries run
+    # in parallel, so it costs runner minutes, not wall time.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # A failure on one React version must not hide the result on the others.
+      fail-fast: false
+      matrix:
+        react:
+          - '16.14.0'
+          - '17.0.2'
+          - '18.3.1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # `--no-save` keeps package.json and the lockfile untouched; `--legacy-peer-deps` makes
+      # the swap deterministic across npm versions, because @testing-library/react's peer range
+      # (^18 || ^19) conflicts with anything older (npm 11 only warns, npm 7 would refuse).
+      - name: Install React ${{ matrix.react }}
+        env:
+          REACT_VERSION: ${{ matrix.react }}
+        run: npm install --no-save --no-audit --no-fund --legacy-peer-deps "react@$REACT_VERSION" "react-dom@$REACT_VERSION"
+
+      # Everything below resolves react-dom from the repo root (the examples have no
+      # node_modules of their own, and `resolve.dedupe` pins the style guide to the same copy),
+      # so the version there must be the matrix one and there must be no stray nested copy.
+      # `npm ls` cannot be the gate: it exits non-zero because the root devDependency range
+      # still says ^19.
+      - name: Check the installed React
+        env:
+          REACT_VERSION: ${{ matrix.react }}
+        run: |
+          set -euo pipefail
+          actual="$(node -p 'require("react-dom/package.json").version')"
+          if [ "$actual" != "$REACT_VERSION" ]; then
+            echo "react-dom is $actual, expected $REACT_VERSION"
+            exit 1
+          fi
+          # Matches node_modules/react and any nested node_modules/*/node_modules/react, but
+          # not node_modules/@types/react or node_modules/preact.
+          copies="$(find node_modules -type d \( -path '*node_modules/react' -o -path '*node_modules/react-dom' \) | sort)"
+          echo "$copies"
+          if [ "$(printf '%s\n' "$copies" | wc -l)" -ne 2 ]; then
+            echo "Expected exactly one copy each of react and react-dom in node_modules"
+            exit 1
+          fi
+
+      - run: npm run compile
+
+      - name: Build all examples
+        run: |
+          npm run build:basic
+          npm run build:customised
+          npm run build:sections
+          npm run build:themed
+          npm run build:express
+          npm run build:preact
+          npm run build:styled-components
+          npm run build:vite
+
+      # Same browser cache as `integration`, see the comments there.
+      - name: Read the installed Playwright version
+        id: playwright
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: npx playwright install --with-deps chromium
+
+      # The dev-server suite runs against the swapped React (the legacy root on 16 and 17),
+      # the examples smoke test against the builds above.
+      - run: npm run test:e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-react-${{ matrix.react }}
+          path: playwright-report/
+          retention-days: 7
+
   tarball:
     name: Install from the packed tarball
     if: github.event_name != 'pull_request' || github.event.action != 'edited'

@@ -12,8 +12,9 @@ import type * as Rsg from '../../../typings/index.js';
  * into one card per row: the header is hidden, each row becomes a bordered flex box
  * whose first line holds the leading cells (name, type, default) and whose last cell
  * (the description) wraps onto its own line. Doing this in CSS keeps the DOM, the test
- * ids and the a11y tree of the desktop table; the cost is that the browser drops the
- * table roles once the elements are `display: block`, which is acceptable for a list
+ * ids and the a11y tree of the desktop table; the cost is that some engines may drop the
+ * table roles once the elements are `display: block` (Chromium keeps them: an aria
+ * snapshot of the cards still reports table/row/cell), which is acceptable for a list
  * of cards.
  *
  * Two sizes have no theme token and are literals on purpose: the 12 px header labels
@@ -32,7 +33,14 @@ export const styles = ({
 	table: {
 		width: '100%',
 		borderCollapse: 'collapse',
-		marginBottom: space[4],
+		// No trailing margin: the block that holds the table already contributes the section
+		// gap, and a bottom margin on top of it detached the props table from the Examples
+		// heading below. Props and methods sit in the same tab panel as two adjacent tables,
+		// so the gap between them is set on the second one instead.
+		'& + &': {
+			isolate: false,
+			marginTop: space[4],
+		},
 		[mq.small]: {
 			display: 'block',
 		},
@@ -45,6 +53,10 @@ export const styles = ({
 			display: 'none',
 		},
 	},
+	// Empty on purpose: the rule exists so the thead row carries a JSS class and
+	// jss-plugin-isolate resets it like the body rows, instead of inheriting a host page's
+	// `tr` styles (the sections example paints those to prove isolation)
+	headRow: {},
 	tableBody: {
 		[mq.small]: {
 			display: 'flex',
@@ -93,8 +105,10 @@ export const styles = ({
 			paddingRight: 0,
 		},
 		// Block children (Markdown paragraphs, Para, JsDoc lines, argument lists) take the
-		// cell's size instead of the 16 px body copy they are designed for elsewhere
-		'& p, & div': {
+		// cell's size instead of the 16 px body copy they are designed for elsewhere; lists
+		// are included because a bulleted prop description is a common way to document
+		// options and its 16 px items looked oversized next to the 14 px paragraph above
+		'& p, & div, & ul, & ol, & li': {
 			isolate: false,
 			fontSize: 'inherit',
 			lineHeight: 'inherit',
@@ -139,7 +153,7 @@ export const TableRenderer: React.FunctionComponent<TableProps> = ({
 	return (
 		<table className={classes.table}>
 			<thead className={classes.tableHead}>
-				<tr>
+				<tr className={classes.headRow}>
 					{columns.map(({ caption }) => (
 						<th key={caption} className={classes.cellHeading}>
 							{caption}

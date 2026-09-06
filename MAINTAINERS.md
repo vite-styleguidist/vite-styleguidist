@@ -53,7 +53,7 @@ There is no formal process, but there is a path:
 
 ## Succession
 
-- **A second npm owner is added as soon as a co-maintainer exists**, so that the package never depends on a single account. Until then, the npm account has two-factor authentication enabled and publishing goes through npm trusted publishing from CI rather than through long-lived tokens.
+- **A second npm owner is added as soon as a co-maintainer exists**, so that the package never depends on a single account. Until then, the npm account has two-factor authentication enabled and publishing goes through npm trusted publishing from CI rather than through long-lived tokens (the one exception is the very first publish, which needs a short-lived automation token because a trusted publisher can only be registered on an existing package; see the [maintainer guide](docs/Maintenance.md#releases)).
 - **If the maintainer goes silent for six months** (no commits, no issue or pull request activity, no answer to an email at the address above) the project should be considered unmaintained. In that case, anyone is welcome to fork it under the MIT license; the maintainer asks that a fork picks a new name, keeps the credits to the original project and to this fork, and opens an issue here pointing to it so users can find it. If a co-maintainer exists at that point, they take over the repository and the npm package without further formality.
 - **Handing over deliberately** is preferred over disappearing: a maintainer who wants to stop announces it in an issue, adds the successor to this file and to the npm package, and updates the `CODEOWNERS` file.
 

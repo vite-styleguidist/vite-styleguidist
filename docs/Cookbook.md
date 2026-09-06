@@ -810,7 +810,7 @@ And with Styleguidist you write _examples_ in Markdown files:
     <Button size="large">Push Me</Button>
     ```
 
-![Styleguidist screenshot](https://camo.githubusercontent.com/7af8e5fc43288807978f28530656275008c5afbf/68747470733a2f2f64337676366c703535716a6171632e636c6f756466726f6e742e6e65742f6974656d732f32373142333732783130325330633035326933462f72656163742d7374796c6567756964697374372e676966)
+![Vite Styleguidist screenshot](https://raw.githubusercontent.com/vite-styleguidist/vite-styleguidist/main/site/static/img/workbench.jpg)
 
 Another important distinction is that Storybook shows only one variation of one component at a time but Styleguidist can show all variations of all components, all variations of a single component or one variation. It’s easier to create a style guide with Styleguidist but Storybook has more tools to develop components (though we’re working on that too).
 

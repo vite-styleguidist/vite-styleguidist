@@ -21,6 +21,8 @@ Start a **fresh `1.0.0` line**. The `next` branch publishes **`1.0.0-next.N`** p
 
 - The migration guide and the README name the versions explicitly: upgrading from `react-styleguidist` 13.x (last release 13.1.4) to `vite-styleguidist` 1.0.
 - Installing the beta is `npm install --save-dev vite-styleguidist@next`; installing without a tag gives nothing until 1.0.0 is promoted, which is intentional.
-- The release configuration needs two branches (`main`, and `next` with `prerelease: true`), the conventionalcommits preset, and the changelog plugin so `CHANGELOG.md` is generated; see the [maintainer guide](../Maintenance.md#releases).
-- A `1.x` version number reads as “young” next to `13.1.4`. The README’s fork notice and the changelog explain the lineage so that the number isn’t mistaken for immaturity of the codebase.
+- The release configuration needs two branches (`main`, and `next` with `prerelease: true`) and the conventionalcommits preset. Nothing is committed back to the repository: the `main` ruleset only accepts pull requests and GitHub can’t exempt the Actions app from it, so there is no changelog or git plugin, the version lives in git tags and on npm (`package.json` keeps `0.0.0-development`), and the release notes live on the GitHub Releases page; see the [maintainer guide](../Maintenance.md#releases).
+- Before the first release a baseline tag `v0.0.0` is pushed on the last upstream commit, so the generated notes cover the fork’s commits only instead of the whole inherited history. It is a marker, not an import of upstream’s version tags: the first version is still computed as 1.0.0.
+- npm authentication: trusted publishing (OIDC) with provenance, except for the very first publish, which uses a short-lived `NPM_TOKEN` secret because a trusted publisher can only be registered on an existing package.
+- A `1.x` version number reads as “young” next to `13.1.4`. The README’s fork notice and the release notes explain the lineage so that the number isn’t mistaken for immaturity of the codebase.
 - Dropping a supported Node.js or React version is a major release under this scheme, see [Support policy](0008-support-policy.md).

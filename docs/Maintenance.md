@@ -147,7 +147,7 @@ The flow around a major version:
 2. When the beta exit criteria are met (known blockers fixed, a handful of external projects have run a prerelease, the [migration guide](Migration.md) is complete), `next` is merged into `main` and semantic-release publishes the stable version to `latest`.
 3. Until the next major, fixes and features go to `main` directly and are released as patch and minor versions. `next` is only re-opened when a breaking change needs a beta.
 
-npm authentication uses [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, there is no long-lived npm token in the repository secrets. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
+npm authentication is meant to go through [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, so no long-lived npm token lives in the repository secrets. One exception is unavoidable: a trusted publisher can only be registered for a package that already exists on npm, so the very first publish (`1.0.0-next.1`) uses a granular automation token stored as the `NPM_TOKEN` repository secret. Right after that release lands, the maintainer registers the trusted publisher on npmjs.com (GitHub Actions, organization `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no environment) and deletes the secret; from then on OIDC is the only credential. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
 
 ### Patch releases
 
@@ -162,6 +162,14 @@ Any commit of a `feat` type merged into a release branch is published as a _mino
 Any commit with a `BREAKING CHANGE:` footer (and a `!` in the header) merged into a release branch is published as a _major_ release as soon as CI passes. On `next` it produces the first prerelease of the next major (`2.0.0-next.0`); on `main` it publishes the major directly, which is why breaking changes should go through `next` first.
 
 ### Release checklist
+
+Before the very first release only:
+
+- Push the baseline tag so the release notes start at the fork rather than at the first upstream commit: `git tag v0.0.0 c223f9a2 && git push origin v0.0.0` (see the comments in `release.config.js` for why this is not an import of upstream's tags).
+- Create a granular npm automation token with publish rights for `vite-styleguidist` and store it as the `NPM_TOKEN` repository secret.
+- After `1.0.0-next.1` is on npm: register the trusted publisher on npmjs.com and delete the `NPM_TOKEN` secret.
+
+For every release:
 
 1. Make sure CI is green on the pull request.
 2. Squash-merge with a conforming title; add a body and footer in the merge dialog if needed.

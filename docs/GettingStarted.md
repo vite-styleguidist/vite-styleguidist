@@ -8,6 +8,8 @@
 npm install --save-dev vite-styleguidist
 ```
 
+> **Note:** While 1.0 is in beta, the stable version doesn’t exist on npm yet and the command above fails with `No matching version found`. Install the prerelease from the `next` dist-tag instead: `npm install --save-dev vite-styleguidist@next`.
+
 Styleguidist needs React 18 or newer and Node.js 22.12 or newer (Node 23 is not supported; 24 and later are), see [Compatibility](Compatibility.md). It comes with [Vite](https://vite.dev/) to compile your components, you don’t need a bundler in your project.
 
 > **Note:** Vite Styleguidist is a maintained fork of React Styleguidist. If you are upgrading from `react-styleguidist` 13.x, see the [migration guide](Migration.md).

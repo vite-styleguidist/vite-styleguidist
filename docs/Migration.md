@@ -22,7 +22,7 @@ Replace the old package with the new one:
 npm uninstall react-styleguidist && npm install --save-dev vite-styleguidist
 ```
 
-While 1.0 is in beta, the stable version doesn’t exist yet: install the prerelease from the `next` dist-tag instead with `npm install --save-dev vite-styleguidist@next`, see [Versioning and release channels](decisions/0003-versioning-and-release-channels.md).
+While 1.0 is in beta, the stable version doesn’t exist yet and the command above installs the latest `1.0.0-next.N` prerelease; to be explicit, install from the `next` dist-tag with `npm install --save-dev vite-styleguidist@next`, see [Versioning and release channels](decisions/0003-versioning-and-release-channels.md).
 
 The CLI binary is still called `styleguidist`, so `package.json` scripts like `"styleguide": "styleguidist server"` don’t change.
 

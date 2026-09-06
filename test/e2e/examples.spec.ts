@@ -58,6 +58,11 @@ const test = base.extend<{}, { examplesServer: string }>({
 	],
 });
 
+// Upper bound on the pages one example may contribute to the crawl below. The largest
+// example (sections) has 13 sidebar links today; the cap only exists so that a style guide
+// that generated links in a loop could not turn the smoke test into a full site crawl.
+const MAX_PAGES_PER_EXAMPLE = 40;
+
 for (const name of EXAMPLES) {
 	test(`the ${name} example renders without runtime errors`, async ({ page, examplesServer }) => {
 		const url = `${examplesServer}/${name}/styleguide/`;
@@ -94,6 +99,48 @@ for (const name of EXAMPLES) {
 			// Give late console errors (effects, lazy chunks) a chance to arrive before judging.
 			// The builds are static, so "no network activity" is reached almost immediately.
 			await page.waitForLoadState('networkidle');
+
+			// The start route alone used to be the whole smoke test, which let an example that
+			// throws on any other page (a broken example in a component's Readme, say) ship
+			// green — the sections example did exactly that. So walk the sidebar: visit every
+			// link, and collect the links each visited page adds (a `pagePerSection` style guide
+			// only renders the sub-sections of the page you are on). Same-document hash
+			// navigation is cheap, so this stays in the order of a second per example.
+			const tocHrefs = async () =>
+				page.locator('[data-testid="rsg-toc-link"]').evaluateAll((links) =>
+					links
+						.map((link) => (link as HTMLAnchorElement).href)
+						// External links (`href` sections) leave the style guide; nothing to smoke test
+						.filter((href) => href.startsWith(window.location.origin + window.location.pathname))
+				);
+
+			const visited = new Set([page.url()]);
+			const queue = (await tocHrefs()).filter((href) => !visited.has(href));
+			while (queue.length > 0 && visited.size < MAX_PAGES_PER_EXAMPLE) {
+				const href = queue.shift() as string;
+				if (visited.has(href)) {
+					continue;
+				}
+				visited.add(href);
+
+				const before = errors.length;
+				await page.goto(href);
+				// The heading of the section or component the link points at; every style guide
+				// page has one, including the documentation-only sections.
+				await expect(
+					page.locator('[data-testid$="-container"], [data-testid^="section-"]').first(),
+					`nothing rendered at ${href}`
+				).toBeVisible();
+				expect
+					.soft(errors.slice(before), `runtime errors at the sidebar link ${href}`)
+					.toEqual([]);
+
+				for (const next of await tocHrefs()) {
+					if (!visited.has(next)) {
+						queue.push(next);
+					}
+				}
+			}
 		} finally {
 			// Attached whatever happened above, so a failed render comes with the console
 			if (consoleLog.length > 0) {

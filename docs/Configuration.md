@@ -540,7 +540,38 @@ See an example of [customized style guide](../examples/customised).
 
 To wrap, rather than replace a component, make sure to import the default implementation using the full path to `vite-styleguidist`, with the `.js` extension, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js`. (The package’s `exports` map doesn’t add extensions for you, so the extensionless form only works when a bundler happens to resolve it.) See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
 
-**Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates.
+**Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates, except `Editor`, whose props are a stable contract (see below).
+
+### `Editor`
+
+The code editor shown under an example when you click “View Code” is [CodeMirror 6](https://codemirror.net/) with JavaScript, JSX and TypeScript highlighting, undo history, bracket matching and closing, basic autocompletion and search (Ctrl/Cmd+F inside the editor). It has no line numbers. Its chunk is loaded on demand: a style guide page fetches CodeMirror only the first time an editor opens, and shows the code as plain text meanwhile.
+
+Keyboard: Tab indents the current line, Shift+Tab outdents. To move the focus out of the editor with the keyboard, press Escape and then Tab (or Shift+Tab): after Escape, Tab moves the focus like anywhere else on the page for two seconds. The editor is labelled “Code editor” for assistive technology.
+
+Colors follow the [`theme`](#theme) option: the same `theme.color.code*` keys that style static code blocks style the editor, see [How to change syntax highlighting colors?](Cookbook.md#how-to-change-syntax-highlighting-colors) in the cookbook.
+
+You can replace the editor with your own component:
+
+```javascript
+module.exports = {
+  styleguideComponents: {
+    Editor: path.join(__dirname, 'styleguide/components/Editor')
+  }
+}
+```
+
+When you do, CodeMirror is not part of your bundle at all. The component receives these props (the `EditorProps` type exported from `vite-styleguidist/lib/typings/index.d.ts`), and this list is a public contract: keys are only ever added, never removed or renamed:
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `code` | `string` | Current source of the example. Controlled: Styleguidist owns it and passes it back after `onChange` (debounced) and when the Markdown file changes on hot reload. |
+| `onChange` | `(code: string) => void` | Call it with the whole source after every change. Calls are debounced by the [`previewDelay`](#previewdelay) option (500 ms by default) before the preview re-renders. |
+| `evalInContext` | `(code: string) => () => any`, optional | Compiles and runs example code the way the preview does. The built-in editor doesn’t use it. |
+| `name` | `string`, optional | Id of the slot fill, `rsg-code-editor` for the built-in code tab. Not the example name. |
+| `active` | `boolean`, optional | Whether the tab is the active one; always `true` when the editor is rendered, since only the active tab is. |
+| `onClick` | `function`, optional | Tab click handler of the slot (its id is bound already). Not needed by an editor. |
+
+See [How to replace the code editor?](Cookbook.md#how-to-replace-the-code-editor) in the cookbook for a minimal implementation.
 
 ## `styleguideDir`
 

@@ -393,7 +393,7 @@ We have [an example style guide](../examples/customised) with custom components.
 
 ## How to change syntax highlighting colors?
 
-Styleguidist uses [Prism](https://prismjs.com/) for code highlighting in static examples and inside the editor. You can change the colors using the [theme](Configuration.md#theme) config option:
+Styleguidist uses [Prism](https://prismjs.com/) to highlight static code blocks (in Markdown and in the “Usage” tab) and [CodeMirror](https://codemirror.net/) in the live code editor. Both are colored by the same palette, the `theme.color.code*` keys: the editor emits Prism’s token class names, so a change to these colors applies to static blocks and to the editor alike. You can change the colors using the [theme](Configuration.md#theme) config option:
 
 ```javascript
 // styleguide.config.js
@@ -414,6 +414,52 @@ module.exports = {
   }
 }
 ```
+
+`codeBase` is the color of plain text, `codeBackground` the background of code blocks and the editor.
+
+## How to replace the code editor?
+
+The live editor under each example is [CodeMirror 6](https://codemirror.net/) by default (see [`styleguideComponents.Editor`](Configuration.md#editor) for what it supports and the exact props). If you want something else — a plain text area, Monaco, an editor from your own design system — point `styleguideComponents.Editor` to your component. The default editor is loaded on demand from the `rsg-components/Editor` module, so when you replace it CodeMirror isn’t bundled at all.
+
+The component gets the current `code` and must call `onChange` with the whole source after every change; Styleguidist debounces the calls by [`previewDelay`](Configuration.md#previewdelay) and re-renders the preview. Anything else the component receives (`evalInContext`, `name`, `active`, `onClick`) can be ignored.
+
+```javascript
+// styleguide.config.js
+const path = require('path')
+module.exports = {
+  styleguideComponents: {
+    Editor: path.join(__dirname, 'styleguide/components/Editor')
+  }
+}
+```
+
+```jsx
+// styleguide/components/Editor.js
+import React from 'react'
+
+// A plain text area: no highlighting, but nothing to load either
+export default function Editor({ code, onChange }) {
+  return (
+    <textarea
+      aria-label="Code editor"
+      value={code}
+      onChange={event => onChange(event.target.value)}
+      rows={code.split('\n').length}
+      spellCheck={false}
+      style={{
+        display: 'block',
+        width: '100%',
+        boxSizing: 'border-box',
+        fontFamily: 'Consolas, "Liberation Mono", Menlo, monospace'
+      }}
+    />
+  )
+}
+```
+
+The `code` prop changes from outside when you edit the Markdown file while the dev server runs: a controlled element like the text area above follows it for free. Editors that keep their own document (CodeMirror, Monaco) should compare the new prop with their content and replace the text only when it differs, so the cursor survives Styleguidist echoing the editor’s own value back.
+
+There is no example project for this recipe: the [customised example](../examples/customised) shows how `styleguideComponents` overrides work in general.
 
 ## How to change style guide dev server logs output?
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import Tippy from '@tippyjs/react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
+import { Styles } from 'jss';
 import type * as Rsg from '../../../typings/index.js';
 
 /*
@@ -11,7 +12,7 @@ import type * as Rsg from '../../../typings/index.js';
  */
 const MAX_WIDTH = 320;
 
-export const styles = ({ color, borderRadius, shadow, fontFamily }: Rsg.Theme) => ({
+export const styles = ({ color, borderRadius, shadow, fontFamily }: Rsg.Theme): Styles => ({
 	tooltip: {
 		'&.tippy-box': {
 			transitionProperty: [['opacity']],
@@ -34,6 +35,9 @@ export const styles = ({ color, borderRadius, shadow, fontFamily }: Rsg.Theme) =
 	// browser outline, which on an inline span hugs the glyphs
 	trigger: {
 		'&:focus-visible': {
+			// Without this the isolate plugin adds the focused trigger to its reset rule,
+			// where a pseudo-class beats the trigger's own class and strips it on focus
+			isolate: false,
 			outline: 'none',
 			borderRadius,
 			boxShadow: [[0, 0, 0, 3, color.focus]],

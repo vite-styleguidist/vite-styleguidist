@@ -12,10 +12,14 @@ import { tags as t } from '@lezer/highlight';
  * the editor without a second copy of the palette: user themes, the `styles` option and theme
  * hot reloading all flow through JSS exactly as they did with Prism.
  *
- * The mapping follows what Prism’s `jsx` grammar produces for the same code, so the editor and
- * the static blocks agree on colours. Rules for a modified tag (`t.function(t.punctuation)`)
- * take precedence over the plain one (`t.punctuation`); rules on a parent tag (`t.keyword`)
- * also match its sub-tags (`controlKeyword`, `moduleKeyword`, `self`, `null`, …).
+ * The mapping approximates what Prism’s `jsx` grammar produces for the same code, so the
+ * editor and the static blocks share the palette and agree on the common tokens. Known
+ * differences, where Lezer has no equivalent tag: ALL_CAPS identifiers (Prism `constant`),
+ * `undefined` and `NaN` (Prism `keyword` / `number`), class names after `extends` or `new`
+ * and method definitions (`class-name` / `function` in Prism, plain names here). Rules for
+ * a modified tag (`t.function(t.punctuation)`) take precedence over the plain one
+ * (`t.punctuation`); rules on a parent tag (`t.keyword`) also match its sub-tags
+ * (`controlKeyword`, `moduleKeyword`, `self`, `null`, …).
  */
 const prismHighlightStyle = HighlightStyle.define([
 	{ tag: t.comment, class: 'token comment' },
@@ -36,7 +40,10 @@ const prismHighlightStyle = HighlightStyle.define([
 	{ tag: t.function(t.punctuation), class: 'token operator' },
 	// JSX: `<`, `</`, `/>`, `>`
 	{ tag: t.angleBracket, class: 'token punctuation' },
-	{ tag: t.tagName, class: 'token tag' },
+	// Built-in elements (`<div>`) are tags for Prism too; a component (`<Button>`) is a
+	// `class-name` in Prism’s JSX grammar, and Lezer marks only the built-ins as standard
+	{ tag: t.standard(t.tagName), class: 'token tag' },
+	{ tag: t.tagName, class: 'token class-name' },
 	{ tag: t.attributeName, class: 'token attr-name' },
 	{ tag: t.attributeValue, class: 'token attr-value' },
 	// Identifiers followed by `(`: `foo(` and `obj.method(`

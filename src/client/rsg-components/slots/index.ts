@@ -1,4 +1,6 @@
-import Editor from 'rsg-components/Editor';
+// The code editor is registered through EditorLoader, which imports `rsg-components/Editor`
+// lazily so CodeMirror ships in its own chunk, fetched on the first “View Code” click
+import EditorLoader from 'rsg-components/Editor/EditorLoader';
 import Usage from 'rsg-components/Usage';
 import IsolateButton from 'rsg-components/slots/IsolateButton';
 import CodeTabButton from 'rsg-components/slots/CodeTabButton';
@@ -25,7 +27,7 @@ export default (config?: Rsg.ProcessedStyleguidistConfig) => {
 		exampleTabs: [
 			{
 				id: EXAMPLE_TAB_CODE_EDITOR,
-				render: Editor,
+				render: EditorLoader,
 			},
 		],
 		docsTabButtons: [

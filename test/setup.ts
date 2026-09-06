@@ -11,6 +11,29 @@ if (typeof window !== 'undefined') {
 		return 0;
 	}) as typeof window.requestAnimationFrame;
 	globalThis.requestAnimationFrame = window.requestAnimationFrame;
+
+	// jsdom does no layout and its Range lacks the two measuring methods CodeMirror calls
+	// while it lays out the editor (Range.getClientRects()/getBoundingClientRect(), the
+	// element variants exist). Empty rectangles are enough for the Editor and Playground
+	// specs, which assert on DOM and behaviour, not on pixels; ResizeObserver and
+	// IntersectionObserver are missing too but CodeMirror checks for them before use.
+	const emptyRect = (): DOMRect => ({
+		x: 0,
+		y: 0,
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		width: 0,
+		height: 0,
+		toJSON: () => ({}),
+	});
+	if (!Range.prototype.getClientRects) {
+		Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+	}
+	if (!Range.prototype.getBoundingClientRect) {
+		Range.prototype.getBoundingClientRect = emptyRect;
+	}
 }
 
 // `classes(styles)` returns a class-name map whose values equal the rule keys,

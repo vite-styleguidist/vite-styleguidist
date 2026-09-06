@@ -103,7 +103,12 @@ class Playground extends Component<PlaygroundProps, PlaygroundState> {
 						name="exampleTabs"
 						active={activeTab}
 						onlyActive
-						// evalInContext passed through to support custom slots that eval code
+						// Public props contract of the code editor (Rsg.EditorProps in
+						// src/typings/RsgEditor.ts, documented under styleguideComponents.Editor):
+						// `code` is the current source, `onChange` receives every edit and is
+						// debounced by `previewDelay`, and `evalInContext` is passed through for
+						// custom editors that evaluate code themselves. Slot adds `name`, `active`
+						// and `onClick`. Keys are only ever added here, never removed or renamed.
 						props={{ code, onChange: this.handleChange, evalInContext }}
 					/>
 				}

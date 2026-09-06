@@ -1,5 +1,6 @@
 export * from './RsgComponent.js';
 export * from './RsgDocgen.js';
+export * from './RsgEditor.js';
 export * from './RsgExample.js';
 export * from './RsgImportMarker.js';
 export * from './RsgPropsObject.js';

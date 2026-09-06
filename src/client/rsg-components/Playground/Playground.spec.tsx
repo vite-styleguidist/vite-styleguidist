@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
+import { EditorView } from '@codemirror/view';
 import Playground from './Playground.js';
 import slots from '../slots/index.js';
 import Context from '../Context/index.js';
@@ -35,6 +36,14 @@ const context = {
 
 const Provider = (props: any) => <Context.Provider value={context} {...props} />;
 
+// The editor is loaded on demand (Editor/EditorLoader.tsx): while its chunk loads, the code
+// shows in a <pre> placeholder, then CodeMirror’s contenteditable takes over. “No editor”
+// therefore means neither the placeholder nor the textbox is in the document.
+const expectNoEditor = (container: HTMLElement) => {
+	expect(container.querySelector('pre')).toBeNull();
+	expect(container.querySelector('[role="textbox"]')).toBeNull();
+};
+
 it('should update code via props', () => {
 	const { rerender, getByText } = render(
 		<Provider>
@@ -53,42 +62,63 @@ it('should update code via props', () => {
 	expect(getByText('Code: Not OK')).toBeInTheDocument();
 });
 
-it('should open a code editor', () => {
-	const { queryByRole, getByText } = render(
+it('should open a code editor', async () => {
+	const { container, findByRole, getByText } = render(
 		<Provider>
 			<Playground {...defaultProps} />
 		</Provider>
 	);
 
-	expect(queryByRole('textbox')).not.toBeInTheDocument();
+	expectNoEditor(container);
 
 	fireEvent.click(getByText(/view code/i));
 
-	expect(queryByRole('textbox')).toBeInTheDocument();
+	expect(await findByRole('textbox')).toHaveTextContent(code);
+});
+
+it('should update the preview after the code is edited', async () => {
+	const { container, findByRole, findByText, getByText } = render(
+		<Provider>
+			<Playground {...defaultProps} />
+		</Provider>
+	);
+	fireEvent.click(getByText(/view code/i));
+	await findByRole('textbox');
+
+	// Drive CodeMirror through its own state API, the closest jsdom gets to typing
+	const view = EditorView.findFromDOM(container);
+	if (!view) {
+		throw new Error('No CodeMirror view found');
+	}
+	view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: newCode } });
+
+	// Playground debounces onChange by `previewDelay` (0 here) before re-rendering the preview
+	expect(await findByText('Code: Not OK')).toBeInTheDocument();
 });
 
 it('should not render a code editor if noeditor option passed in example settings', () => {
-	const { queryByText } = render(
+	const { container, queryByText } = render(
 		<Provider>
 			<Playground {...defaultProps} settings={{ noeditor: true }} />
 		</Provider>
 	);
 
 	expect(queryByText(/view code/i)).not.toBeInTheDocument();
+	expectNoEditor(container);
 });
 
-it('should open a code editor by default if showcode=true option passed in example settings', () => {
-	const { queryByRole } = render(
+it('should open a code editor by default if showcode=true option passed in example settings', async () => {
+	const { findByRole } = render(
 		<Provider>
 			<Playground {...defaultProps} settings={{ showcode: true }} />
 		</Provider>
 	);
 
-	expect(queryByRole('textbox')).toBeInTheDocument();
+	expect(await findByRole('textbox')).toBeInTheDocument();
 });
 
-it('should open a code editor by default if exampleMode="expand" option specified in style guide config', () => {
-	const { queryByRole } = render(
+it('should open a code editor by default if exampleMode="expand" option specified in style guide config', async () => {
+	const { findByRole } = render(
 		<Provider
 			value={{
 				...context,
@@ -101,11 +131,11 @@ it('should open a code editor by default if exampleMode="expand" option specifie
 		</Provider>
 	);
 
-	expect(queryByRole('textbox')).toBeInTheDocument();
+	expect(await findByRole('textbox')).toBeInTheDocument();
 });
 
 it('showcode option in example settings should overwrite style guide config option', () => {
-	const { queryByRole } = render(
+	const { container } = render(
 		<Provider
 			value={{
 				...context,
@@ -118,7 +148,7 @@ it('showcode option in example settings should overwrite style guide config opti
 		</Provider>
 	);
 
-	expect(queryByRole('textbox')).not.toBeInTheDocument();
+	expectNoEditor(container);
 });
 
 it('should not include padded class if padded option is not passed in example settings', () => {

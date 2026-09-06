@@ -5,6 +5,7 @@ import path from 'node:path';
 import getConfig from '../../scripts/config.js';
 import { collectSections } from '../modules/styleguide.js';
 import { parseExamples } from '../modules/examples.js';
+import parseMdx from '../../loaders/utils/mdx.js';
 import {
 	buildManifest,
 	createManifestCache,
@@ -623,20 +624,75 @@ describe('shiftHeadings', () => {
 });
 
 describe('toManifestExamples', () => {
+	const MD = ['Intro', '', '    <A />', '', 'Second', '', '```jsx', '<B />', '```', '', 'Bye'].join(
+		'\n'
+	);
+	const MDX = ['Doc', '', '```jsx', '<C />', '```', '', 'More', '', '```jsx', '<D />', '```'].join(
+		'\n'
+	);
+
+	const mdSource = () => ({
+		chunks: parseExamples(configIn(testDir, {}), { file: '/virtual/Readme.md' }, MD),
+		mdx: false,
+	});
+	const mdxSource = async () => ({
+		chunks: (
+			await parseMdx(configIn(testDir, {}), { file: path.join(testDir, 'Readme.mdx') }, MDX)
+		).chunks,
+		mdx: true,
+	});
+
 	it('should pair every playground with the prose before it', async () => {
-		const config = configIn(testDir, {});
-		const chunks = parseExamples(
-			config,
-			{ file: '/virtual/Readme.md' },
-			['Intro', '', '    <A />', '', 'Second', '', '```jsx', '<B />', '```', '', 'Bye'].join('\n')
-		);
-		expect(toManifestExamples(chunks)).toEqual({
+		expect(toManifestExamples([mdSource()])).toEqual({
 			examples: [
 				{ index: 1, lang: 'jsx', code: '<A />', settings: {}, description: 'Intro' },
 				{ index: 3, lang: 'jsx', code: '<B />', settings: {}, description: 'Second' },
 			],
 			notes: 'Bye',
 		});
+	});
+
+	it('should number a lone mdx page by its playgrounds', async () => {
+		expect(toManifestExamples([await mdxSource()])).toEqual({
+			examples: [
+				{ index: 0, lang: 'jsx', code: '<C />', settings: {}, description: 'Doc' },
+				{ index: 1, lang: 'jsx', code: '<D />', settings: {}, description: 'More' },
+			],
+			notes: '',
+		});
+	});
+
+	// The mixed component: a Markdown examples file plus an `@example ./x.mdx` doclet (or the
+	// reverse). Each source keeps its own rule, but the numbers run continuously across them,
+	// so no two examples of one component share a number and each one is the number
+	// filterExamplesByIndex() resolves back to that example.
+	it('should continue numbering into an mdx doclet after a markdown examples file', async () => {
+		const { examples } = toManifestExamples([mdSource(), await mdxSource()]);
+		// The Markdown page owns 0-4 (five chunks, prose included), so the MDX page starts at 5
+		expect(examples.map(({ index, code }) => [index, code])).toEqual([
+			[1, '<A />'],
+			[3, '<B />'],
+			[5, '<C />'],
+			[6, '<D />'],
+		]);
+	});
+
+	it('should continue numbering into a markdown doclet after an mdx examples file', async () => {
+		const { examples, notes } = toManifestExamples([await mdxSource(), mdSource()]);
+		// The MDX page owns 0-1 (one number per playground, none for its prose), so the
+		// Markdown page's four chunks are 2-5
+		expect(examples.map(({ index, code }) => [index, code])).toEqual([
+			[0, '<C />'],
+			[1, '<D />'],
+			[3, '<A />'],
+			[5, '<B />'],
+		]);
+		expect(notes).toBe('Bye');
+	});
+
+	it('should give every example of a mixed component a distinct number', async () => {
+		const { examples } = toManifestExamples([mdSource(), await mdxSource()]);
+		expect(new Set(examples.map(({ index }) => index)).size).toBe(examples.length);
 	});
 });
 

@@ -95,8 +95,14 @@ export interface ManifestMethod {
 
 export interface ManifestExample {
 	/**
-	 * Position of the example among the chunks of the examples file (prose included), the
-	 * number the style guide uses in isolated-example URLs: `index.html#!/Button/2`.
+	 * The number the style guide uses in isolated-example URLs: `index.html#!/Button/2`.
+	 *
+	 * Numbers run continuously over everything the component documents, in the order the UI
+	 * renders it (the examples file, then the `@example` doclet file): a chunk of a Markdown
+	 * page takes one number each, prose included, and an MDX page takes one per playground
+	 * (its prose is one compiled React tree with no chunks to count). See
+	 * `toManifestExamples()`, which is the same rule the client applies in
+	 * `filterExamplesByIndex()`.
 	 */
 	index: number;
 	/** Fence language (`jsx`, `tsx`, …); code blocks without one are JSX playgrounds. */
@@ -210,11 +216,19 @@ export interface BuildManifestOptions {
 }
 
 /**
- * A chunk of an examples file. The MDX parser stamps `index` on its code chunks: an MDX
- * page's isolated-example URL counts playgrounds, while a Markdown page's counts every
- * chunk (prose included), and `toManifestExamples()` must report the number the UI uses.
+ * A chunk of an examples file. The MDX parser stamps `index` on its code chunks — the
+ * playground's ordinal *within its own page* — because an MDX page's isolated-example URL
+ * counts playgrounds while a Markdown page's counts every chunk (prose included).
+ * `toManifestExamples()` turns both into the single number the UI uses.
  */
 type Chunk = (Rsg.CodeExample & { index?: number }) | Rsg.MarkdownExample;
+
+/** One examples file of a component, as `toManifestExamples()` needs to see it. */
+export interface ExampleSource {
+	chunks: Chunk[];
+	/** Whether the chunks came from an `.mdx` page (their code chunks carry page ordinals). */
+	mdx: boolean;
+}
 
 /** The part of a file’s stat that tells whether it changed since the last parse. */
 const fileKey = (file: string): string => {
@@ -507,30 +521,52 @@ const toManifestMethod = (method: Rsg.MethodDescriptor): ManifestMethod => ({
 });
 
 /**
- * Examples as the manifest lists them: every playground with the prose that precedes it,
- * plus the prose left after the last one (`notes`). `index` counts prose chunks too, to
- * match the isolated-example URLs of the UI.
+ * How many isolated-example numbers one examples file occupies: a Markdown page numbers
+ * every chunk (prose included), an MDX page numbers its playgrounds only.
  */
-export function toManifestExamples(chunks: Chunk[]): {
+const slotCount = ({ chunks, mdx }: ExampleSource): number =>
+	mdx ? chunks.filter((chunk) => chunk.type === 'code').length : chunks.length;
+
+/**
+ * Examples as the manifest lists them: every playground with the prose that precedes it,
+ * plus the prose left after the last one (`notes`).
+ *
+ * `sources` are the component's examples files in the order the UI concatenates them (the
+ * examples file, then the `@example` doclet file — see src/client/utils/processComponents.ts).
+ * Numbering runs continuously across them, each source starting where the previous one ended,
+ * so a component that draws examples from a `.md` file *and* an `.mdx` file still gets one
+ * number per example and every number resolves to the example the UI isolates under it.
+ * A component with a single source is numbered exactly as it was before offsets existed:
+ * `0…n-1` over the chunks of a Markdown page, `0…n-1` over the playgrounds of an MDX page.
+ *
+ * The client applies the same rule from the other end, in `filterExamplesByIndex()`; the two
+ * must be changed together.
+ */
+export function toManifestExamples(sources: ExampleSource[]): {
 	examples: ManifestExample[];
 	notes: string;
 } {
 	const examples: ManifestExample[] = [];
 	let prose: string[] = [];
-	chunks.forEach((chunk, index) => {
-		if (chunk.type === 'markdown') {
-			prose.push(unhighlight(chunk.content).trim());
-			return;
-		}
-		examples.push({
-			// MDX pages number their playgrounds, Markdown pages number every chunk
-			index: chunk.index ?? index,
-			lang: chunk.lang || 'jsx',
-			code: chunk.content,
-			settings: chunk.settings || {},
-			description: prose.join('\n\n'),
+	// Where the source being read starts in the component's continuous numbering
+	let offset = 0;
+	sources.forEach((source) => {
+		source.chunks.forEach((chunk, position) => {
+			if (chunk.type === 'markdown') {
+				prose.push(unhighlight(chunk.content).trim());
+				return;
+			}
+			examples.push({
+				// MDX pages number their playgrounds, Markdown pages number every chunk
+				index: offset + (source.mdx ? (chunk.index ?? 0) : position),
+				lang: chunk.lang || 'jsx',
+				code: chunk.content,
+				settings: chunk.settings || {},
+				description: prose.join('\n\n'),
+			});
+			prose = [];
 		});
-		prose = [];
+		offset += slotCount(source);
 	});
 	return { examples, notes: prose.join('\n\n') };
 }
@@ -645,10 +681,17 @@ class ManifestBuilder {
 		const docs = this.readDocs(file);
 		const name = docs.displayName;
 		// Examples file first, then the `@example` doclet file, like the client does
-		// (see src/client/utils/processComponents.ts)
+		// (see src/client/utils/processComponents.ts). Kept as separate sources because the
+		// two pipelines number their examples differently and toManifestExamples() has to
+		// give the concatenation one continuous numbering. A source that cannot be read is
+		// an empty one in development (tolerateErrors), so one broken page does not take the
+		// whole manifest with it.
 		const examplesFile = await this.readExamplesOrDegrade(docs.examples);
 		const docletFile = await this.readExamplesOrDegrade(docs.example);
-		const chunks = [...examplesFile.chunks, ...docletFile.chunks];
+		const sources: ExampleSource[] = [
+			{ chunks: examplesFile.chunks, mdx: isMdxMarker(docs.examples) },
+			{ chunks: docletFile.chunks, mdx: isMdxMarker(docs.example) },
+		];
 		const error = [examplesFile.error, docletFile.error].filter(Boolean).join('\n');
 		return {
 			name,
@@ -671,7 +714,7 @@ class ManifestBuilder {
 			props: (Array.isArray(docs.props) ? docs.props : []).map(toManifestProp),
 			methods: (docs.methods || []).map(toManifestMethod),
 			format: isMdxMarker(docs.examples) || isMdxMarker(docs.example) ? 'mdx' : 'md',
-			...toManifestExamples(chunks),
+			...toManifestExamples(sources),
 			// Absent unless a page failed, so the manifest of a healthy guide is unchanged
 			...(error ? { error } : {}),
 		};

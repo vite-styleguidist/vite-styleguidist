@@ -14,6 +14,16 @@ import type * as Rsg from '../../../typings/index.js';
 export interface MdxPageContents {
 	/** The page’s playgrounds, in document order; `RsgPlayground` looks itself up by index. */
 	examples: Rsg.RuntimeCodeExample[];
+	/**
+	 * The isolated-example number of this page’s first playground.
+	 *
+	 * Zero unless the page shares a component with another examples file (a `.md` examples file
+	 * plus an `@example ./x.mdx` doclet, or the reverse): the numbers of a component run
+	 * continuously over everything it documents, so a page that is not first starts above zero.
+	 * `RsgPlayground` adds it to its own ordinal to build the isolate link, which is what
+	 * `filterExamplesByIndex()` reads back.
+	 */
+	indexOffset?: number;
 	/** Name of the component or section the page documents, for the isolate links. */
 	name?: string;
 	/** `exampleMode` of the owner: whether examples start with the code editor open. */

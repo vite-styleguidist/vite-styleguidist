@@ -16,7 +16,7 @@ interface RsgPlaygroundProps {
  * isolate button, `previewDelay` and `codeRevision` all behave exactly as they do for `.md`.
  */
 const RsgPlayground: React.FunctionComponent<RsgPlaygroundProps> = ({ index }) => {
-	const { examples, name, exampleMode } = useMdxPageContext();
+	const { examples, name, exampleMode, indexOffset = 0 } = useMdxPageContext();
 	const example = examples[index];
 	if (!example) {
 		// Only reachable if a page is rendered with examples that do not match its compiled
@@ -33,7 +33,9 @@ const RsgPlayground: React.FunctionComponent<RsgPlaygroundProps> = ({ index }) =
 			lang={example.lang}
 			evalInContext={example.evalInContext}
 			name={name}
-			index={index}
+			// `index` is this page’s own ordinal; the isolate link needs the component’s
+			// number, which starts above zero when the page is not its only examples file
+			index={indexOffset + index}
 			settings={example.settings ?? {}}
 			exampleMode={exampleMode}
 		/>

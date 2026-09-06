@@ -13,6 +13,11 @@ export interface MdxPageProps {
 	name?: string;
 	/** `exampleMode` of the owner, passed on to every playground of the page. */
 	exampleMode?: string;
+	/**
+	 * The isolated-example number of this page’s first playground — non-zero only when the
+	 * component documents more than one examples file (see MdxPageContext).
+	 */
+	indexOffset?: number;
 }
 
 /**
@@ -23,10 +28,18 @@ export interface MdxPageProps {
  * guide’s own renderers so an `.mdx` page and a `.md` page paint the same way, plus the
  * `RsgPlayground` / `RsgStatic` pair the loader wrote into the page for each code fence.
  */
-const MdxPage: React.FunctionComponent<MdxPageProps> = ({ chunk, name, exampleMode }) => {
+const MdxPage: React.FunctionComponent<MdxPageProps> = ({
+	chunk,
+	name,
+	exampleMode,
+	indexOffset = 0,
+}) => {
 	const components = useMdxComponents();
 	const { Content, examples } = chunk;
-	const context = useMemo(() => ({ examples, name, exampleMode }), [examples, name, exampleMode]);
+	const context = useMemo(
+		() => ({ examples, name, exampleMode, indexOffset }),
+		[examples, name, exampleMode, indexOffset]
+	);
 	return (
 		// The boundary is inside the renderer so a failing page still occupies its normal place
 		// in the layout, and outside <Content> so it catches everything the page renders.
@@ -44,6 +57,7 @@ MdxPage.propTypes = {
 	chunk: PropTypes.any.isRequired,
 	name: PropTypes.string,
 	exampleMode: PropTypes.string,
+	indexOffset: PropTypes.number,
 };
 
 export default MdxPage;

@@ -19,6 +19,24 @@ export interface ExamplesRenderer {
 	depth?: number;
 }
 
+/**
+ * The isolated-example number each chunk of a page starts at (`#!/Button/2`).
+ *
+ * It is not the array position: a Markdown chunk owns one number, an MDX page owns one per
+ * playground, and a component’s list may concatenate both — its examples file and its
+ * `@example` doclet file (see processComponents.ts). `filterExamplesByIndex()` walks the same
+ * numbering from the other end, and `toManifestExamples()` writes it into `docs.json`; the
+ * three must be changed together.
+ */
+function exampleIndexes(examples: Rsg.Example[]): number[] {
+	let next = 0;
+	return examples.map((example) => {
+		const first = next;
+		next += example.type === 'mdx' ? example.examples.length : 1;
+		return first;
+	});
+}
+
 const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 	examples,
 	name,
@@ -28,9 +46,11 @@ const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 	const { codeRevision } = useStyleGuideContext();
 	const heading =
 		depth === undefined ? undefined : <Heading level={Math.min(6, depth + 1)}>Examples</Heading>;
+	const indexes = exampleIndexes(examples);
 	return (
 		<ExamplesRenderer name={name} heading={heading}>
 			{examples.map((example, index) => {
+				const first = indexes[index];
 				switch (example.type) {
 					case 'code':
 						return (
@@ -40,7 +60,7 @@ const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 								evalInContext={example.evalInContext}
 								key={`${codeRevision}/${index}`}
 								name={name}
-								index={index}
+								index={first}
 								settings={example.settings ?? {}}
 								exampleMode={exampleMode}
 							/>
@@ -57,6 +77,7 @@ const Examples: React.FunctionComponent<ExamplesRenderer> = ({
 								chunk={example}
 								name={name}
 								exampleMode={exampleMode}
+								indexOffset={first}
 								key={`${codeRevision}/${index}`}
 							/>
 						);

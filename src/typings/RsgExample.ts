@@ -28,7 +28,9 @@ export interface RuntimeCodeExample extends CodeExample {
  *
  * `examples[i]` is the i-th playground **of the page**: unlike the `.md` chunk list, prose is
  * not counted, because an MDX page has no prose chunks to count. That is the number the
- * isolated-example URL uses (`#!/Button/1` is the second playground).
+ * isolated-example URL uses (`#!/Button/1` is the second playground) — offset by the examples
+ * that precede the page, on the rare component that documents more than one examples file
+ * (see src/client/utils/filterExamplesByIndex.ts).
  */
 export interface MdxExample {
 	type: 'mdx';

@@ -19,6 +19,21 @@ export const styles = ({ space, color, fontFamily, fontSize }: Rsg.Theme) => ({
 		fontSize: fontSize.small,
 		color: color.light,
 	},
+	// The methods table gives every column but the description its minimum content width,
+	// which for Parameters was the width of the column label alone: an argument then wrapped
+	// over half a dozen lines in a narrow stripe. Keeping `name: Type` on one line makes it
+	// the column's minimum instead, and the description reflows next to it. The table's
+	// container scrolls horizontally, so an unusually long type name cannot break the page.
+	nameType: {
+		whiteSpace: 'nowrap',
+		// Name and Type are isolated components, so their own white-space is reset to
+		// `normal` and Chromium then takes the break opportunity at the space between them
+		// despite the nowrap above: hand them the wrapper's value explicitly
+		'& > *': {
+			isolate: false,
+			whiteSpace: 'inherit',
+		},
+	},
 });
 
 export interface ArgumentProps {
@@ -50,18 +65,19 @@ export const ArgumentRenderer: React.FunctionComponent<ArgumentPropsWithClasses>
 	const content = (
 		<Group>
 			{returns && 'Returns'}
-			{name && (
-				<span>
-					<Name>{name}</Name>
-					{type && <span className={classes.punctuation}>:</span>}
+			{(name || type) && (
+				<span className={classes.nameType}>
+					{name && <Name>{name}</Name>}
+					{name && type && <span className={classes.punctuation}>:</span>}
+					{name && type && ' '}
+					{type && (
+						<Type>
+							{typeName}
+							{isOptional && '?'}
+							{!!defaultValue && `=${defaultValue}`}
+						</Type>
+					)}
 				</span>
-			)}
-			{type && (
-				<Type>
-					{typeName}
-					{isOptional && '?'}
-					{!!defaultValue && `=${defaultValue}`}
-				</Type>
 			)}
 			{type && description && `—`}
 			{description && <Markdown text={`${description}`} inline />}

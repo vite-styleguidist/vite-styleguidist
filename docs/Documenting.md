@@ -90,7 +90,7 @@ Styleguidist will look for any `Readme.md` or `ComponentName.md` files in the co
 
 ## MDX
 
-A Markdown page can only put a component inside a playground, where it is editable source code. An [MDX](https://mdxjs.com/) page can also use components as page furniture — a callout, a props matrix, a tabbed comparison — because its prose is compiled to a React tree. Everything else stays the same: fences, modifiers, the current component in scope, the isolated-example links, `docs.json`.
+A Markdown page can only put a component inside a playground, where it is editable source code. An [MDX](https://mdxjs.com/) page can also use components as page furniture — a callout, a props matrix, a tabbed comparison — because its prose is compiled to a React tree. Everything else stays the same: fences, modifiers, the current component being in scope inside those fences, the isolated-example links, `docs.json`.
 
 MDX is optional and needs two dev dependencies:
 
@@ -128,18 +128,18 @@ The imports at the top of an `.mdx` file are in scope for the page, not for the 
 
 ### MDX is not Markdown
 
-MDX is not a superset of Markdown. Six constructs that a `.md` file accepts behave differently, and the first one is a trap rather than an error:
+MDX is not a superset of Markdown. Six constructs that a `.md` file accepts behave differently, and the first one is a trap rather than a compile error:
 
 | In an `.mdx` file | What happens | Write this instead |
 | --- | --- | --- |
-| A block indented by four spaces | **Not a code block.** MDX has no indented code, so the block is read as prose — and an indented `<Button />` silently becomes a _live component_ on the page instead of a playground | A fenced block |
+| A block indented by four spaces | **Not a code block.** MDX has no indented code, so the block is read as prose, and an indented JSX element is evaluated as a component instead of shown as a playground: `<Callout />` renders _live_ if the page imported it or [mdxComponents](Configuration.md#mdxcomponents) provides it, and otherwise the whole page is replaced by an “Expected component `Callout` to be defined” panel. Either way the build succeeds | A fenced block |
 | An HTML comment (`<!-- … -->`) | Compile error | A JSX expression comment, `{/* … */}` |
 | A void element without a trailing slash (`br`, `img`, `hr`) | Compile error | `<br />`, `<img />`, `<hr />` |
 | An autolink written with angle brackets | Compile error: MDX reads the `<` as the start of a JSX tag | A normal link, `[https://example.com](https://example.com)` |
 | Raw HTML, e.g. a `div` with a `class` attribute | It is JSX, so `class` reaches React verbatim and React warns | `className` |
 | A curly brace in prose | It starts a JavaScript expression | Escape it, `\{`, or wrap it in backticks |
 
-> **Warning:** The indented-block difference is the one to check first when an MDX page renders something unexpected: nothing fails, the page simply shows a live component where a playground was meant to be. The indented examples earlier on this page are Markdown, and stay Markdown, for exactly that reason.
+> **Warning:** The indented-block difference is the one to check first when an MDX page renders something unexpected, and the component the page documents is the worst case: `Button` is in scope inside a fence, but not in the page’s prose, so an indented `<Button />` is neither a playground nor source code — MDX evaluates it, finds nothing, and the page’s prose is replaced by an “Expected component `Button` to be defined” panel. A component the page did import fails the other way round: it renders live, where a playground was meant to be. Neither case fails the build — it exits 0 and warns about nothing — so the page itself is the only place you will see it. The indented examples earlier on this page are Markdown, and stay Markdown, for exactly that reason.
 
 GitHub-flavoured Markdown — tables, task lists, strikethrough, literal URLs — works out of the box, because [remark-gfm](https://github.com/remarkjs/remark-gfm) is enabled by default. If you replace the plugin list with the [mdx](Configuration.md#mdx) option, add it back yourself.
 

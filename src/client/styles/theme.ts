@@ -1,3 +1,5 @@
+import { light, cssVariableName } from './colorSchemes.js';
+
 export const spaceFactor = 8;
 export const space = [
 	spaceFactor / 2, // 4
@@ -9,35 +11,26 @@ export const space = [
 	spaceFactor * 6, // 48
 ];
 
-export const color = {
-	base: '#333',
-	light: '#767676',
-	lightest: '#ccc',
-	link: '#1673b1',
-	linkHover: '#e90',
-	focus: 'rgba(22, 115, 177, 0.25)',
-	border: '#e8e8e8',
-	name: '#690',
-	type: '#905',
-	error: '#c00',
-	baseBackground: '#fff',
-	codeBackground: '#f5f5f5',
-	sidebarBackground: '#f5f5f5',
-	ribbonBackground: '#e90',
-	ribbonText: '#fff',
-	// Based on default Prism theme
-	codeBase: '#333',
-	codeComment: '#6d6d6d',
-	codePunctuation: '#999',
-	codeProperty: '#905',
-	codeDeleted: '#905',
-	codeString: '#690',
-	codeInserted: '#690',
-	codeOperator: '#9a6e3a',
-	codeKeyword: '#1673b1',
-	codeFunction: '#DD4A68',
-	codeVariable: '#e90',
-};
+/**
+ * Colour tokens are CSS custom properties (ADR 0011): each value is
+ * `var(--rsg-color-<name>, <light value>)`. The light value is the fallback, so a
+ * token still works where the variable sheet (cssVariables.ts) is not attached, and
+ * the variable is what switches in dark mode. Overriding a token through the `theme`
+ * config replaces the whole expression with a literal, which opts that token out of
+ * dark mode; to keep both schemes, override the custom property instead (see
+ * docs/Configuration.md). The values themselves live in colorSchemes.ts.
+ */
+const toCustomProperties = <T extends Record<string, string>>(
+	palette: T
+): { [Token in keyof T]: string } =>
+	Object.fromEntries(
+		Object.entries(palette).map(([token, value]) => [
+			token,
+			`var(${cssVariableName(token)}, ${value})`,
+		])
+	) as { [Token in keyof T]: string };
+
+export const color = toCustomProperties(light);
 
 export const fontFamily = {
 	base: [

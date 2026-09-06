@@ -9,6 +9,29 @@ import type * as Rsg from '../../typings/index.js';
 type StylesFactory = (t: Rsg.Theme) => Styles<string>;
 
 /**
+ * `componentName` is derived from the renderer’s function name (Styled.tsx) and is
+ * the key users address in the `styles` option, so it is NOT unique: the props
+ * `TableRenderer` and the Markdown `TableRenderer` are both `Table`. The cache used to
+ * be keyed by name alone, so whichever table mounted first handed its classes to the
+ * other. Each `styles` factory is a distinct module-level function, which makes it a
+ * stable stand-in for the component’s identity; the number is only used in cache keys,
+ * never in class names, so its allocation order does not matter.
+ */
+const stylesIds = new WeakMap<StylesFactory, number>();
+let nextStylesId = 0;
+const getStylesId = (styles: StylesFactory): number => {
+	let id = stylesIds.get(styles);
+	if (id === undefined) {
+		id = nextStylesId++;
+		stylesIds.set(styles, id);
+	}
+	return id;
+};
+
+const getIdentity = (styles: StylesFactory, componentName: string) =>
+	`${componentName}#${getStylesId(styles)}`;
+
+/**
  * By default lodash/memoize only uses the first argument
  * for cache rendering. It works well if the first prameter
  * is enough.
@@ -54,7 +77,8 @@ const createSheet = memoize(
 		});
 	},
 	// calculate the cache key here
-	(styles, config, componentName, cssRevision) => `${componentName}_${cssRevision}`
+	(styles, config, componentName, cssRevision) =>
+		`${getIdentity(styles, componentName)}_${cssRevision}`
 );
 
 // Latest sheet handed out per component identity, across revisions
@@ -78,10 +102,11 @@ export default function createStyleSheet(
 	cssRevision: string
 ): StyleSheet<string> {
 	const sheet = createSheet(styles, config, componentName, cssRevision);
-	const previous = currentSheets.get(componentName);
+	const identity = getIdentity(styles, componentName);
+	const previous = currentSheets.get(identity);
 	if (previous && previous !== sheet) {
 		previous.detach();
 	}
-	currentSheets.set(componentName, sheet);
+	currentSheets.set(identity, sheet);
 	return sheet;
 }

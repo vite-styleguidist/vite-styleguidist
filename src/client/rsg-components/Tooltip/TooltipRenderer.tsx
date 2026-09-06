@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Tippy from '@tippyjs/react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import { Styles } from 'jss';
@@ -54,20 +54,34 @@ export interface TooltipProps extends JssInjectedProps {
 }
 
 function TooltipRenderer({ classes, children, content, placement = 'top' }: TooltipProps) {
+	const triggerRef = useRef<HTMLSpanElement>(null);
+
+	// The trigger is rendered by us and handed to Tippy through `reference` instead of
+	// being passed as Tippy's child. @tippyjs/react (4.2.6, last released 2022) clones a
+	// child trigger and reads `children.ref` off the element to chain refs, and in React 19
+	// `element.ref` is a removed getter that logs
+	// "Accessing element.ref was removed in React 19" on every render. The `reference` prop
+	// takes the same code path minus the clone, so the warning never fires; the rendered
+	// DOM and every Tippy prop below are unchanged.
 	return (
-		<Tippy
-			content={content}
-			className={classes.tooltip}
-			interactive
-			placement={placement}
-			trigger="click mouseenter focus"
-			arrow={false}
-			maxWidth={MAX_WIDTH}
-		>
-			<span role="button" tabIndex={0} className={classes.trigger}>
+		<>
+			<span ref={triggerRef} role="button" tabIndex={0} className={classes.trigger}>
 				{children}
 			</span>
-		</Tippy>
+			<Tippy
+				// `useRef<HTMLSpanElement>(null)` is typed `RefObject<HTMLSpanElement | null>`
+				// while Tippy asks for `RefObject<Element>`; the ref is always populated by the
+				// time Tippy's layout effect reads `.current`, since the span mounts first.
+				reference={triggerRef as React.RefObject<Element>}
+				content={content}
+				className={classes.tooltip}
+				interactive
+				placement={placement}
+				trigger="click mouseenter focus"
+				arrow={false}
+				maxWidth={MAX_WIDTH}
+			/>
+		</>
 	);
 }
 

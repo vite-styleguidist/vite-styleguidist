@@ -43,11 +43,19 @@ export const styles = ({ space, color, borderRadius, mq }: Rsg.Theme) => ({
 	// `styles: { Playground: { tabs: … } }` override silently did nothing. `tab` stays:
 	// rule keys are append-only (ADR 0011).
 	tabs: {
-		// The tab buttons of the example (the Code tab, plus custom exampleTabs fills): a flex
-		// row with the artboard’s 16 px gap; TabButton itself has no sibling margin
 		display: 'flex',
 		alignItems: 'center',
-		gap: space[2],
+		// The Slot renders its fills inside a wrapper element of its own, so the row of tab
+		// buttons (the Code tab, plus custom exampleTabs fills) is that wrapper, not this
+		// element: the flex row and the artboard’s 16 px gap have to go one level down or a
+		// second fill would sit flush against “View Code” (TabButton has no sibling margin).
+		// Mirrors ReactComponentRenderer.tabButtons.
+		'& > *': {
+			isolate: false,
+			display: 'flex',
+			alignItems: 'center',
+			gap: space[2],
+		},
 	},
 	padded: {
 		// add padding between each example element rendered

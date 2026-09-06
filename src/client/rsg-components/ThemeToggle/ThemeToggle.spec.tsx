@@ -11,7 +11,7 @@ import type * as Rsg from '../../../typings/index.js';
 
 const root = document.documentElement;
 
-const renderToggle = (config: Partial<Rsg.ProcessedStyleguidistConfig> = {}) =>
+const renderToggle = (config: Partial<Rsg.ProcessedStyleguidistConfig> = {}, compact = false) =>
 	render(
 		<Context.Provider
 			value={{
@@ -22,7 +22,7 @@ const renderToggle = (config: Partial<Rsg.ProcessedStyleguidistConfig> = {}) =>
 				displayMode: 'all',
 			}}
 		>
-			<ThemeToggle />
+				<ThemeToggle compact={compact} />
 		</Context.Provider>
 	);
 
@@ -103,4 +103,35 @@ test('should read a forced scheme from <html> when the config does not reach the
 	const { container } = renderToggle();
 	expect(container).toBeEmptyDOMElement();
 	expect(root).toHaveAttribute(COLOR_SCHEME_ATTRIBUTE, 'light');
+});
+
+/**
+ * The small-screen header has room for one 44 px button only, so the group collapses
+ * into a button that cycles system -> light -> dark -> system and names both the
+ * current scheme and the next one (QA F9, V5).
+ */
+test('should cycle through the schemes as a single button when compact', () => {
+	const { getByRole, queryByRole } = renderToggle({}, true);
+	expect(queryByRole('group')).not.toBeInTheDocument();
+	expect(getByRole('button')).toHaveAttribute(
+		'aria-label',
+		'Color scheme: System. Switch to Light'
+	);
+
+	fireEvent.click(getByRole('button'));
+	expect(root).toHaveAttribute(COLOR_SCHEME_ATTRIBUTE, 'light');
+	expect(getByRole('button')).toHaveAttribute('aria-label', 'Color scheme: Light. Switch to Dark');
+
+	fireEvent.click(getByRole('button'));
+	expect(root).toHaveAttribute(COLOR_SCHEME_ATTRIBUTE, 'dark');
+	expect(getByRole('button')).toHaveAttribute('aria-label', 'Color scheme: Dark. Switch to System');
+
+	fireEvent.click(getByRole('button'));
+	expect(root).not.toHaveAttribute(COLOR_SCHEME_ATTRIBUTE);
+	expect(window.localStorage.getItem(COLOR_SCHEME_STORAGE_KEY)).toBe('system');
+});
+
+test('should render nothing when compact and the config forces a scheme', () => {
+	const { container } = renderToggle({ colorScheme: 'dark' }, true);
+	expect(container).toBeEmptyDOMElement();
 });

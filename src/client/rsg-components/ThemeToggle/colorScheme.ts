@@ -62,3 +62,20 @@ export function readConfiguredScheme(): ColorScheme {
 	const value = document.documentElement.getAttribute(COLOR_SCHEME_CONFIG_ATTRIBUTE);
 	return isColorScheme(value) ? value : 'system';
 }
+
+/**
+ * The scheme the style guide forces, from the `colorScheme` config option and, when
+ * that did not reach the client, from `<html>`. `system` means the visitor chooses.
+ */
+export function resolveConfiguredScheme(configured?: string): ColorScheme {
+	return isColorScheme(configured) ? configured : readConfiguredScheme();
+}
+
+/**
+ * Whether there is a choice to offer, i.e. whether ThemeToggle renders anything. The
+ * single source of that decision: StyleGuideRenderer asks before it draws the strip
+ * that would hold the toggle, so a forced scheme leaves no empty bordered footer.
+ */
+export function hasSchemeChoice(configured?: string): boolean {
+	return resolveConfiguredScheme(configured) === 'system';
+}

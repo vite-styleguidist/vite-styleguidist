@@ -49,4 +49,25 @@ test.describe('Styleguidist core', () => {
 		await expect.poll(() => containers.count()).toBeGreaterThan(1);
 		await expect(sidebar).toHaveCount(1);
 	});
+
+	test('switches the colour scheme and remembers it across reloads', async () => {
+		const html = page.locator('html');
+		const toggle = page.getByRole('group', { name: 'Color scheme' });
+
+		// Default: nothing forced, the page follows the OS (no data-rsg-theme attribute)
+		await expect(toggle.getByRole('button', { name: 'System' })).toHaveAttribute('aria-pressed', 'true');
+		await expect(html).not.toHaveAttribute('data-rsg-theme');
+
+		await toggle.getByRole('button', { name: 'Dark' }).click();
+		await expect(html).toHaveAttribute('data-rsg-theme', 'dark');
+
+		// The inline head script applies the stored choice before first paint
+		await page.reload();
+		await expect(html).toHaveAttribute('data-rsg-theme', 'dark');
+		await expect(toggle.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true');
+
+		// Back to the default so the shared page (and localStorage) is clean for later tests
+		await toggle.getByRole('button', { name: 'System' }).click();
+		await expect(html).not.toHaveAttribute('data-rsg-theme');
+	});
 });

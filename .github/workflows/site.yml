@@ -9,8 +9,12 @@ name: Docs site
 
 on:
   push:
+    # `next` too: during a beta the site documents the prerelease, and there is no reason to
+    # keep the docs offline until the stable release lands on main. Pages has a single
+    # deployment slot, so whichever branch was pushed last is what is live.
     branches:
       - main
+      - next
     # The site embeds docs/ and the examples, and the examples are built with the
     # package from src/, so any of those can change what gets published.
     paths:

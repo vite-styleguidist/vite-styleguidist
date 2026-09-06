@@ -1,7 +1,12 @@
 /**
  * When the theme is to be used in a component,
  * it will have all it's values set.
- * None of those declarations should be optional
+ * None of those declarations should be optional.
+ *
+ * Token names are append-only (ADR 0011): new tokens are added next to the existing
+ * ones, never renamed, so every `theme` and `styles` config in the wild keeps working.
+ * Colour tokens hold `var(--rsg-color-<name>, <light value>)` strings, see
+ * src/client/styles/theme.ts.
  */
 export interface Theme {
 	spaceFactor: number;
@@ -50,8 +55,30 @@ export interface Theme {
 		h5: number;
 		h6: number;
 	};
+	/** Unitless line heights: `base` for running text, `heading` for headings. */
+	lineHeight: {
+		base: number;
+		heading: number;
+	};
+	/** `normal` and `bold` by default; a number (400, 700) works as well. */
+	fontWeight: {
+		normal: string | number;
+		bold: string | number;
+	};
+	/** Duration and easing (without the property): `transition: \`color ${transition.fast}\`` */
+	transition: {
+		fast: string;
+		slow: string;
+	};
+	/** Complete shadow values: `boxShadow: shadow.tooltip`, `textShadow: shadow.ribbon` */
+	shadow: {
+		tooltip: string;
+		ribbon: string;
+	};
+	/** Media queries, usable as keys of a JSS rule: `[mq.small]: { … }` */
 	mq: {
 		small: string;
+		medium: string;
 	};
 	borderRadius: number;
 	maxWidth: number;

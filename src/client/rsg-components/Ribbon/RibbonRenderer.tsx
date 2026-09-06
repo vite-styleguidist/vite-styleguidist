@@ -2,7 +2,7 @@ import React from 'react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ color, space, fontSize, fontFamily }: Rsg.Theme) => ({
+export const styles = ({ color, space, fontSize, fontFamily, shadow }: Rsg.Theme) => ({
 	root: {
 		position: 'fixed',
 		top: 0,
@@ -24,7 +24,7 @@ export const styles = ({ color, space, fontSize, fontFamily }: Rsg.Theme) => ({
 		fontSize: fontSize.base,
 		background: color.ribbonBackground,
 		textDecoration: 'none',
-		textShadow: [[0, '-1px', 0, 'rgba(0,0,0,.15)']],
+		textShadow: shadow.ribbon,
 		transformOrigin: [[0, 0]],
 		transform: 'rotate(45deg)',
 		cursor: 'pointer',

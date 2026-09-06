@@ -36,4 +36,18 @@ describe('theme', () => {
 		expect(typeof theme.maxWidth).toBe('number');
 		expect(typeof theme.sidebarWidth).toBe('number');
 	});
+
+	it('should ship the tokens for formerly hard-coded values with those exact values', () => {
+		expect(theme.lineHeight).toEqual({ base: 1.5, heading: 1.2 });
+		expect(theme.fontWeight).toEqual({ normal: 'normal', bold: 'bold' });
+		expect(theme.transition).toEqual({ fast: '150ms ease-in', slow: '750ms ease-out' });
+		expect(theme.shadow).toEqual({
+			tooltip: '0 2px 4px rgba(0,0,0,.15)',
+			ribbon: '0 -1px 0 rgba(0,0,0,.15)',
+		});
+		expect(theme.mq).toEqual({
+			small: '@media (max-width: 600px)',
+			medium: '@media (max-width: 1024px)',
+		});
+	});
 });

@@ -61,8 +61,37 @@ export const fontSize = {
 	h6: 16,
 };
 
+// Tokens for values components used to hard-code (line heights, weights, transitions,
+// shadows); the defaults are exactly those former literals, so adopting a token
+// changes no output. They are here so that users can override them at all.
+export const lineHeight = {
+	base: 1.5,
+	heading: 1.2,
+};
+
+export const fontWeight = {
+	normal: 'normal',
+	bold: 'bold',
+};
+
+// Duration and easing only; the property stays in the component: `color ${transition.fast}`
+export const transition = {
+	fast: '150ms ease-in',
+	slow: '750ms ease-out',
+};
+
+// Whole shadow values. The colour is a literal for now: a translucent black works on
+// both schemes, and the designed palette may route it through a colour token later.
+export const shadow = {
+	tooltip: '0 2px 4px rgba(0,0,0,.15)',
+	ribbon: '0 -1px 0 rgba(0,0,0,.15)',
+};
+
 export const mq = {
 	small: '@media (max-width: 600px)',
+	// Not used by any component yet: sidebar (200) + content (1000) + paddings no longer
+	// fit side by side around this width, so it is the natural next breakpoint.
+	medium: '@media (max-width: 1024px)',
 };
 
 export const borderRadius = 3;

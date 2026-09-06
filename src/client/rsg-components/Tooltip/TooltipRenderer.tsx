@@ -3,7 +3,7 @@ import Tippy from '@tippyjs/react';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ space, color, borderRadius, fontSize }: Rsg.Theme) => ({
+export const styles = ({ space, color, borderRadius, fontSize, shadow }: Rsg.Theme) => ({
 	tooltip: {
 		'&.tippy-box': {
 			transitionProperty: [['opacity']],
@@ -16,7 +16,7 @@ export const styles = ({ space, color, borderRadius, fontSize }: Rsg.Theme) => (
 			border: `1px ${color.border} solid`,
 			borderRadius,
 			background: color.baseBackground,
-			boxShadow: [[0, 2, 4, 'rgba(0,0,0,.15)']],
+			boxShadow: shadow.tooltip,
 			fontSize: fontSize.small,
 			color: color.type,
 		},

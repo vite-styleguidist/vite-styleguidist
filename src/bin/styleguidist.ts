@@ -13,6 +13,22 @@ import type * as Rsg from '../typings/index.js';
 
 const logger = glogg('rsg');
 
+// `engines` in package.json is advisory for npm (it only warns, unless the user sets
+// engine-strict), and the compiled lib/ relies on features older or odd-numbered Node.js lines
+// lack (require(esm), recent Vite), so an unsupported runtime would fail somewhere deep with an
+// error that points nowhere near the cause. Refuse early instead. Keep in sync with `engines`.
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+if (!(nodeMajor >= 24 || (nodeMajor === 22 && nodeMinor >= 12))) {
+	console.error(
+		kleur
+			.bold()
+			.red(
+				`Vite Styleguidist needs Node.js 22.12 or newer (Node 23 is not supported), you are running ${process.version}.`
+			)
+	);
+	process.exit(1);
+}
+
 const argv = mri(process.argv.slice(2));
 const command = argv._[0];
 

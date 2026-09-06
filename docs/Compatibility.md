@@ -8,7 +8,7 @@ This page is the single source of truth for what Vite Styleguidist supports. `pa
 
 | What | Supported | Notes |
 | --- | --- | --- |
-| Node.js | `^22.12.0 \|\| >=24.0.0` | Node.js 22.12 or newer. Node 23 is not supported (it is an odd-numbered, end-of-life line); 24 and later are. This is the `engines.node` range in `package.json`; npm refuses to install on other versions. CI runs the unit tests on Node 22 and 24, and the integration tests on Node 22. |
+| Node.js | `^22.12.0 \|\| >=24.0.0` | Node.js 22.12 or newer. Node 23 is not supported (it is an odd-numbered, end-of-life line); 24 and later are. This is the `engines.node` range in `package.json`; npm only warns (`EBADENGINE`) on other versions unless you set `engine-strict=true`, so the `styleguidist` command refuses to start on an unsupported Node.js and says why. CI runs the unit tests on Node 22 and 24, and the integration tests on Node 22. |
 | React | `>=18.0` | `react` and `react-dom` are peer dependencies. CI tests with React 19; React 18 is supported through the same `react-dom/client` API. Preact works through `preact/compat`, see the [cookbook](Cookbook.md#how-to-use-styleguidist-with-preact). |
 | Vite | `^8.2.2`, bundled | Vite is a dependency of Vite Styleguidist, not a peer dependency: you don’t install it and you don’t pick its version. Your own project may use any bundler, or a different Vite major; only the style guide is built with the bundled one, see [Configuring Vite](Vite.md). |
 | TypeScript | 5.9 (type declarations) | The package ships `.d.ts` files generated with TypeScript `^5.9.3`. Consumers on any TypeScript 5.x should be fine; older versions are not tested. TypeScript in your components needs no setup: Vite compiles it and react-docgen reads the type annotations. |

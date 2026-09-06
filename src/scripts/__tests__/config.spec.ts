@@ -335,3 +335,32 @@ it('should set the usageMode to collapse if the flag showUsage is off', () => {
 	});
 	expect(result.usageMode).toBe('collapse');
 });
+
+describe('mdxComponents', () => {
+	// The values become imports of a virtual module with no directory of its own, so a
+	// relative path only works if it is resolved here, against the config file (C2/C3)
+	it('should resolve a relative module path against the config directory', () => {
+		const result = getConfig({
+			mdxComponents: { Callout: 'src/docs/Callout' },
+		});
+		expect(result.mdxComponents).toEqual({
+			Callout: path.join(configDir, 'src/docs/Callout'),
+		});
+	});
+
+	it('should leave an absolute module path alone', () => {
+		const absolute = path.join(configDir, 'src/docs/Callout');
+		const result = getConfig({ mdxComponents: { Callout: absolute } });
+		expect(result.mdxComponents).toEqual({ Callout: absolute });
+	});
+
+	it('should pass a component value through untouched', () => {
+		const Callout = () => null;
+		const result = getConfig({ mdxComponents: { Callout } });
+		expect(result.mdxComponents).toEqual({ Callout });
+	});
+
+	it('should default to an empty map', () => {
+		expect(getConfig().mdxComponents).toEqual({});
+	});
+});

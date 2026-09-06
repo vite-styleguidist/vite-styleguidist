@@ -3,6 +3,7 @@
 
 import path from 'node:path';
 import glogg from 'glogg';
+import mapValues from 'lodash/mapValues.js';
 import startCase from 'lodash/startCase.js';
 import kleur from 'kleur';
 import { builtinResolvers, defaultHandlers } from 'react-docgen';
@@ -207,6 +208,23 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	mdxComponents: {
 		type: 'object',
 		default: {},
+		example: { Callout: 'src/docs/Callout' },
+		// String values are module paths the browser bundle imports (see
+		// src/vite/modules/styleguide.ts), and the virtual module they end up in has no
+		// directory of its own, so a relative specifier would be resolved against the
+		// package instead of the project. Resolve them here, against the config file’s
+		// folder, exactly as `styles` and `theme` resolve their path form — which also
+		// makes the watched file absolute. Component values are passed through: a config
+		// that is itself bundled can carry a real component.
+		process: (
+			val: Record<string, unknown> | undefined,
+			config: unknown,
+			configDir: string
+		): Record<string, unknown> | undefined =>
+			val &&
+			mapValues(val, (value) =>
+				typeof value === 'string' ? path.resolve(configDir, value) : value
+			),
 	},
 	minimize: {
 		type: 'boolean',

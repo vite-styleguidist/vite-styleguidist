@@ -129,6 +129,33 @@ describe('generateStyleguideModule', () => {
 		}
 	});
 
+	// The schema resolves a relative `mdxComponents` path against the config file, so the
+	// import the browser module gets is absolute and the watched file is a real path (C2)
+	it('should import an mdxComponents module path given relative to the config', () => {
+		const relative = 'components/Button/Button.js';
+		const absolute = path.join(testDir, relative);
+		const withComponents = getConfig({
+			components: 'components/**/[A-Z]*.js',
+			mdxComponents: { Callout: relative },
+		});
+		const { code, watchFiles } = generateStyleguideModule(withComponents);
+
+		expect(importsOf(code)).toEqual(expect.arrayContaining([absolute]));
+		expect(watchFiles).toEqual([absolute]);
+		expect(code).toMatch(/"Callout": \(__rsg_\d+\.default !== undefined/);
+	});
+
+	it('should serialize an mdxComponents component value without importing anything', () => {
+		const withComponents = {
+			...config,
+			mdxComponents: { Callout: function Callout() {} },
+		} as unknown as Rsg.SanitizedStyleguidistConfig;
+		const { code, watchFiles } = generateStyleguideModule(withComponents);
+
+		expect(watchFiles).toEqual([]);
+		expect(code).toMatch('function Callout()');
+	});
+
 	it('should show the welcome screen when nothing matches', () => {
 		// The welcome screen only lists array patterns (getComponentPatternsFromSections)
 		const emptyConfig = getConfig({ components: ['nothing/**/*.js'] });

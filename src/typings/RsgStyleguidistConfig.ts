@@ -82,8 +82,11 @@ interface BaseStyleguidistConfig {
 	/**
 	 * Extra components available to every MDX page, merged over the default element map
 	 * (`h1`, `p`, `a`, …): `{ Callout: 'src/docs/Callout' }` makes `<Callout/>` usable
-	 * without an import. Values are module paths, resolved and imported for the browser like
-	 * a `styles` or `theme` path; a component value works when the config itself is bundled.
+	 * without an import. Values are module paths — absolute, or relative to the config
+	 * file, resolved and imported for the browser exactly like a `styles` or `theme` path.
+	 * A component value is emitted with `Function.prototype.toString()` like a `styles`
+	 * function, so it must be self-contained: it cannot close over anything else in the
+	 * config file, and it cannot use JSX unless the config is compiled.
 	 */
 	mdxComponents: Record<string, string | ComponentType<any>>;
 	minimize: boolean;

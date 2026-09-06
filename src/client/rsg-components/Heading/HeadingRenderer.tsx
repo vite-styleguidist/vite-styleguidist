@@ -9,6 +9,11 @@ import type * as Rsg from '../../../typings/index.js';
  * height; the levels differ by size only. Margins are deliberately not set here: the
  * component header, section titles and Markdown headings each own their spacing
  * (see MarkdownHeadingRenderer for the prose case).
+ *
+ * `level` picks the element (and so the document outline); the optional `size` picks the
+ * visual scale and defaults to `level`. They are separate because a component name sits
+ * at whatever depth its section nests it (h2, h3…) but is always drawn at the page-title
+ * size the artboards specify.
  */
 const styles = ({ color, fontFamily, fontSize, fontWeight, lineHeight, mq }: Rsg.Theme) => ({
 	heading: {
@@ -58,16 +63,18 @@ const styles = ({ color, fontFamily, fontSize, fontWeight, lineHeight, mq }: Rsg
 interface HeadingProps extends JssInjectedProps, React.HTMLAttributes<HTMLHeadingElement> {
 	children?: React.ReactNode;
 	level: number;
+	size?: number;
 }
 
 const HeadingRenderer: React.FunctionComponent<HeadingProps> = ({
 	classes,
 	level,
+	size,
 	children,
 	...props
 }) => {
 	const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-	const headingClasses = cx(classes.heading, classes[`heading${level}`]);
+	const headingClasses = cx(classes.heading, classes[`heading${size || level}`]);
 
 	return (
 		<Tag {...props} className={headingClasses}>
@@ -79,6 +86,7 @@ const HeadingRenderer: React.FunctionComponent<HeadingProps> = ({
 HeadingRenderer.propTypes = {
 	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
 	level: PropTypes.oneOf([1, 2, 3, 4, 5, 6]).isRequired,
+	size: PropTypes.oneOf([1, 2, 3, 4, 5, 6]),
 	children: PropTypes.any,
 };
 

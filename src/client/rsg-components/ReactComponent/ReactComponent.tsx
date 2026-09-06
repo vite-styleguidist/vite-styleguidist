@@ -80,6 +80,11 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 						}}
 						href={href}
 						depth={depth}
+						// The component name keeps the outline level its nesting gives it, but is
+						// always drawn at the page-title size (40px, 32 below mq.small) the
+						// artboards specify: a Button documented three sections deep should not
+						// read as a sub-sub-heading (ADR 0011)
+						size={1}
 					>
 						{visibleName}
 					</SectionHeading>

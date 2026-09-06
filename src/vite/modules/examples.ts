@@ -61,32 +61,12 @@ export function parseExamples(
 		source = expandDefaultComponent(source, displayName);
 	}
 
-	// chunkify() drops the fence language of playground examples (the browser compiles
-	// them all the same way), but the machine-readable docs want it back to write
-	// ```jsx / ```tsx fences. `updateExample` is called once per code block, in document
-	// order, with the same `content` that ends up in the chunk, so the languages are
-	// recorded here and matched back to the code chunks below.
-	const seen: { lang?: string | null; content: string }[] = [];
-	const updateExample = (props: Omit<Rsg.CodeExample, 'type'>) => {
-		const updated = config.updateExample ? config.updateExample(props, file) : props;
-		seen.push({ lang: updated.lang, content: updated.content });
-		return updated;
-	};
+	// chunkify() keeps the fence language on every playground chunk (the machine-readable
+	// docs write it back as ```jsx / ```tsx); `updateExample` sees each block first
+	const updateExample = (props: Omit<Rsg.CodeExample, 'type'>) =>
+		config.updateExample ? config.updateExample(props, file) : props;
 
-	const examples = chunkify(source, updateExample);
-
-	let cursor = 0;
-	return examples.map((example) => {
-		if (example.type !== 'code') {
-			return example;
-		}
-		// Static and non-playground blocks were seen too but produced no chunk: skip them
-		while (cursor < seen.length && seen[cursor].content !== example.content) {
-			cursor++;
-		}
-		const lang = cursor < seen.length ? seen[cursor++].lang : undefined;
-		return lang ? { ...example, lang } : example;
-	});
+	return chunkify(source, updateExample);
 }
 
 /**

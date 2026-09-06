@@ -58,6 +58,9 @@ export default function chunkify(
 						type: 'code',
 						content: example.content,
 						settings: example.settings,
+						// The browser compiles every playground the same way, but the machine-readable
+						// docs write the fence back (```jsx / ```tsx), so the language is kept
+						...(lang ? { lang } : {}),
 					});
 					node.type = 'html';
 					node.value = CODE_PLACEHOLDER;

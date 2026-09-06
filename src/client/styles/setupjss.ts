@@ -96,6 +96,11 @@ const jss = create({
 				fontSize: 'inherit',
 				fontWeight: 'inherit',
 				lineHeight: 'inherit',
+				// Without this the reset would set `cursor: auto` on every isolated element,
+				// including the icons and labels inside a button or a link, so the pointer a
+				// control declares for itself would stop at its own box. `cursor` is an
+				// inherited property, so letting it through is what the browser does anyway.
+				cursor: 'inherit',
 			},
 		}),
 		nested(),

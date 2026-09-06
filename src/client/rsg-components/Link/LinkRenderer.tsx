@@ -11,13 +11,13 @@ const styles = ({ color, transition }: Rsg.Theme): Styles => ({
 			fontSize: 'inherit',
 			color: color.link,
 			textDecoration: 'none',
+			cursor: 'pointer',
 			transition: `color ${transition.fast}`,
 		},
 		'&:hover, &:active': {
 			isolate: false,
 			color: color.linkHover,
 			textDecoration: 'underline',
-			cursor: 'pointer',
 		},
 		// The keyboard focus ring of the facelift (ADR 0011). `:focus-visible` keeps it
 		// off mouse clicks; browsers without it keep their default outline, because the

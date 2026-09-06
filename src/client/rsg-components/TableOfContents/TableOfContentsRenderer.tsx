@@ -126,6 +126,7 @@ const styles = ({
 		lineHeight: lineHeight.base,
 		background: 'transparent',
 		whiteSpace: 'nowrap',
+		cursor: 'pointer',
 		// Doubled class: the four properties the Link component declares for the base
 		// state (`&, &:link, &:visited`, one class + one pseudo-class) have to outrank it.
 		// Everything else stays on the plain rule above, where a `styles` override —

@@ -59,6 +59,7 @@ export const styles = ({
 		overflow: 'hidden',
 		textOverflow: 'ellipsis',
 		whiteSpace: 'nowrap',
+		cursor: 'pointer',
 		// Doubled class: only the properties the Link component declares for the base
 		// state (`&, &:link, &:visited`, one class + one pseudo-class) need to outrank it,
 		// whichever sheet is attached later. The rest stays on the plain rule above, so a

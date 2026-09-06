@@ -32,7 +32,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "styleguidist": "./lib/bin/styleguidist.js"
+    "styleguidist": "lib/bin/styleguidist.js"
   },
   "files": [
     "lib",

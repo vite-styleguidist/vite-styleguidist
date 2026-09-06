@@ -17,6 +17,14 @@ const styles = ({ space, color, fontSize, lineHeight, borderRadius }: Rsg.Theme)
 		fontSize: fontSize.base,
 		lineHeight: lineHeight.base,
 		color: color.base,
+		// The text is Markdown and its blocks carry their own bottom margin (Para), which would
+		// otherwise sit inside the box’s 12 px padding and make the bottom read 28 px against
+		// the 12 px above. markdown-to-jsx returns a single block unwrapped and wraps several
+		// in a <div>, so the last block is zeroed at both depths.
+		'& > :last-child, & > * > :last-child': {
+			isolate: false,
+			marginBottom: 0,
+		},
 	},
 });
 

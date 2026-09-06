@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { MdFullscreen, MdFullscreenExit } from 'react-icons/md';
+import { MdCloseFullscreen, MdOpenInFull } from 'react-icons/md';
 import ToolbarButton from 'rsg-components/ToolbarButton';
 import getUrl from '../../utils/getUrl.js';
 
@@ -17,18 +17,27 @@ const IsolateButton = ({ name, example, isolated, href }: IsolateButtonProps) =>
 	}
 
 	const testID = example ? `${name}-${example}-isolate-button` : `${name}-isolate-button`;
+	// The example toolbar spells the action out next to the icon (“Open isolated”, Main
+	// artboard); the section and component headers keep the icon alone
+	const isExampleToolbar = example !== undefined;
 
 	return isolated ? (
-		<ToolbarButton href={href} title="Show all components" testId={testID}>
-			<MdFullscreenExit />
+		<ToolbarButton
+			href={href}
+			title="Show all components"
+			label={isExampleToolbar ? 'Show all components' : undefined}
+			testId={testID}
+		>
+			<MdCloseFullscreen />
 		</ToolbarButton>
 	) : (
 		<ToolbarButton
 			href={getUrl({ name, example, isolated: true })}
 			title="Open isolated"
+			label={isExampleToolbar ? 'Open isolated' : undefined}
 			testId={testID}
 		>
-			<MdFullscreen />
+			<MdOpenInFull />
 		</ToolbarButton>
 	);
 };

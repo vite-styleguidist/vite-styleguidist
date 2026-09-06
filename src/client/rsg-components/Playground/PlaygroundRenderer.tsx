@@ -4,21 +4,33 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ space, color, borderRadius }: Rsg.Theme) => ({
+export const styles = ({ space, color, borderRadius, mq }: Rsg.Theme) => ({
 	root: {
 		marginBottom: space[4],
 	},
+	// The preview box (Main artboard, examples section): 24 / 16 padding, a 1 px border on a
+	// 6 px radius and the page background; 20 / 16 on small screens (Mobile artboard).
 	preview: {
-		padding: space[2],
+		padding: [[space[3], space[2]]],
+		marginBottom: space[1],
 		border: [[1, color.border, 'solid']],
 		borderRadius,
-		// the next 2 lines are required to contain floated components
+		background: color.baseBackground,
+		// the next 3 lines are required to contain floated components; `top` removes the
+		// descender gap an inline-block leaves below itself
 		width: '100%',
 		display: 'inline-block',
+		verticalAlign: 'top',
+		[mq.small]: {
+			padding: [[20, space[2]]],
+		},
 	},
+	// The toolbar row between the preview and the code: the tab buttons on the left, the
+	// toolbar (“Open isolated”) pushed to the right
 	controls: {
 		display: 'flex',
 		alignItems: 'center',
+		gap: space[2],
 		marginBottom: space[1],
 	},
 	toolbar: {

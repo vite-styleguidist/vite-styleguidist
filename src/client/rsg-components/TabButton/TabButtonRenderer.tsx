@@ -4,40 +4,63 @@ import { Styles } from 'jss';
 import cx from 'clsx';
 import type * as Rsg from '../../../typings/index.js';
 
+// A tab label (“View Code”, “Props & methods”): 13 / 600 sentence-case text with a 2 px
+// underline in the link colour when active (Main artboard). The underline is always drawn,
+// transparent while inactive, so switching tabs does not change the row’s height.
 export const styles = ({
 	space,
 	color,
 	fontFamily,
 	fontSize,
+	fontWeight,
+	lineHeight,
+	borderRadius,
 	buttonTextTransform,
+	transition,
+	mq,
 }: Rsg.Theme): Styles => ({
 	button: {
-		padding: [[space[1], 0]],
+		padding: [[6, 0]],
 		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
+		fontSize: fontSize.small,
+		fontWeight: fontWeight.bold,
+		lineHeight: lineHeight.base,
 		color: color.light,
 		background: 'transparent',
 		textTransform: buttonTextTransform,
-		transition: 'color 750ms ease-out',
+		transition: `color ${transition.slow}, border-color ${transition.slow}`,
 		border: 'none',
+		borderBottom: [[2, 'transparent', 'solid']],
 		cursor: 'pointer',
 		'&:hover, &:focus': {
 			isolate: false,
-			outline: 0,
-			color: color.linkHover,
-			transition: 'color 150ms ease-in',
+			color: color.base,
+			transition: `color ${transition.fast}, border-color ${transition.fast}`,
 		},
-		'&:focus:not($isActive)': {
+		// Keyboard focus ring shared with the rest of the UI (Editor, links): a translucent halo
+		// instead of the browser outline; the halo follows the page radius
+		'&:focus-visible': {
 			isolate: false,
-			outline: [[1, 'dotted', color.linkHover]],
+			outline: 0,
+			borderRadius,
+			boxShadow: [[0, 0, 0, 3, color.focus]],
 		},
 		'& + &': {
 			isolate: false,
-			marginLeft: space[1],
+			marginLeft: space[2],
+		},
+		// 44 px touch targets on small screens (Mobile artboard)
+		[mq.small]: {
+			minHeight: 44,
 		},
 	},
 	isActive: {
-		borderBottom: [[2, color.linkHover, 'solid']],
+		color: color.link,
+		borderBottomColor: color.link,
+		'&:hover, &:focus': {
+			isolate: false,
+			color: color.linkHover,
+		},
 	},
 });
 

@@ -7,6 +7,12 @@ import type * as Rsg from '../../../typings/index.js';
 // A tab label (“View Code”, “Props & methods”): 13 / 600 sentence-case text with a 2 px
 // underline in the link colour when active (Main artboard). The underline is always drawn,
 // transparent while inactive, so switching tabs does not change the row’s height.
+//
+// One size for both rows on purpose: the example row (Playground) and the component header row
+// (ReactComponent) share these 13 px / 6 px-padding buttons, and only their gap differs (16 vs
+// 20, set by the two parents). The artboard draws the header tabs a notch larger (14 px,
+// 8/10 padding); a `size` prop set by UsageTabButton would be the way to add that later, but it
+// buys a second visual variant of the same control, so the smaller pair ships as is.
 export const styles = ({
 	space,
 	color,

@@ -12,9 +12,11 @@ import type * as Rsg from '../../../typings/index.js';
 
 /**
  * Room the badge takes out of the code area’s right edge on desktop: its 12 px offset from the
- * frame, the widest label (“JSON”-length, 4 mono characters at 11 px ≈ 28 px) and an 8 px gap,
- * so the first line of code never runs under the label. Under `mq.small` there is no badge
- * (Mobile artboard) and no gutter.
+ * frame, room for a four-character label (11 px mono, ≈ 28 px; “JSX” measures 21) and an 8 px
+ * gap, so the first line of code never runs under it. A fence language with no short spelling
+ * is shown as written and can be wider than that — it would overlap the very end of a full
+ * first row, the way it did for every label before this gutter. Under `mq.small` there is no
+ * badge (Mobile artboard) and no gutter.
  */
 const badgeGutter = 12 + 28 + 8;
 

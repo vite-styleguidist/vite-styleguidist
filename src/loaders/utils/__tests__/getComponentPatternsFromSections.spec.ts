@@ -19,13 +19,12 @@ const sections = [
 		],
 	},
 	{
+		// A section can carry both, and getSections() processes both, so both are listed
 		name: 'Nesting With Components',
 		components: ['components/**/T*.js'],
-		// is this on purpose or a bug ?
-		// a section cannot conatin `components` and nested `sections`
 		sections: [
 			{
-				name: 'Ignored Nested',
+				name: 'Also Nested',
 				components: ['components/**/O*.js'],
 			},
 		],
@@ -34,7 +33,12 @@ const sections = [
 
 it('should return a list of patterns', () => {
 	const result = getComponentPatternsFromSections(sections);
-	expect(result).toEqual(['components/**/B*.js', 'components/**/P*.js', 'components/**/T*.js']);
+	expect(result).toEqual([
+		'components/**/B*.js',
+		'components/**/P*.js',
+		'components/**/T*.js',
+		'components/**/O*.js',
+	]);
 });
 
 it('should include a string pattern, which the default section keeps as given', () => {

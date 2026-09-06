@@ -111,8 +111,9 @@ interface WelcomeProps extends JssInjectedProps {
 }
 
 export const WelcomeRenderer: React.FunctionComponent<WelcomeProps> = ({ classes, patterns }) => {
-	// The list can be empty: getComponentPatternsFromSections() only collects array-valued
-	// `components`, so a plain string pattern (the common case) arrives as no patterns at all
+	// The list can be empty: getComponentPatternsFromSections() collects string and array
+	// `components` patterns, so nothing is left to show only when every section uses a
+	// function-valued `components` option (or an empty array)
 	const hasPatterns = patterns.length > 0;
 	return (
 		<div className={classes.root}>
@@ -124,7 +125,11 @@ export const WelcomeRenderer: React.FunctionComponent<WelcomeProps> = ({ classes
 						: 'Vite Styleguidist looked for components in your project and found none.'}
 				</p>
 				{hasPatterns && (
-					<ul className={classes.patterns}>
+					// `list-style: none` makes WebKit drop the list role, so VoiceOver would read the
+					// patterns as loose text; the explicit role restores them as a list. The
+					// redundant-roles rule does not know about that heuristic.
+					// eslint-disable-next-line jsx-a11y/no-redundant-roles
+					<ul className={classes.patterns} role="list">
 						{patterns.map((pattern) => (
 							<li key={pattern}>
 								<code className={classes.code}>{pattern}</code>

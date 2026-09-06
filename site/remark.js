@@ -5,27 +5,49 @@
 // looked up in the same table scripts/sync.js uses to name the generated files (see
 // scripts/docs.js), so a doc whose id differs from its filename still resolves.
 //
-// Absolute URLs are never touched, even when they end in `.md`. (The previous version
-// rewrote any `*.md` URL and had to keep an allowlist of external Markdown links.)
+// Relative links that leave the synced docs (`../SECURITY.md`, `../src/vite`,
+// `decisions/0003-....md`) are equally valid on GitHub but have no page here, so they are
+// rewritten to the repository on GitHub: `blob/` for files, `tree/` for directories.
+//
+// Absolute URLs, anchors and mailto: links are never touched, even when they end in
+// `.md`. (The previous version rewrote any `*.md` URL and had to keep an allowlist of
+// external Markdown links.)
 
-const { kebabCase } = require('lodash');
-const { getDocsTable } = require('./scripts/docs');
+const { existsSync, statSync } = require('node:fs');
+const path = require('node:path');
+const { DOCS_DIR, REPO_URL, REPO_BRANCH, getDocsTable } = require('./scripts/docs');
 
 const RELATIVE_MD_LINK = /^(?:\.\/)?([\w-]+)\.md(#.*)?$/;
+const EXTERNAL_LINK = /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/)/i;
+
+const REPO_ROOT = path.resolve(DOCS_DIR, '..');
+
+// `../src/vite` -> https://github.com/<org>/<repo>/tree/main/src/vite
+const getRepoUrl = (url) => {
+	const [target, hash = ''] = url.split(/(?=#)/);
+	const absolute = path.resolve(DOCS_DIR, target);
+	const relative = path.relative(REPO_ROOT, absolute).split(path.sep).join('/');
+	if (relative.startsWith('..')) {
+		// Escapes the repository: leave it alone and let the broken-link check report it.
+		return url;
+	}
+	const isDirectory = existsSync(absolute) && statSync(absolute).isDirectory();
+	return `${REPO_URL}/${isDirectory ? 'tree' : 'blob'}/${REPO_BRANCH}/${relative}${hash}`;
+};
 
 const getDocUrl = (url) => {
+	if (EXTERNAL_LINK.test(url)) {
+		return url;
+	}
 	const match = url.match(RELATIVE_MD_LINK);
 	if (!match) {
-		return url;
+		return getRepoUrl(url);
 	}
 	const [, name, hash = ''] = match;
 	const id = getDocsTable().get(name);
 	if (!id) {
-		// Not one of docs/*.md (typo, deleted file, or a doc excluded from the site).
-		// Fall back to the old filename convention and let Docusaurus's broken-link check
-		// report it, rather than failing here with less context.
-		console.warn(`remark.js: link to unknown doc "${url}"`);
-		return `/docs/${kebabCase(name)}${hash}`;
+		// A sibling Markdown file that is not a site page (excluded, e.g. Readme.md).
+		return getRepoUrl(url);
 	}
 	return `/docs/${id}${hash}`;
 };

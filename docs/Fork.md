@@ -46,7 +46,7 @@ The full list is in the [migration guide](Migration.md).
 
 ## How to report problems
 
-- **Bugs and feature requests:** open an issue at <https://github.com/vite-styleguidist/vite-styleguidist/issues>. Please include the Vite Styleguidist version, your Node.js version and a minimal reproduction.
+- **Bugs and feature requests:** open an issue in [the issue tracker](https://github.com/vite-styleguidist/vite-styleguidist/issues). Please include the Vite Styleguidist version, your Node.js version and a minimal reproduction.
 - **Questions:** use [Discussions](https://github.com/vite-styleguidist/vite-styleguidist/discussions).
 - **Security issues:** report them privately through [GitHub security advisories](https://github.com/vite-styleguidist/vite-styleguidist/security/advisories/new), never in a public issue. See [SECURITY.md](../SECURITY.md).
 - **Problems with `react-styleguidist` 13.x:** this fork doesn’t ship fixes for the original package, see the [support policy](Compatibility.md#support-policy). Upgrade first, then report if the problem persists.

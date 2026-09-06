@@ -95,4 +95,10 @@ function getDocsTable() {
 	return table;
 }
 
-module.exports = { DOCS_DIR, parseDoc, listDocs, getDocsTable };
+// Where relative links that leave the synced docs (`../SECURITY.md`, `../src/...`,
+// `decisions/0001-...md`) are sent on the site. They stay relative in the source so that
+// GitHub resolves them; the site cannot, so remark.js turns them into repository URLs.
+const REPO_URL = 'https://github.com/vite-styleguidist/vite-styleguidist';
+const REPO_BRANCH = 'main';
+
+module.exports = { DOCS_DIR, REPO_URL, REPO_BRANCH, parseDoc, listDocs, getDocsTable };

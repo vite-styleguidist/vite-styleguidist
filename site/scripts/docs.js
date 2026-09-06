@@ -99,6 +99,13 @@ function getDocsTable() {
 // `decisions/0001-...md`) are sent on the site. They stay relative in the source so that
 // GitHub resolves them; the site cannot, so remark.js turns them into repository URLs.
 const REPO_URL = 'https://github.com/vite-styleguidist/vite-styleguidist';
-const REPO_BRANCH = 'main';
+// Out-of-docs links (source files, .github/*) point at the branch the site is built from:
+// site.yml deploys both main and next, and a page built from next may link to files that
+// only exist there. GITHUB_REF_NAME is the pushed branch in CI (`<n>/merge` on pull
+// requests, hence the allow-list); local builds link to main.
+const DEPLOY_BRANCHES = ['main', 'next'];
+const REPO_BRANCH = DEPLOY_BRANCHES.includes(process.env.GITHUB_REF_NAME)
+	? process.env.GITHUB_REF_NAME
+	: 'main';
 
 module.exports = { DOCS_DIR, REPO_URL, REPO_BRANCH, parseDoc, listDocs, getDocsTable };

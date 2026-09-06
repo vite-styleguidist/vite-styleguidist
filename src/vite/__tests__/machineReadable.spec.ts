@@ -53,17 +53,17 @@ const findComponent = (manifest: DocsManifest, name: string): ManifestComponent 
 describe('buildManifest', () => {
 	let config: Rsg.SanitizedStyleguidistConfig;
 	let manifest: DocsManifest;
-	beforeAll(() => {
+	beforeAll(async () => {
 		config = configIn(testDir, {
 			components: 'components/**/[A-Z]*.js',
 			defaultExample: true,
 			title: 'Fixtures',
 			version: '1.2.3',
 		});
-		manifest = buildManifest(config, collectSections(config), { now: NOW });
+		manifest = await buildManifest(config, collectSections(config), { now: NOW });
 	});
 
-	it('should describe the style guide', () => {
+	it('should describe the style guide', async () => {
 		expect(manifest).toMatchObject({
 			schemaVersion: 1,
 			source: 'vite-styleguidist',
@@ -73,7 +73,7 @@ describe('buildManifest', () => {
 		});
 	});
 
-	it('should list the components in sidebar order', () => {
+	it('should list the components in sidebar order', async () => {
 		expect(manifest.sections).toHaveLength(1);
 		// The `components` shortcut creates an unnamed section
 		expect(manifest.sections[0]).toMatchObject({ name: null, slug: 'section-untitled' });
@@ -86,7 +86,7 @@ describe('buildManifest', () => {
 		]);
 	});
 
-	it('should describe a component like the UI does', () => {
+	it('should describe a component like the UI does', async () => {
 		const button = findComponent(manifest, 'Button');
 		expect(button).toMatchObject({
 			name: 'Button',
@@ -129,7 +129,7 @@ describe('buildManifest', () => {
 		]);
 	});
 
-	it('should list the examples with the prose before them', () => {
+	it('should list the examples with the prose before them', async () => {
 		const button = findComponent(manifest, 'Button');
 		expect(button.examples).toEqual([
 			{
@@ -158,7 +158,7 @@ describe('buildManifest', () => {
 		expect(button.notes).toBe('');
 	});
 
-	it('should use the default example for components without an examples file', () => {
+	it('should use the default example for components without an examples file', async () => {
 		expect(findComponent(manifest, 'Price').examples).toEqual([
 			{
 				index: 0,
@@ -170,7 +170,7 @@ describe('buildManifest', () => {
 		]);
 	});
 
-	it('should list public methods, drop tooling tags and keep the @example file prose', () => {
+	it('should list public methods, drop tooling tags and keep the @example file prose', async () => {
 		const placeholder = findComponent(manifest, 'Placeholder');
 		expect(placeholder.methods).toEqual([
 			{ name: 'getImageUrl', params: [], returns: null, description: 'A public method.', tags: {} },
@@ -190,15 +190,15 @@ describe('buildManifest', () => {
 		expect(placeholder.notes).toBe('Hello world!');
 	});
 
-	it('should be deterministic', () => {
-		const again = buildManifest(config, collectSections(config), { now: NOW });
+	it('should be deterministic', async () => {
+		const again = await buildManifest(config, collectSections(config), { now: NOW });
 		expect(again).toEqual(manifest);
 	});
 
-	it('should pin generatedAt to SOURCE_DATE_EPOCH when set', () => {
+	it('should pin generatedAt to SOURCE_DATE_EPOCH when set', async () => {
 		vi.stubEnv('SOURCE_DATE_EPOCH', '1700000000');
 		try {
-			expect(buildManifest(config, collectSections(config)).generatedAt).toBe(
+			expect((await buildManifest(config, collectSections(config))).generatedAt).toBe(
 				'2023-11-14T22:13:20.000Z'
 			);
 		} finally {
@@ -206,15 +206,19 @@ describe('buildManifest', () => {
 		}
 	});
 
-	it('should not link the unnamed section the components shortcut creates', () => {
+	it('should not link the unnamed section the components shortcut creates', async () => {
 		expect(manifest.sections[0].name).toBeNull();
 		expect(manifest.sections[0].href).toBeNull();
 	});
 
-	it('should honor skipComponentsWithoutExample', () => {
-		const filtered = buildManifest({ ...config, skipComponentsWithoutExample: true }, undefined, {
-			now: NOW,
-		});
+	it('should honor skipComponentsWithoutExample', async () => {
+		const filtered = await buildManifest(
+			{ ...config, skipComponentsWithoutExample: true },
+			undefined,
+			{
+				now: NOW,
+			}
+		);
 		expect(flattenComponents(filtered.sections).map(({ component }) => component.name)).toEqual([
 			'Button',
 			'Placeholder',
@@ -224,7 +228,7 @@ describe('buildManifest', () => {
 
 describe('buildManifest with sections', () => {
 	let dir: string;
-	beforeAll(() => {
+	beforeAll(async () => {
 		// realpath: getConfig() resolves paths against process.cwd(), which is the real
 		// path (/private/var/… on macOS), and the cache is keyed by those paths
 		dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-manifest-')));
@@ -340,7 +344,7 @@ Some **intro** text.
 `
 		);
 	});
-	afterAll(() => {
+	afterAll(async () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
@@ -365,8 +369,8 @@ Some **intro** text.
 			...options,
 		});
 
-	it('should nest sections and keep their content pages as Markdown', () => {
-		const manifest = buildManifest(sectionsConfig(), undefined, { now: NOW });
+	it('should nest sections and keep their content pages as Markdown', async () => {
+		const manifest = await buildManifest(sectionsConfig(), undefined, { now: NOW });
 		expect(manifest.sections.map((section) => section.name)).toEqual([
 			'Documentation',
 			'Components',
@@ -408,8 +412,8 @@ Some **intro** text.
 		});
 	});
 
-	it('should describe documented components: tags, methods, prop types', () => {
-		const manifest = buildManifest(sectionsConfig(), undefined, { now: NOW });
+	it('should describe documented components: tags, methods, prop types', async () => {
+		const manifest = await buildManifest(sectionsConfig(), undefined, { now: NOW });
 		const documented = findComponent(manifest, 'Documented');
 		expect(documented.visibleName).toBe('The Documented One');
 		// Code in descriptions is un-highlighted (Prism runs on it in getProps)
@@ -451,8 +455,8 @@ Some **intro** text.
 		]);
 	});
 
-	it('should keep example languages and settings, and prose after the last example', () => {
-		const manifest = buildManifest(sectionsConfig(), undefined, { now: NOW });
+	it('should keep example languages and settings, and prose after the last example', async () => {
+		const manifest = await buildManifest(sectionsConfig(), undefined, { now: NOW });
 		const documented = findComponent(manifest, 'Documented');
 		expect(documented.examples).toEqual([
 			{
@@ -476,8 +480,8 @@ Some **intro** text.
 		expect(documented.notes).toBe('Closing remarks with `<b>bold</b>` HTML.');
 	});
 
-	it('should print TypeScript types', () => {
-		const manifest = buildManifest(sectionsConfig(), undefined, { now: NOW });
+	it('should print TypeScript types', async () => {
+		const manifest = await buildManifest(sectionsConfig(), undefined, { now: NOW });
 		const typed = findComponent(manifest, 'Typed');
 		expect(typed.filePath).toBe('components/Typed.tsx');
 		expect(typed.props.map((prop) => [prop.name, prop.type, prop.required])).toEqual([
@@ -487,8 +491,8 @@ Some **intro** text.
 		]);
 	});
 
-	it('should link like the sidebar when pagePerSection is on', () => {
-		const manifest = buildManifest(sectionsConfig({ pagePerSection: true }), undefined, {
+	it('should link like the sidebar when pagePerSection is on', async () => {
+		const manifest = await buildManifest(sectionsConfig({ pagePerSection: true }), undefined, {
 			now: NOW,
 		});
 		const [documentation, components] = manifest.sections;
@@ -505,8 +509,8 @@ Some **intro** text.
 		expect(findComponent(manifest, 'Documented').href).toBe('index.html#/Components?id=documented');
 	});
 
-	it('should apply updateDocs', () => {
-		const manifest = buildManifest(
+	it('should apply updateDocs', async () => {
+		const manifest = await buildManifest(
 			sectionsConfig({
 				updateDocs: (docs) => ({ ...docs, description: `${docs.description}\n\nUpdated.` }),
 			}),
@@ -516,16 +520,16 @@ Some **intro** text.
 		expect(findComponent(manifest, 'Typed').description).toMatch(/Updated\.$/);
 	});
 
-	it('should reuse cached docs until a file changes', () => {
+	it('should reuse cached docs until a file changes', async () => {
 		const config = sectionsConfig();
 		const cache = createManifestCache();
-		const first = buildManifest(config, undefined, { now: NOW, cache });
+		const first = await buildManifest(config, undefined, { now: NOW, cache });
 		const cachedDocs = cache.docs.get(path.join(dir, 'components/Typed.tsx'))?.docs;
 		expect(cachedDocs).toBeDefined();
 		expect(cache.examples.size).toBeGreaterThan(0);
 
 		// Unchanged files: the very same parsed objects come back
-		buildManifest(config, undefined, { now: NOW, cache });
+		await buildManifest(config, undefined, { now: NOW, cache });
 		expect(cache.docs.get(path.join(dir, 'components/Typed.tsx'))?.docs).toBe(cachedDocs);
 
 		// A changed file (newer mtime) is parsed again
@@ -533,14 +537,14 @@ Some **intro** text.
 		fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('A TypeScript', 'An edited'));
 		const later = new Date(fs.statSync(file).mtimeMs + 5000);
 		fs.utimesSync(file, later, later);
-		const second = buildManifest(config, undefined, { now: NOW, cache });
+		const second = await buildManifest(config, undefined, { now: NOW, cache });
 		expect(findComponent(first, 'Typed').description).toBe('A TypeScript component.');
 		expect(findComponent(second, 'Typed').description).toBe('An edited component.');
 	});
 });
 
 describe('unhighlight', () => {
-	it('should restore highlighted code inside fenced blocks only', () => {
+	it('should restore highlighted code inside fenced blocks only', async () => {
 		const highlighted = [
 			'Text with <span class="token keep">custom HTML</span> and &lt;entities&gt;.',
 			'',
@@ -568,11 +572,11 @@ describe('unhighlight', () => {
 		);
 	});
 
-	it('should handle unterminated fences', () => {
+	it('should handle unterminated fences', async () => {
 		expect(unhighlight('```js\n<span class="token keyword">const</span> a')).toBe('```js\nconst a');
 	});
 
-	it('should find fences inside list items and blockquotes', () => {
+	it('should find fences inside list items and blockquotes', async () => {
 		const highlighted = [
 			'1. Install it:',
 			'',
@@ -609,7 +613,7 @@ describe('unhighlight', () => {
 });
 
 describe('shiftHeadings', () => {
-	it('should demote headings outside fenced code, capped at six', () => {
+	it('should demote headings outside fenced code, capped at six', async () => {
 		const text = '# Title\n\ntext\n\n```md\n# code\n```\n\n###### Deep\n#not a heading';
 		expect(shiftHeadings(text, 2)).toBe(
 			'### Title\n\ntext\n\n```md\n# code\n```\n\n###### Deep\n#not a heading'
@@ -619,7 +623,7 @@ describe('shiftHeadings', () => {
 });
 
 describe('toManifestExamples', () => {
-	it('should pair every playground with the prose before it', () => {
+	it('should pair every playground with the prose before it', async () => {
 		const config = configIn(testDir, {});
 		const chunks = parseExamples(
 			config,
@@ -639,12 +643,15 @@ describe('toManifestExamples', () => {
 describe('printPropType', () => {
 	const prop = (type: any): Rsg.PropDescriptor => ({ name: 'x', type }) as Rsg.PropDescriptor;
 
-	it('should print PropTypes like the props table', () => {
+	it('should print PropTypes like the props table', async () => {
 		expect(printPropType(prop({ name: 'string' }))).toBe('string');
 		expect(printPropType(prop({ name: 'arrayOf', value: { name: 'string' } }))).toBe('string[]');
 		expect(
 			printPropType(
-				prop({ name: 'arrayOf', value: { name: 'enum', value: [{ value: "'a'" }, { value: "'b'" }] } })
+				prop({
+					name: 'arrayOf',
+					value: { name: 'enum', value: [{ value: "'a'" }, { value: "'b'" }] },
+				})
 			)
 		).toBe('(oneOf: a | b)[]');
 		expect(printPropType(prop({ name: 'enum', value: 'Object.keys(x)', computed: true }))).toBe(
@@ -653,7 +660,7 @@ describe('printPropType', () => {
 		expect(printPropType({ name: 'x' } as Rsg.PropDescriptor)).toBe('unknown');
 	});
 
-	it('should print Flow and TypeScript types as written', () => {
+	it('should print Flow and TypeScript types as written', async () => {
 		expect(
 			printPropType({
 				name: 'x',
@@ -678,16 +685,16 @@ describe('printPropType', () => {
 
 describe('renderers', () => {
 	let manifest: DocsManifest;
-	beforeAll(() => {
+	beforeAll(async () => {
 		const config = configIn(testDir, {
 			components: 'components/**/[A-Z]*.js',
 			title: 'Fixtures',
 			version: '1.2.3',
 		});
-		manifest = buildManifest(config, undefined, { now: NOW });
+		manifest = await buildManifest(config, undefined, { now: NOW });
 	});
 
-	it('should render llms.txt in the llmstxt.org shape', () => {
+	it('should render llms.txt in the llmstxt.org shape', async () => {
 		const text = renderLlmsTxt(manifest);
 		const lines = text.split('\n');
 		expect(lines[0]).toBe('# Fixtures');
@@ -703,13 +710,13 @@ describe('renderers', () => {
 		expect(names).toEqual(['Annotation', 'Button', 'Placeholder', 'Price', 'RandomButton']);
 	});
 
-	it('should prefix links with the base URL when given', () => {
+	it('should prefix links with the base URL when given', async () => {
 		const text = renderLlmsTxt(manifest, { baseUrl: 'https://example.com/styleguide' });
 		expect(text).toContain('(https://example.com/styleguide/index.html#button)');
 		expect(text).toContain('(https://example.com/styleguide/llms-full.txt)');
 	});
 
-	it('should render llms-full.txt with a props table and fenced examples', () => {
+	it('should render llms-full.txt with a props table and fenced examples', async () => {
 		const text = renderLlmsFullTxt(manifest);
 		expect(text).toMatch(/^# Fixtures\n\n> Fixtures/);
 		// Components of the unnamed section are top-level headings
@@ -735,7 +742,7 @@ describe('renderers', () => {
 		expect(text).not.toMatch(/\n{3,}/);
 	});
 
-	it('should render nested sections as nested headings', () => {
+	it('should render nested sections as nested headings', async () => {
 		const nested: DocsManifest = {
 			...manifest,
 			sections: [
@@ -745,6 +752,7 @@ describe('renderers', () => {
 					href: 'index.html#section-components',
 					description: 'All of them',
 					content: 'Intro page',
+					format: 'md',
 					components: [],
 					sections: [
 						{
@@ -769,7 +777,7 @@ describe('renderers', () => {
 		);
 	});
 
-	it('should demote headings inside content pages and descriptions', () => {
+	it('should demote headings inside content pages and descriptions', async () => {
 		const button = manifest.sections[0].components.find((component) => component.name === 'Button');
 		const nested: DocsManifest = {
 			...manifest,
@@ -780,6 +788,7 @@ describe('renderers', () => {
 					href: 'index.html#guides',
 					description: null,
 					content: '# Getting started\n\nIntro\n\n```md\n# not a heading\n```\n\n## Install',
+					format: 'md',
 					components: [{ ...(button as ManifestComponent), description: '## Usage\n\nText' }],
 					sections: [],
 				},
@@ -794,16 +803,16 @@ describe('renderers', () => {
 		expect(text).toContain('\n##### Usage\n\nText\n');
 	});
 
-	it('should render docs.json as pretty JSON', () => {
+	it('should render docs.json as pretty JSON', async () => {
 		const json = renderDocsJson(manifest);
 		expect(JSON.parse(json)).toEqual(manifest);
 		expect(json).toMatch(/^\{\n {2}"schemaVersion": 1,/);
 		expect(json).toMatch(/\n$/);
 	});
 
-	it('should render all three files', () => {
+	it('should render all three files', async () => {
 		const config = configIn(testDir, { components: 'components/**/[A-Z]*.js', title: 'Fixtures' });
-		const files = renderMachineReadableFiles(config, { now: NOW });
+		const files = await renderMachineReadableFiles(config, { now: NOW });
 		expect(Object.keys(files)).toEqual([...MACHINE_READABLE_FILES]);
 		expect(JSON.parse(files['docs.json']).name).toBe('Fixtures');
 		expect(files['llms.txt']).toMatch(/^# Fixtures\n/);

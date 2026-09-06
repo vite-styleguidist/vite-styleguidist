@@ -9,7 +9,9 @@
  * never disagree with what the style guide shows.
  *
  * `buildManifest()` is pure (given a config and the section tree it reads files but
- * touches nothing else) and deterministic apart from `generatedAt`: sections and
+ * touches nothing else) and deterministic apart from `generatedAt`. It is async because
+ * compiling an MDX page is; the two callers (the dev middleware and `generateBundle`)
+ * both tolerate a promise. Purity aside: sections and
  * components come in sidebar order, so two builds of the same sources produce the same
  * JSON (set SOURCE_DATE_EPOCH to pin the timestamp too). The renderers turn the manifest
  * into the two text formats.
@@ -25,7 +27,8 @@ import getUrl from '../client/utils/getUrl.js';
 import { collectSections } from './modules/styleguide.js';
 import generatePropsModule from './modules/props.js';
 import { parseExamples } from './modules/examples.js';
-import { NULL, parseExamplesId, toPosix } from './ids.js';
+import parseMdx from '../loaders/utils/mdx.js';
+import { MDX_PREFIX, NULL, parseExamplesId, toPosix } from './ids.js';
 import { isImportMarker } from '../typings/index.js';
 import type * as Rsg from '../typings/index.js';
 
@@ -118,6 +121,8 @@ export interface ManifestComponent {
 	tags: ManifestTags;
 	props: ManifestProp[];
 	methods: ManifestMethod[];
+	/** Which pipeline produced the examples page: Markdown or MDX. */
+	format: 'md' | 'mdx';
 	examples: ManifestExample[];
 	/**
 	 * Prose (Markdown) of the examples files that no example follows: what comes after the
@@ -139,6 +144,8 @@ export interface ManifestSection {
 	description: string | null;
 	/** The section’s content page (Markdown), if any: playgrounds are written back as fenced code. */
 	content: string | null;
+	/** Which pipeline produced the content page: Markdown or MDX. */
+	format: 'md' | 'mdx';
 	components: ManifestComponent[];
 	sections: ManifestSection[];
 }
@@ -183,7 +190,12 @@ export interface BuildManifestOptions {
 	now?: Date;
 }
 
-type Chunk = Rsg.CodeExample | Rsg.MarkdownExample;
+/**
+ * A chunk of an examples file. The MDX parser stamps `index` on its code chunks: an MDX
+ * page's isolated-example URL counts playgrounds, while a Markdown page's counts every
+ * chunk (prose included), and `toManifestExamples()` must report the number the UI uses.
+ */
+type Chunk = (Rsg.CodeExample & { index?: number }) | Rsg.MarkdownExample;
 
 /** The part of a file’s stat that tells whether it changed since the last parse. */
 const fileKey = (file: string): string => {
@@ -240,9 +252,7 @@ export function unhighlight(markdown: string): string {
 		// A fenced block ends at a line made of the same fence character, at least as long
 		// (CommonMark), behind at most the same prefix, or at the end of the text
 		const [, prefix, marker, lang] = fence;
-		const closing = new RegExp(
-			`^[ \\t>]{0,${prefix.length}}${marker[0]}{${marker.length},}\\s*$`
-		);
+		const closing = new RegExp(`^[ \\t>]{0,${prefix.length}}${marker[0]}{${marker.length},}\\s*$`);
 		output.push(lines[index++]);
 		const code: string[] = [];
 		while (index < lines.length && !closing.test(lines[index])) {
@@ -494,7 +504,8 @@ export function toManifestExamples(chunks: Chunk[]): {
 			return;
 		}
 		examples.push({
-			index,
+			// MDX pages number their playgrounds, Markdown pages number every chunk
+			index: chunk.index ?? index,
 			lang: chunk.lang || 'jsx',
 			code: chunk.content,
 			settings: chunk.settings || {},
@@ -515,6 +526,10 @@ const chunksToMarkdown = (chunks: Chunk[]): string =>
 		)
 		.join('\n\n');
 
+/** Was this examples module generated from an `.mdx` file? (See src/vite/ids.ts.) */
+const isMdxMarker = (marker: Rsg.ImportMarker | null | undefined): boolean =>
+	isImportMarker(marker) && marker.__rsgImport.startsWith(MDX_PREFIX);
+
 class ManifestBuilder {
 	constructor(
 		private config: Rsg.SanitizedStyleguidistConfig,
@@ -531,7 +546,8 @@ class ManifestBuilder {
 		if (
 			cached &&
 			cached.key === key &&
-			(cached.exampleFile === null || fs.existsSync(cached.exampleFile) === cached.exampleFileExists)
+			(cached.exampleFile === null ||
+				fs.existsSync(cached.exampleFile) === cached.exampleFileExists)
 		) {
 			return cached.docs;
 		}
@@ -546,8 +562,13 @@ class ManifestBuilder {
 		return docs;
 	}
 
-	/** The chunks of an examples module, from its import marker (see getExamples()). */
-	private readExamples(marker: Rsg.ImportMarker | null | undefined): Chunk[] {
+	/**
+	 * The chunks of an examples module, from its import marker (see getExamples()).
+	 *
+	 * Async because compiling MDX is: the prose of an `.mdx` page is extracted from the
+	 * same parse the browser module is built from, so the two can never disagree.
+	 */
+	private async readExamples(marker: Rsg.ImportMarker | null | undefined): Promise<Chunk[]> {
 		if (!isImportMarker(marker)) {
 			return [];
 		}
@@ -560,19 +581,28 @@ class ManifestBuilder {
 		if (cached && cached.key === key) {
 			return cached.chunks;
 		}
-		const chunks = parseExamples(this.config, options, fs.readFileSync(options.file, 'utf8'));
+		const source = fs.readFileSync(options.file, 'utf8');
+		const chunks = isMdxMarker(marker)
+			? (await parseMdx(this.config, options, source)).chunks
+			: parseExamples(this.config, options, source);
 		this.cache?.examples.set(marker.__rsgImport, { key, chunks });
 		return chunks;
 	}
 
-	private component(component: Rsg.LoaderComponent, link: LinkOptions): ManifestComponent {
+	private async component(
+		component: Rsg.LoaderComponent,
+		link: LinkOptions
+	): Promise<ManifestComponent> {
 		// The absolute path the style guide imports the component from
 		const file = component.module.__rsgImport;
 		const docs = this.readDocs(file);
 		const name = docs.displayName;
 		// Examples file first, then the `@example` doclet file, like the client does
 		// (see src/client/utils/processComponents.ts)
-		const chunks = [...this.readExamples(docs.examples), ...this.readExamples(docs.example)];
+		const chunks = [
+			...(await this.readExamples(docs.examples)),
+			...(await this.readExamples(docs.example)),
+		];
 		return {
 			name,
 			displayName: name,
@@ -593,11 +623,12 @@ class ManifestBuilder {
 			tags: toManifestTags(docs.tags),
 			props: (Array.isArray(docs.props) ? docs.props : []).map(toManifestProp),
 			methods: (docs.methods || []).map(toManifestMethod),
+			format: isMdxMarker(docs.examples) || isMdxMarker(docs.example) ? 'mdx' : 'md',
 			...toManifestExamples(chunks),
 		};
 	}
 
-	private content(content: Rsg.LoaderSection['content']): string | null {
+	private async content(content: Rsg.LoaderSection['content']): Promise<string | null> {
 		if (!content) {
 			return null;
 		}
@@ -605,43 +636,51 @@ class ManifestBuilder {
 			// `content` config option given as a function returning Markdown
 			return content.content;
 		}
-		return chunksToMarkdown(this.readExamples(content));
+		return chunksToMarkdown(await this.readExamples(content));
 	}
 
-	public sections(sections: Rsg.LoaderSection[], link: LinkOptions): ManifestSection[] {
-		return sections.map((section) => {
-			// Same link rules as the sidebar (see src/client/utils/processSections.ts)
-			const childLink: LinkOptions = {
-				useRouterLinks: !!(link.useRouterLinks && section.name),
-				useHashId: section.sectionDepth === 0,
-				hashPath: [...link.hashPath, section.name || '-'],
-			};
-			// The unnamed section of the `components` shortcut renders no heading, so there is
-			// nothing on the page to link to
-			const href =
-				section.href ||
-				(section.name
-					? getUrl(
-							{
-								name: section.name,
-								slug: section.slug,
-								anchor: !link.useRouterLinks,
-								hashPath: link.useRouterLinks ? link.hashPath : false,
-								useSlugAsIdParam: link.useRouterLinks ? link.useHashId : false,
-							},
-							LINK_LOCATION
-						)
-					: null);
-			return {
-				name: section.name || null,
-				slug: section.slug || '',
-				href,
-				description: section.description || null,
-				content: this.content(section.content),
-				components: section.components.map((component) => this.component(component, childLink)),
-				sections: this.sections(section.sections, childLink),
-			};
-		});
+	public async sections(
+		sections: Rsg.LoaderSection[],
+		link: LinkOptions
+	): Promise<ManifestSection[]> {
+		return Promise.all(
+			sections.map(async (section) => {
+				// Same link rules as the sidebar (see src/client/utils/processSections.ts)
+				const childLink: LinkOptions = {
+					useRouterLinks: !!(link.useRouterLinks && section.name),
+					useHashId: section.sectionDepth === 0,
+					hashPath: [...link.hashPath, section.name || '-'],
+				};
+				// The unnamed section of the `components` shortcut renders no heading, so there is
+				// nothing on the page to link to
+				const href =
+					section.href ||
+					(section.name
+						? getUrl(
+								{
+									name: section.name,
+									slug: section.slug,
+									anchor: !link.useRouterLinks,
+									hashPath: link.useRouterLinks ? link.hashPath : false,
+									useSlugAsIdParam: link.useRouterLinks ? link.useHashId : false,
+								},
+								LINK_LOCATION
+							)
+						: null);
+				return {
+					name: section.name || null,
+					slug: section.slug || '',
+					href,
+					description: section.description || null,
+					content: await this.content(section.content),
+					format: isMdxMarker(section.content as Rsg.ImportMarker) ? 'mdx' : 'md',
+					components: await Promise.all(
+						section.components.map((component) => this.component(component, childLink))
+					),
+					sections: await this.sections(section.sections, childLink),
+				};
+			})
+		);
 	}
 }
 
@@ -662,11 +701,11 @@ const LINK_LOCATION = { origin: '', pathname: 'index.html', hash: '' };
  * @param config Sanitized style guide config.
  * @param sections The section tree, `collectSections(config)` unless a caller already has it.
  */
-export function buildManifest(
+export async function buildManifest(
 	config: Rsg.SanitizedStyleguidistConfig,
 	sections: Rsg.LoaderSection[] = collectSections(config),
 	options: BuildManifestOptions = {}
-): DocsManifest {
+): Promise<DocsManifest> {
 	const builder = new ManifestBuilder(config, options.cache);
 	return {
 		schemaVersion: MANIFEST_SCHEMA_VERSION,
@@ -674,7 +713,7 @@ export function buildManifest(
 		name: config.title,
 		version: config.version || null,
 		generatedAt: (options.now || defaultNow()).toISOString(),
-		sections: builder.sections(sections, {
+		sections: await builder.sections(sections, {
 			useRouterLinks: !!config.pagePerSection,
 			useHashId: false,
 			hashPath: [],
@@ -997,11 +1036,11 @@ export const machineReadableContentType = (name: MachineReadableFile): string =>
 	name === DOCS_JSON ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
 
 /** All three files of a style guide, ready to be written next to index.html. */
-export function renderMachineReadableFiles(
+export async function renderMachineReadableFiles(
 	config: Rsg.SanitizedStyleguidistConfig,
 	options: BuildManifestOptions & RenderOptions = {}
-): Record<MachineReadableFile, string> {
-	const manifest = buildManifest(config, undefined, options);
+): Promise<Record<MachineReadableFile, string>> {
+	const manifest = await buildManifest(config, undefined, options);
 	return {
 		[DOCS_JSON]: renderDocsJson(manifest),
 		[LLMS_TXT]: renderLlmsTxt(manifest, options),

@@ -4,32 +4,54 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ color, fontFamily, fontSize }: Rsg.Theme) => ({
+/**
+ * The 1.0 type scale: every level is set in the heading weight (600) on a tight line
+ * height; the levels differ by size only. Margins are deliberately not set here: the
+ * component header, section titles and Markdown headings each own their spacing
+ * (see MarkdownHeadingRenderer for the prose case).
+ */
+const styles = ({ color, fontFamily, fontSize, fontWeight, lineHeight, mq }: Rsg.Theme) => ({
 	heading: {
 		margin: 0,
 		color: color.base,
 		fontFamily: fontFamily.base,
-		fontWeight: 'normal',
+		fontWeight: fontWeight.bold,
+		lineHeight: lineHeight.heading,
+		// Inline code (Code sets the fixed 13px prose size) scales with the heading
+		// instead, so "### `useFoo()`" does not shrink to a footnote
+		'& code': {
+			isolate: false,
+			fontSize: '0.85em',
+		},
 	},
 	heading1: {
 		fontSize: fontSize.h1,
+		// Display sizes are tracked slightly tighter than running text
+		letterSpacing: '-0.01em',
+		// The mobile artboard sets the page title at 32 (h1 40 × 0.8); derived from the
+		// token so a custom scale keeps the ratio
+		[mq.small]: {
+			fontSize: Math.round(fontSize.h1 * 0.8),
+		},
 	},
 	heading2: {
 		fontSize: fontSize.h2,
 	},
 	heading3: {
 		fontSize: fontSize.h3,
+		lineHeight: 1.25,
 	},
 	heading4: {
 		fontSize: fontSize.h4,
+		lineHeight: 1.3,
 	},
 	heading5: {
 		fontSize: fontSize.h5,
-		fontWeight: 'bold',
+		lineHeight: 1.3,
 	},
 	heading6: {
 		fontSize: fontSize.h6,
-		fontStyle: 'italic',
+		lineHeight: 1.3,
 	},
 });
 

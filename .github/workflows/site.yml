@@ -38,6 +38,9 @@ concurrency:
 
 jobs:
   build:
+    # Forks (contributor forks, and the old react-styleguidist fork this project grew out of)
+    # have neither Pages enabled nor the publishing credentials; run only in the canonical repo.
+    if: github.repository == 'vite-styleguidist/vite-styleguidist'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,6 +77,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.repository == 'vite-styleguidist/vite-styleguidist'
     runs-on: ubuntu-latest
     permissions:
       pages: write

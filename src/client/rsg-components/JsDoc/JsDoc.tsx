@@ -35,6 +35,10 @@ export function getMarkdown(props: TagProps) {
  * method): small and light, unlike the prose they are rendered through. Para and Text
  * set their size and colour themselves, so the paragraphs and the bold tag names are
  * overridden from here rather than inherited.
+ *
+ * Inside a props or methods description cell the size below does not apply: Table.cell's
+ * `& div` selector is more specific and hands the tags the cell's 14px, on purpose. Only
+ * the colour comes from here in that context.
  */
 const styles = ({ space, color, fontSize }: Rsg.Theme) => ({
 	jsDoc: {

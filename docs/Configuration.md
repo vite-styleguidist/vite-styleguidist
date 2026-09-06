@@ -228,6 +228,28 @@ module.exports = {
 }
 ```
 
+## `machineReadable`
+
+Type: `Boolean`, default: `true`
+
+Emit a machine-readable copy of the style guide next to `index.html`, for AI assistants, editor integrations and scripts:
+
+- `docs.json`: every section and component with its description, props (name, type, required, default value, description, JSDoc tags), public methods and usage examples, as JSON;
+- `llms.txt`: an index in the [llms.txt](https://llmstxt.org/) format, one line per component with a link to it in the style guide;
+- `llms-full.txt`: the whole style guide as one Markdown document.
+
+The files are generated from the same sources as the style guide itself (react-docgen output, Markdown examples), in the order of the sidebar. `styleguidist build` writes them into [styleguideDir](#styleguidedir); the dev server serves them at `/docs.json`, `/llms.txt` and `/llms-full.txt`, regenerated on every request. Set the option to `false` to skip them.
+
+```javascript
+module.exports = {
+  machineReadable: false
+}
+```
+
+> **Caution:** The files are plain, unprotected downloads: when the style guide is deployed, everything in them (descriptions, examples, file paths relative to the project) is public, exactly like the style guide page is. Turn the option off if the style guide is served from somewhere you don’t want to expose that way.
+
+See [How do I make my style guide readable by AI tools?](Cookbook.md#how-do-i-make-my-style-guide-readable-by-ai-tools) for the details of each file.
+
 ## `minimize`
 
 Type: `Boolean`, default: `true`

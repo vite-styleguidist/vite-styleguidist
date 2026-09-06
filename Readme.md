@@ -14,6 +14,7 @@ What changed compared to React Styleguidist 13.x:
 - The package is an ES module and ships compiled TypeScript.
 - It requires **Node.js 22.12 or newer** (Node 23 is not supported; 24 and later are) and **React 18 or newer**.
 - The configuration API (`styleguideComponents`, `theme`, `styles`, `sections`, `moduleAliases`, …) and the Markdown documentation format are unchanged, so existing style guides keep working with few edits.
+- Every build also writes `docs.json`, `llms.txt` and `llms-full.txt` next to the style guide: the same documentation in a form AI assistants and scripts can read, see [the cookbook](docs/Cookbook.md#how-do-i-make-my-style-guide-readable-by-ai-tools).
 
 It is not affiliated with or endorsed by the original React Styleguidist maintainers.
 

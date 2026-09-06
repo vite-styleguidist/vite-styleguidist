@@ -16,21 +16,23 @@ describe('cssVariables', () => {
 		);
 	});
 
-	it('should define the light values on :root', () => {
+	// Every selector is wrapped in :where() so the sheet has no specificity and any rule a
+	// user writes for the same custom property wins (see cssVariables.ts)
+	it('should define the light values on :root, with zero specificity', () => {
 		expect(css).toMatch(
-			/^:root \{\n {2}color-scheme: light;\n {2}--rsg-color-base: #333;\n {2}--rsg-color-base-background: #fff;\n\}/
+			/^:where\(:root\) \{\n {2}color-scheme: light;\n {2}--rsg-color-base: #333;\n {2}--rsg-color-base-background: #fff;\n\}/
 		);
 	});
 
 	it('should define the dark values for the dark attribute, after :root', () => {
-		const dark = `[${COLOR_SCHEME_ATTRIBUTE}="dark"] {\n  color-scheme: dark;\n  --rsg-color-base: #ccc;\n  --rsg-color-base-background: #000;\n}`;
+		const dark = `:where([${COLOR_SCHEME_ATTRIBUTE}="dark"]) {\n  color-scheme: dark;\n  --rsg-color-base: #ccc;\n  --rsg-color-base-background: #000;\n}`;
 		expect(css).toContain(dark);
-		expect(css.indexOf(':root {')).toBeLessThan(css.indexOf(dark));
+		expect(css.indexOf(':where(:root) {')).toBeLessThan(css.indexOf(dark));
 	});
 
 	it('should follow the system when no scheme is chosen', () => {
 		expect(css).toContain(
-			`@media (prefers-color-scheme: dark) {\n  :root:not([${COLOR_SCHEME_ATTRIBUTE}="light"]) {\n    color-scheme: dark;\n    --rsg-color-base: #ccc;`
+			`@media (prefers-color-scheme: dark) {\n  :where(:root:not([${COLOR_SCHEME_ATTRIBUTE}="light"])) {\n    color-scheme: dark;\n    --rsg-color-base: #ccc;`
 		);
 	});
 
@@ -39,6 +41,7 @@ describe('cssVariables', () => {
 		const reset =
 			document.querySelector('style[data-meta="jss-plugin-isolate"]')?.textContent || '';
 		expect(reset).not.toContain(':root');
+		expect(reset).not.toContain(':where');
 		expect(css).not.toContain('isolate');
 	});
 });

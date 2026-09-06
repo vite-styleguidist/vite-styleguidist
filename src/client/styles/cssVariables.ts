@@ -18,20 +18,29 @@ const declarations = (palette: Palette, colorScheme: 'light' | 'dark') => ({
 /**
  * The global variable sheet: `:root` carries the light values, the attribute
  * selector the dark ones, and the media query applies the dark ones when the
- * attribute is absent (system setting) and the OS prefers dark. Source order matters
- * for the first two (equal specificity, later wins), and `:root:not(...)` outranks
- * `:root`, so an explicit "light" choice beats a dark OS.
+ * attribute is absent (system setting) and the OS prefers dark.
+ *
+ * Every selector is wrapped in `:where()`, which has zero specificity: the three rules
+ * then resolve among themselves by source order alone (light, then the toggle’s dark, then
+ * the OS’s dark, which the media query limits to "no explicit light choice"), and any rule
+ * a user writes (`:root { --rsg-color-link: … }` in a template or a required stylesheet)
+ * outranks all of them wherever it sits in <head>. This sheet is attached by JSS at runtime,
+ * after every stylesheet of the page, so without `:where()` the documented overrides
+ * would lose on source order.
  */
 export const createVariableStyles = (
 	palettes: { light: Palette; dark: Palette } = { light, dark }
 ) => ({
 	'@global': {
-		':root': declarations(palettes.light, 'light'),
-		[`[${COLOR_SCHEME_ATTRIBUTE}="dark"]`]: declarations(palettes.dark, 'dark'),
+		':where(:root)': declarations(palettes.light, 'light'),
+		[`:where([${COLOR_SCHEME_ATTRIBUTE}="dark"])`]: declarations(palettes.dark, 'dark'),
 	},
 	'@media (prefers-color-scheme: dark)': {
 		'@global': {
-			[`:root:not([${COLOR_SCHEME_ATTRIBUTE}="light"])`]: declarations(palettes.dark, 'dark'),
+			[`:where(:root:not([${COLOR_SCHEME_ATTRIBUTE}="light"]))`]: declarations(
+				palettes.dark,
+				'dark'
+			),
 		},
 	},
 });

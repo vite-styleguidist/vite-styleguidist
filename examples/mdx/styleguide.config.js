@@ -10,6 +10,12 @@ module.exports = {
 	moduleAliases: {
 		'rsg-example': path.resolve(__dirname, 'src'),
 	},
+	// Components every `.mdx` page can use as a JSX element without importing it. Values are
+	// module paths, relative to this file or absolute; `docs/Intro.mdx` uses `<Callout/>` on
+	// the strength of this line alone, while the two component pages import it themselves.
+	mdxComponents: {
+		Callout: 'src/docs/Callout',
+	},
 	sections: [
 		{
 			name: 'Introduction',

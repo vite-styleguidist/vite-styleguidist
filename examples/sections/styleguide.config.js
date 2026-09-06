@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-	title: 'React Style Guide Example',
+	title: 'Vite Styleguidist Sections Example',
 	pagePerSection: true,
 	// tocMode: 'collapse',
 	sections: [

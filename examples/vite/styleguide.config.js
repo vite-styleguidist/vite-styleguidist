@@ -2,6 +2,6 @@
 // vite.config.js, which Styleguidist loads on its own, so only the style guide
 // itself needs configuring here.
 export default {
-	title: 'React Style Guide Example',
+	title: 'Vite Styleguidist Vite Example',
 	components: 'src/components/**/*.jsx',
 };

@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import type { Connect, UserConfig, ViteDevServer } from 'vite';
 import type { Options as SucraseOptions } from 'sucrase';
 import type { Handler, Resolver } from 'react-docgen';
@@ -11,6 +12,24 @@ import type { ConfigSection, Section } from './RsgSection.js';
 import type { ColorScheme, Theme } from './RsgTheme.js';
 
 export type StyleguidistEnv = 'development' | 'production';
+
+/**
+ * The `mdx` config option: plugin lists passed straight to @mdx-js/mdx's `compile()`.
+ *
+ * Typed as `readonly unknown[]` on purpose. The real type is unified's `PluggableList`,
+ * but a published `.d.ts` that referenced `unified` would force every consumer to install
+ * it — including the ones who never write a line of MDX. The cast happens once, at the
+ * `compile()` call site.
+ */
+export interface MdxOptions {
+	/**
+	 * remark plugins (`[remarkFrontmatter]`). Replaces the default list, which is
+	 * `[remarkGfm]` — pass `[remarkGfm, remarkFrontmatter]` to keep GFM.
+	 */
+	remarkPlugins?: readonly unknown[];
+	rehypePlugins?: readonly unknown[];
+	recmaPlugins?: readonly unknown[];
+}
 
 /** Parameters carried by the `rsg-examples:` virtual module id (see src/vite/ids.ts). */
 export interface ExamplesModuleOptions {
@@ -58,6 +77,13 @@ interface BaseStyleguidistConfig {
 	};
 	/** Emit docs.json, llms.txt and llms-full.txt with the style guide (and serve them in development). */
 	machineReadable: boolean;
+	/** MDX compiler options for `.mdx` examples and content pages. */
+	mdx: MdxOptions;
+	/**
+	 * Extra components available to every MDX page, merged over the default element map
+	 * (`h1`, `p`, `a`, …): `{ Callout }` makes `<Callout/>` usable without an import.
+	 */
+	mdxComponents: Record<string, ComponentType<any>>;
 	minimize: boolean;
 	mountPointId: string;
 	moduleAliases: Record<string, string>;

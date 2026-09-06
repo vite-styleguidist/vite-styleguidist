@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import getExamples from '../getExamples.js';
-import { EXAMPLES_PREFIX, NULL, parseExamplesId, toPosix } from '../../../vite/ids.js';
+import { defaultGetExampleFilename } from '../../../scripts/schemas/config.js';
+import { EXAMPLES_PREFIX, MDX_PREFIX, NULL, parseExamplesId, toPosix } from '../../../vite/ids.js';
+import type * as Rsg from '../../../typings/index.js';
 
 const displayName = 'Pizza';
 // The default example is never read from disk by getExamples(), so it needs no fixture
@@ -12,11 +14,16 @@ const defaultExample = path.join(path.sep, 'styleguide', 'DefaultExample.md');
 let dir: string;
 let file: string;
 let examplesFile: string;
+let config: Rsg.SanitizedStyleguidistConfig;
 
 beforeEach(() => {
 	dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-getExamples-'));
 	file = path.join(dir, 'pizza.js');
 	examplesFile = path.join(dir, 'Pizza.md');
+	config = {
+		configDir: dir,
+		getExampleFilename: defaultGetExampleFilename,
+	} as unknown as Rsg.SanitizedStyleguidistConfig;
 });
 
 afterEach(() => {
@@ -30,7 +37,7 @@ const parseId = (id: string) => parseExamplesId(NULL + id);
 it('should import the examples file if it exists', () => {
 	fs.writeFileSync(examplesFile, 'pizza');
 
-	const result = getExamples(file, displayName, examplesFile, defaultExample);
+	const result = getExamples(config, file, displayName, examplesFile, defaultExample);
 
 	expect(result).toEqual({ __rsgImport: expect.any(String), __rsgDefault: true });
 	expect(result?.__rsgImport.startsWith(`${EXAMPLES_PREFIX}${toPosix(examplesFile)}?`)).toBe(true);
@@ -43,7 +50,7 @@ it('should import the examples file if it exists', () => {
 });
 
 it('should import the default example if the examples file does not exist', () => {
-	const result = getExamples(file, displayName, examplesFile, defaultExample);
+	const result = getExamples(config, file, displayName, examplesFile, defaultExample);
 
 	expect(result?.__rsgDefault).toBe(true);
 	expect(parseId(result?.__rsgImport ?? '')).toEqual({
@@ -56,7 +63,7 @@ it('should import the default example if the examples file does not exist', () =
 });
 
 it('should import the default example if the component has no examples file', () => {
-	const result = getExamples(file, displayName, false, defaultExample);
+	const result = getExamples(config, file, displayName, false, defaultExample);
 
 	expect(result?.__rsgDefault).toBe(true);
 	expect(parseId(result?.__rsgImport ?? '')).toEqual({
@@ -68,8 +75,51 @@ it('should import the default example if the component has no examples file', ()
 });
 
 it('should return null if the component has no examples file and no default example', () => {
-	expect(getExamples(file, displayName)).toBeNull();
-	expect(getExamples(file, displayName, false, false)).toBeNull();
+	expect(getExamples(config, file, displayName)).toBeNull();
+	expect(getExamples(config, file, displayName, false, false)).toBeNull();
 	// Examples file configured but missing on disk
-	expect(getExamples(file, displayName, examplesFile)).toBeNull();
+	expect(getExamples(config, file, displayName, examplesFile)).toBeNull();
+});
+
+describe('MDX', () => {
+	it('should import an .mdx examples file through the MDX module', () => {
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+
+		const result = getExamples(config, file, displayName, mdxFile, defaultExample);
+
+		expect(result?.__rsgImport.startsWith(`${MDX_PREFIX}${toPosix(mdxFile)}?`)).toBe(true);
+		expect(parseExamplesId(NULL + (result?.__rsgImport ?? ''))).toEqual({
+			file: toPosix(mdxFile),
+			displayName,
+			componentPath: toPosix(file),
+			shouldShowDefaultExample: false,
+		});
+	});
+
+	it('should warn and skip a discovered .mdx file when @mdx-js/mdx is missing', async () => {
+		const mdx = await import('../mdx.js');
+		vi.spyOn(mdx, 'isMdxAvailable').mockReturnValue(false);
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+
+		expect(getExamples(config, file, displayName, mdxFile, defaultExample)).toBeNull();
+		vi.restoreAllMocks();
+	});
+
+	it('should throw for an .mdx file named by a custom getExampleFilename', async () => {
+		const mdx = await import('../mdx.js');
+		vi.spyOn(mdx, 'isMdxAvailable').mockReturnValue(false);
+		const mdxFile = path.join(dir, 'Pizza.mdx');
+		fs.writeFileSync(mdxFile, '# Pizza');
+		const custom = {
+			...config,
+			getExampleFilename: () => mdxFile,
+		} as unknown as Rsg.SanitizedStyleguidistConfig;
+
+		expect(() => getExamples(custom, file, displayName, mdxFile, defaultExample)).toThrow(
+			'@mdx-js/mdx'
+		);
+		vi.restoreAllMocks();
+	});
 });

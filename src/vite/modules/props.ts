@@ -72,7 +72,7 @@ export default function generatePropsModule(
 		}
 	}
 
-	const tempDocs = getProps(docs, file);
+	const tempDocs = getProps(docs, file, config);
 	let finalDocs: Rsg.PropsObject = { ...tempDocs, props: [] };
 
 	const componentProps = tempDocs.props;
@@ -92,6 +92,7 @@ export default function generatePropsModule(
 	// Examples from Markdown file
 	const examplesFile = config.getExampleFilename(file);
 	finalDocs.examples = getExamples(
+		config,
 		file,
 		finalDocs.displayName,
 		examplesFile,

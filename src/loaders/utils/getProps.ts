@@ -8,8 +8,9 @@ import createLogger from 'glogg';
 import highlightCodeInMarkdown from './highlightCodeInMarkdown.js';
 import removeDoclets from './removeDoclets.js';
 import { importDefault } from './importIt.js';
+import { isMdxFile, isMdxAvailable, MissingMdxError } from './mdx.js';
 import getNameFromFilePath from './getNameFromFilePath.js';
-import { examplesId } from '../../vite/ids.js';
+import { examplesId, mdxId } from '../../vite/ids.js';
 import type * as Rsg from '../../typings/index.js';
 
 const logger = createLogger('rsg');
@@ -71,7 +72,11 @@ const getMergedTag = (tags: Rsg.TagProps, names: (keyof Rsg.TagProps)[]): Rsg.Ta
  * @param {string} filepath
  * @returns {object}
  */
-export default function getProps(doc: Rsg.Documentation, filepath?: string): Rsg.TempPropsObject {
+export default function getProps(
+	doc: Rsg.Documentation,
+	filepath?: string,
+	config?: Rsg.SanitizedStyleguidistConfig
+): Rsg.TempPropsObject {
 	const outDocs: Rsg.TempPropsObject = {
 		doclets: {},
 		displayName: '',
@@ -151,9 +156,17 @@ export default function getProps(doc: Rsg.Documentation, filepath?: string): Rsg
 
 		if (exampleFileExists && filepath && typeof exampleFile === 'string') {
 			// The path in the doclet is relative to the component file
-			outDocs.example = importDefault(
-				examplesId({ file: path.resolve(path.dirname(filepath), exampleFile) })
-			);
+			const examplePath = path.resolve(path.dirname(filepath), exampleFile);
+			if (isMdxFile(examplePath)) {
+				// `@example ./extra.mdx` names the file explicitly: a missing @mdx-js/mdx is
+				// an error (see getExamples for the discovered-file counterpart)
+				if (!isMdxAvailable(config ? config.configDir : path.dirname(filepath))) {
+					throw new MissingMdxError(examplePath);
+				}
+				outDocs.example = importDefault(mdxId({ file: examplePath }));
+			} else {
+				outDocs.example = importDefault(examplesId({ file: examplePath }));
+			}
 			delete outDocs.doclets.example;
 		}
 	} else {

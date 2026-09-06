@@ -50,11 +50,14 @@ const isBareSpecifier = (request: string) =>
 	!request.includes(':');
 
 /**
- * Collect bare module specifiers imported from Markdown examples (`import x from 'lodash'`),
+ * Collect bare module specifiers imported from examples files (`import x from 'lodash'`),
  * so Vite can pre-bundle them at startup instead of discovering them lazily (which
  * causes a page reload the first time an example is rendered).
+ *
+ * The regex matches both forms an `.mdx` file can carry: the imports of its fences and the
+ * page's own ESM imports.
  */
-export function findExampleDependencies(markdownFiles: string[], aliases: string[] = []): string[] {
+export function findExampleDependencies(exampleFiles: string[], aliases: string[] = []): string[] {
 	const deps: string[] = [];
 	// Specifiers starting with a user alias point at project files, which must not be
 	// pre-bundled (they need hot module replacement, not dependency optimization)
@@ -63,7 +66,7 @@ export function findExampleDependencies(markdownFiles: string[], aliases: string
 	// `import 'x'` (no `from`) must be matched at the start of a line, which in Markdown
 	// examples is usually indented (indented code blocks)
 	const IMPORT_REGEXP = /(?:\bfrom\s*|\brequire\(\s*|^\s*import\s*)['"]([^'"\n]+)['"]/gm;
-	markdownFiles.forEach((file) => {
+	exampleFiles.forEach((file) => {
 		let source = '';
 		try {
 			source = fs.readFileSync(file, 'utf8');
@@ -200,7 +203,8 @@ export default async function makeViteConfig(
 		config.configDir,
 		config.ignore
 	);
-	const markdownFiles = [
+	// Markdown and MDX: getExampleFilename() and section content pages return either
+	const exampleFiles = [
 		...componentFiles
 			.map((file) => config.getExampleFilename(file))
 			.filter((file): file is string => !!file),
@@ -255,7 +259,7 @@ export default async function makeViteConfig(
 			// The entry is a virtual module Vite can’t crawl, point the dependency
 			// scanner at the real files instead
 			entries: [toPosix(clientEntry), ...componentFiles.map(toPosix)],
-			include: findExampleDependencies(markdownFiles, getAliasNames(config, userConfig)),
+			include: findExampleDependencies(exampleFiles, getAliasNames(config, userConfig)),
 			rolldownOptions: {
 				// The scanner and the optimizer parse files on their own (our plugins don’t apply):
 				// let them understand JSX in .js files too

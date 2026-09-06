@@ -8,6 +8,7 @@ import renderHtml from './html.js';
 import generateStyleguideModule from './modules/styleguide.js';
 import generatePropsModule from './modules/props.js';
 import generateExamplesModule from './modules/examples.js';
+import generateMdxModule from './modules/mdx.js';
 import {
 	buildManifest,
 	createManifestCache,
@@ -23,9 +24,11 @@ import {
 	RESOLVED_STYLEGUIDE_ID,
 	PROPS_PREFIX,
 	EXAMPLES_PREFIX,
+	MDX_PREFIX,
 	NULL,
 	isPropsId,
 	isExamplesId,
+	isMdxId,
 	parsePropsId,
 	parseExamplesId,
 	propsId,
@@ -90,14 +93,14 @@ export function createMachineReadableMiddleware(
 	config: Rsg.SanitizedStyleguidistConfig
 ): Connect.NextHandleFunction {
 	const cache = createManifestCache();
-	return (req, res, next) => {
+	return async (req, res, next) => {
 		const name = (req.url || '').split('?')[0].replace(/^\//, '');
 		if ((req.method !== 'GET' && req.method !== 'HEAD') || !isMachineReadableFile(name)) {
 			next();
 			return;
 		}
 		try {
-			const manifest = buildManifest(config, undefined, { cache });
+			const manifest = await buildManifest(config, undefined, { cache });
 			res.statusCode = 200;
 			res.setHeader('Content-Type', machineReadableContentType(name));
 			// Never cached: the next request may follow an edit
@@ -143,7 +146,11 @@ export default function styleguidistPlugin({
 			if (id === STYLEGUIDE_ID) {
 				return RESOLVED_STYLEGUIDE_ID;
 			}
-			if (id.startsWith(PROPS_PREFIX) || id.startsWith(EXAMPLES_PREFIX)) {
+			if (
+				id.startsWith(PROPS_PREFIX) ||
+				id.startsWith(EXAMPLES_PREFIX) ||
+				id.startsWith(MDX_PREFIX)
+			) {
 				return NULL + id;
 			}
 			// Bare imports written in Markdown examples must resolve from the Markdown
@@ -151,14 +158,18 @@ export default function styleguidistPlugin({
 			// they differ in monorepos, where the dependency may live in a nested
 			// node_modules. The examples module has no directory, so resolve on behalf
 			// of the Markdown file it was generated from.
-			if (importer && importer.startsWith(NULL + EXAMPLES_PREFIX) && isBareSpecifier(id)) {
+			if (
+				importer &&
+				(importer.startsWith(NULL + EXAMPLES_PREFIX) || importer.startsWith(NULL + MDX_PREFIX)) &&
+				isBareSpecifier(id)
+			) {
 				const markdownFile = parseExamplesId(importer).file;
 				return this.resolve(id, markdownFile, { skipSelf: true });
 			}
 			return null;
 		},
 
-		load(id) {
+		async load(id) {
 			if (id === RESOLVED_ENTRY_ID) {
 				// `require` config items are loaded before the style guide itself
 				// (polyfills, global styles, etc.)
@@ -189,6 +200,16 @@ export default function styleguidistPlugin({
 				// Re-parse the examples when the Markdown file changes
 				this.addWatchFile(options.file);
 				return generateExamplesModule(config, options, fs.readFileSync(options.file, 'utf8'));
+			}
+
+			if (isMdxId(id)) {
+				const options = parseExamplesId(id);
+				// Same as above: the file is not in the module graph, so watch it explicitly
+				// and the importing chain (props/styleguide → client) propagates the update
+				this.addWatchFile(options.file);
+				return generateMdxModule(config, options, fs.readFileSync(options.file, 'utf8'), {
+					isProduction: env === 'production',
+				});
 			}
 
 			return null;
@@ -279,7 +300,7 @@ export default function styleguidistPlugin({
 				}
 				// An examples file appeared or disappeared: the docs module of its
 				// component references it, so regenerate the docs of affected components
-				if (file.endsWith('.md')) {
+				if (file.endsWith('.md') || file.endsWith('.mdx')) {
 					for (const id of graph.idToModuleMap.keys()) {
 						if (isPropsId(id)) {
 							const componentPath = parsePropsId(id);
@@ -301,7 +322,7 @@ export default function styleguidistPlugin({
 			return type === 'delete' ? extra : [...modules, ...extra];
 		},
 
-		generateBundle(_options, bundle) {
+		async generateBundle(_options, bundle) {
 			// Emit index.html referencing the entry chunk and its CSS
 			const chunks = Object.values(bundle).filter((item) => item.type === 'chunk');
 			const entry = chunks.find((chunk) => chunk.isEntry);
@@ -336,7 +357,7 @@ export default function styleguidistPlugin({
 			// option). Emitted as assets, so Vite writes them with the rest of the output
 			// and `closeBundle` can’t let an `assetsDir` copy overwrite them.
 			if (config.machineReadable) {
-				Object.entries(renderMachineReadableFiles(config)).forEach(([fileName, source]) => {
+				Object.entries(await renderMachineReadableFiles(config)).forEach(([fileName, source]) => {
 					this.emitFile({ type: 'asset', fileName, source });
 				});
 			}

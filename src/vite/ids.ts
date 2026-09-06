@@ -8,6 +8,12 @@
  * - `virtual:rsg-styleguide`  — sections/components/config data (was `styleguide-loader`)
  * - `rsg-props:<file>`        — react-docgen documentation of one component (was `props-loader`)
  * - `rsg-examples:<file>?...` — examples parsed from one Markdown file (was `examples-loader`)
+ * - `rsg-mdx:<file>?...`      — the same for an MDX file, compiled to a React component
+ *
+ * MDX deliberately gets its own prefix instead of a flag on the examples id: `isExamplesId`
+ * drives the plugin’s `load`, its bare-specifier fallback, `hotUpdate` and the
+ * machine-readable docs, and a separate prefix means none of those Markdown code paths
+ * change at all.
  */
 import path from 'node:path';
 import type * as Rsg from '../typings/index.js';
@@ -16,6 +22,7 @@ export const ENTRY_ID = 'virtual:rsg-entry';
 export const STYLEGUIDE_ID = 'virtual:rsg-styleguide';
 export const PROPS_PREFIX = 'rsg-props:';
 export const EXAMPLES_PREFIX = 'rsg-examples:';
+export const MDX_PREFIX = 'rsg-mdx:';
 
 export const NULL = '\0';
 
@@ -31,7 +38,8 @@ export function propsId(componentPath: string): string {
 	return PROPS_PREFIX + toPosix(componentPath);
 }
 
-export function examplesId(options: Rsg.ExamplesModuleOptions): string {
+/** Query string shared by the examples and MDX ids (they carry the same options). */
+function moduleQuery(options: Rsg.ExamplesModuleOptions): string {
 	const params = new URLSearchParams();
 	if (options.displayName) {
 		params.set('displayName', options.displayName);
@@ -43,7 +51,15 @@ export function examplesId(options: Rsg.ExamplesModuleOptions): string {
 		params.set('default', '1');
 	}
 	const query = params.toString();
-	return EXAMPLES_PREFIX + toPosix(options.file) + (query ? `?${query}` : '');
+	return query ? `?${query}` : '';
+}
+
+export function examplesId(options: Rsg.ExamplesModuleOptions): string {
+	return EXAMPLES_PREFIX + toPosix(options.file) + moduleQuery(options);
+}
+
+export function mdxId(options: Rsg.ExamplesModuleOptions): string {
+	return MDX_PREFIX + toPosix(options.file) + moduleQuery(options);
 }
 
 export function isPropsId(id: string): boolean {
@@ -54,14 +70,19 @@ export function isExamplesId(id: string): boolean {
 	return id.startsWith(NULL + EXAMPLES_PREFIX);
 }
 
+export function isMdxId(id: string): boolean {
+	return id.startsWith(NULL + MDX_PREFIX);
+}
+
 /** Extract the component path from a resolved `\0rsg-props:` id. */
 export function parsePropsId(id: string): string {
 	return id.slice((NULL + PROPS_PREFIX).length);
 }
 
-/** Extract the options from a resolved `\0rsg-examples:` id. */
+/** Extract the options from a resolved `\0rsg-examples:` or `\0rsg-mdx:` id. */
 export function parseExamplesId(id: string): Rsg.ExamplesModuleOptions {
-	const rest = id.slice((NULL + EXAMPLES_PREFIX).length);
+	const prefix = isMdxId(id) ? NULL + MDX_PREFIX : NULL + EXAMPLES_PREFIX;
+	const rest = id.slice(prefix.length);
 	const queryIndex = rest.indexOf('?');
 	const file = queryIndex === -1 ? rest : rest.slice(0, queryIndex);
 	const params = new URLSearchParams(queryIndex === -1 ? '' : rest.slice(queryIndex + 1));
@@ -72,3 +93,6 @@ export function parseExamplesId(id: string): Rsg.ExamplesModuleOptions {
 		shouldShowDefaultExample: params.get('default') === '1',
 	};
 }
+
+/** Extract the options from a resolved `\0rsg-mdx:` id (same shape as the examples id). */
+export const parseMdxId = parseExamplesId;

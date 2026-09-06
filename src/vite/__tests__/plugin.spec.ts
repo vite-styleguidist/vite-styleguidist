@@ -13,6 +13,7 @@ import {
 	NULL,
 	propsId,
 	examplesId,
+	mdxId,
 } from '../ids.js';
 import type * as Rsg from '../../typings/index.js';
 
@@ -72,6 +73,21 @@ describe('resolveId', () => {
 		await expect(resolveId(examples)).resolves.toBe(NULL + examples);
 	});
 
+	it('should prefix mdx ids', async () => {
+		const mdx = mdxId({ file: component('Button/Readme.mdx'), displayName: 'Button' });
+		await expect(resolveId(mdx)).resolves.toBe(NULL + mdx);
+	});
+
+	it('should resolve bare imports from an MDX module against the .mdx file', async () => {
+		const mdxFile = component('Button/Readme.mdx');
+		const importer = NULL + mdxId({ file: mdxFile, displayName: 'Button' });
+		const resolve = vi.fn().mockResolvedValue({ id: '/resolved/clsx.js' });
+		await expect(resolveId('clsx', importer, { resolve })).resolves.toEqual({
+			id: '/resolved/clsx.js',
+		});
+		expect(resolve).toHaveBeenCalledWith('clsx', mdxFile, { skipSelf: true });
+	});
+
 	it('should leave other ids to Vite', async () => {
 		await expect(resolveId('react')).resolves.toBeNull();
 		await expect(resolveId(component('Button/Button.js'))).resolves.toBeNull();
@@ -91,11 +107,12 @@ describe('resolveId', () => {
 });
 
 describe('load', () => {
+	// `load` is async: MDX modules are compiled there
 	const load = (plugin: Plugin, id: string, ctx = context()) =>
 		(hook(plugin.load) as any).call(ctx, id, {});
 
-	it('should load the entry: require config items, then the client', () => {
-		expect(load(createPlugin(), RESOLVED_ENTRY_ID)).toBe(
+	it('should load the entry: require config items, then the client', async () => {
+		expect(await load(createPlugin(), RESOLVED_ENTRY_ID)).toBe(
 			[
 				'import "core-js/stable";',
 				'import "/path/to/styles.css";',
@@ -104,9 +121,9 @@ describe('load', () => {
 		);
 	});
 
-	it('should load the styleguide module', () => {
+	it('should load the styleguide module', async () => {
 		const ctx = context();
-		const code = load(createPlugin(), RESOLVED_STYLEGUIDE_ID, ctx);
+		const code = await load(createPlugin(), RESOLVED_STYLEGUIDE_ID, ctx);
 		expect(code).toMatch('export default {');
 		expect(code).toMatch(component('Button/Button.js'));
 		expect(ctx.addWatchFile).not.toHaveBeenCalled();
@@ -125,19 +142,19 @@ describe('load', () => {
 		}
 	});
 
-	it('should load component docs and watch the component', () => {
+	it('should load component docs and watch the component', async () => {
 		const file = component('Button/Button.js');
 		const ctx = context();
-		const code = load(createPlugin(), NULL + propsId(file), ctx);
+		const code = await load(createPlugin(), NULL + propsId(file), ctx);
 		expect(code).toMatch('"displayName": "Button"');
 		expect(code).toMatch('export default {');
 		expect(ctx.addWatchFile).toHaveBeenCalledWith(file);
 	});
 
-	it('should load examples and watch the Markdown file', () => {
+	it('should load examples and watch the Markdown file', async () => {
 		const file = component('Button/Readme.md');
 		const ctx = context();
-		const code = load(
+		const code = await load(
 			createPlugin(),
 			NULL +
 				examplesId({ file, displayName: 'Button', componentPath: component('Button/Button.js') }),
@@ -148,8 +165,38 @@ describe('load', () => {
 		expect(ctx.addWatchFile).toHaveBeenCalledWith(file);
 	});
 
-	it('should leave other ids to Vite', () => {
-		expect(load(createPlugin(), component('Button/Button.js'))).toBeNull();
+	it('should load an MDX page and watch the .mdx file', async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-plugin-mdx-'));
+		const mdxFile = path.join(dir, 'Readme.mdx');
+		fs.writeFileSync(mdxFile, 'Prose.\n\n```jsx\n<Button>Push Me</Button>\n```\n');
+		try {
+			const ctx = context();
+			const code = await load(createPlugin(), NULL + mdxId({ file: mdxFile }), ctx);
+			expect(code).toMatch('type: "mdx"');
+			expect(code).toMatch('"content": "<Button>Push Me</Button>"');
+			expect(ctx.addWatchFile).toHaveBeenCalledWith(mdxFile);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should report an MDX syntax error with the file, line and column', async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-plugin-mdx-bad-'));
+		const mdxFile = path.join(dir, 'Readme.mdx');
+		fs.writeFileSync(mdxFile, 'Fine.\n\n<Callout>\n');
+		try {
+			const error: any = await load(createPlugin(), NULL + mdxId({ file: mdxFile })).catch(
+				(err: unknown) => err
+			);
+			expect(error.message).toMatch(mdxFile);
+			expect(error.loc).toEqual({ file: mdxFile, line: 3, column: 0 });
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should leave other ids to Vite', async () => {
+		expect(await load(createPlugin(), component('Button/Button.js'))).toBeNull();
 	});
 });
 
@@ -267,11 +314,11 @@ describe('configureServer', () => {
 			return server.middlewares.use.mock.calls[1][0];
 		};
 
-		it('should serve docs.json, regenerated from the sources', () => {
+		it('should serve docs.json, regenerated from the sources', async () => {
 			const middleware = getMiddleware();
 			const res = response();
 			const next = vi.fn();
-			middleware({ method: 'GET', url: '/docs.json?nocache' }, res, next);
+			await middleware({ method: 'GET', url: '/docs.json?nocache' }, res, next);
 			expect(next).not.toHaveBeenCalled();
 			expect(res.statusCode).toBe(200);
 			expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json; charset=utf-8');
@@ -281,11 +328,11 @@ describe('configureServer', () => {
 			expect(manifest.sections[0].components.map((c: any) => c.name)).toContain('Button');
 		});
 
-		it('should serve llms.txt and llms-full.txt as text', () => {
+		it('should serve llms.txt and llms-full.txt as text', async () => {
 			const middleware = getMiddleware({ title: 'Served' });
 			for (const url of ['/llms.txt', '/llms-full.txt']) {
 				const res = response();
-				middleware({ method: 'GET', url }, res, vi.fn());
+				await middleware({ method: 'GET', url }, res, vi.fn());
 				expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/plain; charset=utf-8');
 				expect(res.end.mock.calls[0][0]).toMatch(/^# Served\n/);
 			}
@@ -306,13 +353,13 @@ describe('configureServer', () => {
 			}
 		});
 
-		it('should pass errors on', () => {
+		it('should pass errors on', async () => {
 			// A section content file that disappeared makes getSections() throw
 			const middleware = getMiddleware({
 				sections: [{ name: 'Gone', content: 'nope.md' }],
 			});
 			const next = vi.fn();
-			middleware({ method: 'GET', url: '/llms.txt' }, response(), next);
+			await middleware({ method: 'GET', url: '/llms.txt' }, response(), next);
 			expect(next).toHaveBeenCalledWith(expect.any(Error));
 		});
 	});
@@ -421,6 +468,19 @@ describe('hotUpdate', () => {
 		expect(result).toEqual([{ id: propsModule }]);
 	});
 
+	it('should regenerate the docs of a component when an .mdx examples file appears', () => {
+		const propsModule = NULL + propsId(button);
+		const graph = createGraph([propsModule]);
+		const getExampleFilename = (file: string) =>
+			file === button ? component('Button/Readme.mdx') : false;
+		const result = hotUpdate(createPlugin({ getExampleFilename }), graph, {
+			file: component('Button/Readme.mdx'),
+			type: 'create',
+		});
+		expect(graph.invalidateModule).toHaveBeenCalledWith({ id: propsModule }, new Set(), 42, true);
+		expect(result).toEqual([{ id: propsModule }]);
+	});
+
 	it('should return only the regenerated modules when a file is deleted', () => {
 		const propsModule = NULL + propsId(button);
 		const graph = createGraph([propsModule]);
@@ -434,8 +494,8 @@ describe('hotUpdate', () => {
 });
 
 describe('generateBundle', () => {
-	const generateBundle = (plugin: Plugin, bundle: Record<string, any>, ctx = context()) => {
-		(hook(plugin.generateBundle) as any).call(ctx, {}, bundle, false);
+	const generateBundle = async (plugin: Plugin, bundle: Record<string, any>, ctx = context()) => {
+		await (hook(plugin.generateBundle) as any).call(ctx, {}, bundle, false);
 		return ctx;
 	};
 
@@ -449,8 +509,8 @@ describe('generateBundle', () => {
 		},
 	});
 
-	it('should emit index.html referencing the entry chunk and its CSS', () => {
-		const ctx = generateBundle(createPlugin({ machineReadable: false }), {
+	it('should emit index.html referencing the entry chunk and its CSS', async () => {
+		const ctx = await generateBundle(createPlugin({ machineReadable: false }), {
 			'build/bundle.abc.js': {
 				type: 'chunk',
 				isEntry: true,
@@ -478,15 +538,15 @@ describe('generateBundle', () => {
 		expect(source).not.toMatch('vendor.def.js');
 	});
 
-	it('should emit nothing without an entry chunk', () => {
-		const ctx = generateBundle(createPlugin(), {
+	it('should emit nothing without an entry chunk', async () => {
+		const ctx = await generateBundle(createPlugin(), {
 			'build/style.css': { type: 'asset', fileName: 'build/style.css' },
 		});
 		expect(ctx.emitFile).not.toHaveBeenCalled();
 	});
 
-	it('should emit the machine-readable docs next to index.html', () => {
-		const ctx = generateBundle(createPlugin({ title: 'Built' }), bundle());
+	it('should emit the machine-readable docs next to index.html', async () => {
+		const ctx = await generateBundle(createPlugin({ title: 'Built' }), bundle());
 		const emitted = ctx.emitFile.mock.calls.map((call) => call[0]);
 		expect(emitted.map((file) => file.fileName)).toEqual([
 			'index.html',
@@ -503,8 +563,8 @@ describe('generateBundle', () => {
 		expect(emitted[3].source).toMatch(/^# Built\n/);
 	});
 
-	it('should emit only index.html when machineReadable is off', () => {
-		const ctx = generateBundle(createPlugin({ machineReadable: false }), bundle());
+	it('should emit only index.html when machineReadable is off', async () => {
+		const ctx = await generateBundle(createPlugin({ machineReadable: false }), bundle());
 		expect(ctx.emitFile).toHaveBeenCalledTimes(1);
 	});
 });

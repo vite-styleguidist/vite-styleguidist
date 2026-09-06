@@ -7,13 +7,17 @@ import {
 	NULL,
 	PROPS_PREFIX,
 	EXAMPLES_PREFIX,
+	MDX_PREFIX,
 	toPosix,
 	propsId,
 	examplesId,
 	isPropsId,
 	isExamplesId,
+	isMdxId,
 	parsePropsId,
 	parseExamplesId,
+	mdxId,
+	parseMdxId,
 } from '../ids.js';
 
 describe('constants', () => {
@@ -104,5 +108,48 @@ describe('examples ids', () => {
 			componentPath: '/my docs/Button&Co.js',
 		};
 		expect(parseExamplesId(NULL + examplesId(options))).toMatchObject(options);
+	});
+});
+
+describe('mdx ids', () => {
+	const options = {
+		file: ['', 'components', 'Button', 'Readme.mdx'].join(path.sep),
+		displayName: 'Button',
+		componentPath: ['', 'components', 'Button', 'Button.js'].join(path.sep),
+		shouldShowDefaultExample: true,
+	};
+
+	it('should build an id with posix paths and the module options as query params', () => {
+		expect(mdxId(options)).toBe(
+			`${MDX_PREFIX}/components/Button/Readme.mdx?displayName=Button&component=%2Fcomponents%2FButton%2FButton.js&default=1`
+		);
+	});
+
+	it('should round-trip through parseMdxId', () => {
+		expect(parseMdxId(NULL + mdxId(options))).toEqual({
+			file: '/components/Button/Readme.mdx',
+			displayName: 'Button',
+			componentPath: '/components/Button/Button.js',
+			shouldShowDefaultExample: true,
+		});
+	});
+
+	it('should omit empty options', () => {
+		const id = mdxId({ file: '/a/Readme.mdx' });
+		expect(id).toBe(`${MDX_PREFIX}/a/Readme.mdx`);
+		expect(parseMdxId(NULL + id)).toEqual({
+			file: '/a/Readme.mdx',
+			displayName: undefined,
+			componentPath: undefined,
+			shouldShowDefaultExample: false,
+		});
+	});
+
+	it('should recognize only resolved mdx ids', () => {
+		expect(isMdxId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(true);
+		expect(isMdxId(mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
+		expect(isMdxId(NULL + EXAMPLES_PREFIX + '/a/Readme.md')).toBe(false);
+		expect(isExamplesId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
+		expect(isPropsId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
 	});
 });

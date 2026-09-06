@@ -48,6 +48,39 @@ export interface ConfigSchemaOptions<T> {
 const removedWebpackOption = (replacement: string) =>
 	`Styleguidist now uses Vite instead of webpack. Use the "${replacement}" option instead:\n${consts.DOCS_VITE}`;
 
+/**
+ * Default `getExampleFilename`: the examples file of a component, `.md` before `.mdx` for
+ * the same base name so that a style guide that has both keeps rendering the Markdown one.
+ *
+ * The *extension of the returned path selects the pipeline*: `.mdx` goes through
+ * @mdx-js/mdx, anything else through the Markdown one. That is what makes a custom
+ * `getExampleFilename` work with MDX without a new config option.
+ *
+ * Exported so the discovery code can tell a file it found itself (warn and skip when
+ * @mdx-js/mdx is missing) from one the user named explicitly (a hard error).
+ */
+export function defaultGetExampleFilename(componentPath: string): string | boolean {
+	const dir = path.dirname(componentPath);
+	const extension = path.extname(componentPath);
+	const files = [
+		path.join(dir, 'Readme.md'),
+		path.join(dir, 'Readme.mdx'),
+		// ComponentName.md
+		componentPath.replace(extension, '.md'),
+		componentPath.replace(extension, '.mdx'),
+		// FolderName.md when component definition file is index.js
+		path.join(dir, path.basename(dir) + '.md'),
+		path.join(dir, path.basename(dir) + '.mdx'),
+	];
+	for (const file of files) {
+		const existingFile = fileExistsCaseInsensitive(file);
+		if (existingFile) {
+			return existingFile;
+		}
+	}
+	return false;
+}
+
 const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.StyleguidistConfig>> = {
 	assetsDir: {
 		type: ['array', 'existing directory path'],
@@ -128,22 +161,7 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	getExampleFilename: {
 		type: 'function',
-		default: (componentPath: string): string | boolean => {
-			const files = [
-				path.join(path.dirname(componentPath), 'Readme.md'),
-				// ComponentName.md
-				componentPath.replace(path.extname(componentPath), '.md'),
-				// FolderName.md when component definition file is index.js
-				path.join(path.dirname(componentPath), path.basename(path.dirname(componentPath)) + '.md'),
-			];
-			for (const file of files) {
-				const existingFile = fileExistsCaseInsensitive(file);
-				if (existingFile) {
-					return existingFile;
-				}
-			}
-			return false;
-		},
+		default: defaultGetExampleFilename,
 	},
 	handlers: {
 		type: 'function',
@@ -180,6 +198,15 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	machineReadable: {
 		type: 'boolean',
 		default: true,
+	},
+	mdx: {
+		type: 'object',
+		default: {},
+		example: { remarkPlugins: [] },
+	},
+	mdxComponents: {
+		type: 'object',
+		default: {},
 	},
 	minimize: {
 		type: 'boolean',

@@ -90,3 +90,37 @@ describe('createStyleSheet', () => {
 		expect(style['border-color']).toBe(customThemeLinkColor);
 	});
 });
+
+describe('class names', () => {
+	const stylesA = () => ({ root: { color: 'red' }, child: { color: 'blue' } });
+	const stylesB = () => ({ root: { color: 'green' } });
+	const emptyConfig = { theme: {}, styles: {} };
+
+	it('should give every rule of a component the same suffix', () => {
+		const { classes } = createStyleSheet(stylesA, emptyConfig, 'Alpha', '1');
+		const suffix = classes.root.replace(/^rsg--root-/, '');
+		expect(suffix).toMatch(/^\d+$/);
+		expect(classes.child).toBe(`rsg--child-${suffix}`);
+	});
+
+	it('should generate the same class names regardless of creation order', () => {
+		// Two independent factories: the memoize cache must not short-circuit this
+		const stylesAgain = () => ({ root: { color: 'red' }, child: { color: 'blue' } });
+		const first = createStyleSheet(stylesA, emptyConfig, 'Beta', '1').classes;
+		createStyleSheet(stylesB, emptyConfig, 'Gamma', '1');
+		createStyleSheet(stylesB, emptyConfig, 'Delta', '1');
+		const second = createStyleSheet(stylesAgain, emptyConfig, 'Beta', '2').classes;
+		expect(second).toEqual(first);
+	});
+
+	it('should detach the sheet of the previous revision of a component', () => {
+		const first = createStyleSheet(stylesA, emptyConfig, 'Epsilon', '1');
+		first.attach();
+		expect(first.attached).toBe(true);
+		const second = createStyleSheet(stylesA, emptyConfig, 'Epsilon', '2');
+		expect(second).not.toBe(first);
+		expect(first.attached).toBe(false);
+		// Same class names across revisions, which is why the previous sheet had to go
+		expect(second.classes).toEqual(first.classes);
+	});
+});

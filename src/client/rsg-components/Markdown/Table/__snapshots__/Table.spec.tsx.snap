@@ -2,19 +2,19 @@
 
 exports[`Markdown Table > should render a table 1`] = `
 <table
-  class="rsg--table-0"
+  class="rsg--table-2321044498"
 >
   <thead
-    class="rsg--thead-2"
+    class="rsg--thead-3739114682"
   >
     <tr>
       <th
-        class="rsg--th-4 rsg--td-3"
+        class="rsg--th-1677232350 rsg--td-1677232350"
       >
         1st header
       </th>
       <th
-        class="rsg--th-4 rsg--td-3"
+        class="rsg--th-1677232350 rsg--td-1677232350"
       >
         2nd header
       </th>
@@ -23,12 +23,12 @@ exports[`Markdown Table > should render a table 1`] = `
   <tbody>
     <tr>
       <td
-        class="rsg--td-3"
+        class="rsg--td-1677232350"
       >
         1st cell
       </td>
       <td
-        class="rsg--td-3"
+        class="rsg--td-1677232350"
       >
         2nd cell
       </td>

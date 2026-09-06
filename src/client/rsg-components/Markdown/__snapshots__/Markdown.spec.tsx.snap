@@ -2,10 +2,10 @@
 
 exports[`Markdown > should render a blockquote 1`] = `
 <blockquote
-  class="rsg--blockquote-25"
+  class="rsg--blockquote-4208721352"
 >
   <p
-    class="rsg--para-0"
+    class="rsg--para-3111121442"
   >
     This is a blockquote.
 And this is a second line.
@@ -15,25 +15,25 @@ And this is a second line.
 
 exports[`Markdown > should render a horizontal rule 1`] = `
 <hr
-  class="rsg--hr-28"
+  class="rsg--hr-2696988530"
 />
 `;
 
 exports[`Markdown > should render a table 1`] = `
 <table
-  class="rsg--table-29"
+  class="rsg--table-2321044498"
 >
   <thead
-    class="rsg--thead-30"
+    class="rsg--thead-3739114682"
   >
     <tr>
       <th
-        class="rsg--th-32 rsg--td-31"
+        class="rsg--th-1677232350 rsg--td-1677232350"
       >
         heading 1
       </th>
       <th
-        class="rsg--th-32 rsg--td-31"
+        class="rsg--th-1677232350 rsg--td-1677232350"
       >
         heading 2
       </th>
@@ -42,24 +42,24 @@ exports[`Markdown > should render a table 1`] = `
   <tbody>
     <tr>
       <td
-        class="rsg--td-31"
+        class="rsg--td-1677232350"
       >
         foo
       </td>
       <td
-        class="rsg--td-31"
+        class="rsg--td-1677232350"
       >
         bar
       </td>
     </tr>
     <tr>
       <td
-        class="rsg--td-31"
+        class="rsg--td-1677232350"
       >
         more foo
       </td>
       <td
-        class="rsg--td-31"
+        class="rsg--td-1677232350"
       >
         more bar
       </td>
@@ -70,34 +70,34 @@ exports[`Markdown > should render a table 1`] = `
 
 exports[`Markdown > should render check-lists 1`] = `
 <ul
-  class="rsg--list-21"
+  class="rsg--list-2999071948"
 >
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     <input
-      class="rsg--input-24"
+      class="rsg--input-1717227527"
       readonly=""
       type="checkbox"
     />
      to do 1
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     <input
-      class="rsg--input-24"
+      class="rsg--input-1717227527"
       readonly=""
       type="checkbox"
     />
      to do 2
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     <input
       checked=""
-      class="rsg--input-24"
+      class="rsg--input-1717227527"
       readonly=""
       type="checkbox"
     />
@@ -108,7 +108,7 @@ exports[`Markdown > should render check-lists 1`] = `
 
 exports[`Markdown > should render code blocks without escaping 1`] = `
 <pre
-  class="language-html lang-html rsg--pre-26"
+  class="language-html lang-html rsg--pre-2855345150"
 >
   <foo />
 </pre>
@@ -117,21 +117,21 @@ exports[`Markdown > should render code blocks without escaping 1`] = `
 exports[`Markdown > should render emphasis and strong text 1`] = `
 <div>
   <p
-    class="rsg--para-0"
+    class="rsg--para-3111121442"
   >
     this text is 
     <strong
-      class="rsg--text-11 rsg--inheritSize-12 rsg--baseColor-16 rsg--strong-19"
+      class="rsg--text-4105326000 rsg--inheritSize-4105326000 rsg--baseColor-4105326000 rsg--strong-4105326000"
     >
       strong
     </strong>
   </p>
   <p
-    class="rsg--para-0"
+    class="rsg--para-3111121442"
   >
     and this is 
     <em
-      class="rsg--text-11 rsg--inheritSize-12 rsg--baseColor-16 rsg--em-18"
+      class="rsg--text-4105326000 rsg--inheritSize-4105326000 rsg--baseColor-4105326000 rsg--em-4105326000"
     >
       emphasized
     </em>
@@ -142,60 +142,60 @@ exports[`Markdown > should render emphasis and strong text 1`] = `
 exports[`Markdown > should render headings with generated ids 1`] = `
 <div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h1
-      class="rsg--heading-4 rsg--heading1-5"
+      class="rsg--heading-428943963 rsg--heading1-428943963"
       id="one"
     >
       one
     </h1>
   </div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h2
-      class="rsg--heading-4 rsg--heading2-6"
+      class="rsg--heading-428943963 rsg--heading2-428943963"
       id="two"
     >
       two
     </h2>
   </div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h3
-      class="rsg--heading-4 rsg--heading3-7"
+      class="rsg--heading-428943963 rsg--heading3-428943963"
       id="three"
     >
       three
     </h3>
   </div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h4
-      class="rsg--heading-4 rsg--heading4-8"
+      class="rsg--heading-428943963 rsg--heading4-428943963"
       id="four"
     >
       four
     </h4>
   </div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h5
-      class="rsg--heading-4 rsg--heading5-9"
+      class="rsg--heading-428943963 rsg--heading5-428943963"
       id="five"
     >
       five
     </h5>
   </div>
   <div
-    class="rsg--spacing-3"
+    class="rsg--spacing-3142955614"
   >
     <h6
-      class="rsg--heading-4 rsg--heading6-10"
+      class="rsg--heading-428943963 rsg--heading6-428943963"
       id="six"
     >
       six
@@ -206,11 +206,11 @@ exports[`Markdown > should render headings with generated ids 1`] = `
 
 exports[`Markdown > should render inline code with escaping 1`] = `
 <p
-  class="rsg--para-0"
+  class="rsg--para-3111121442"
 >
   Foo 
   <code
-    class="rsg--code-27"
+    class="rsg--code-1270128120"
   >
     &lt;bar&gt;
   </code>
@@ -220,11 +220,11 @@ exports[`Markdown > should render inline code with escaping 1`] = `
 
 exports[`Markdown > should render links 1`] = `
 <p
-  class="rsg--para-0"
+  class="rsg--para-3111121442"
 >
   a 
   <a
-    class="rsg--link-2"
+    class="rsg--link-2292694394"
     href="http://test.com"
   >
     link
@@ -234,39 +234,39 @@ exports[`Markdown > should render links 1`] = `
 
 exports[`Markdown > should render mixed nested lists 1`] = `
 <ul
-  class="rsg--list-21"
+  class="rsg--list-2999071948"
 >
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     list 1
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     list 2
     <ol
-      class="rsg--list-21 rsg--ordered-22"
+      class="rsg--list-2999071948 rsg--ordered-2999071948"
     >
       <li
-        class="rsg--li-23"
+        class="rsg--li-2999071948"
       >
         Sub-list
       </li>
       <li
-        class="rsg--li-23"
+        class="rsg--li-2999071948"
       >
         Sub-list
       </li>
       <li
-        class="rsg--li-23"
+        class="rsg--li-2999071948"
       >
         Sub-list
       </li>
     </ol>
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     list 3
   </li>
@@ -275,20 +275,20 @@ exports[`Markdown > should render mixed nested lists 1`] = `
 
 exports[`Markdown > should render ordered lists 1`] = `
 <ol
-  class="rsg--list-21 rsg--ordered-22"
+  class="rsg--list-2999071948 rsg--ordered-2999071948"
 >
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     list
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     item
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     three
   </li>
@@ -298,12 +298,12 @@ exports[`Markdown > should render ordered lists 1`] = `
 exports[`Markdown > should render paragraphs 1`] = `
 <div>
   <p
-    class="rsg--para-0"
+    class="rsg--para-3111121442"
   >
     a paragraph
   </p>
   <p
-    class="rsg--para-0"
+    class="rsg--para-3111121442"
   >
     another paragraph
   </p>
@@ -312,7 +312,7 @@ exports[`Markdown > should render paragraphs 1`] = `
 
 exports[`Markdown > should render pre-formatted text 1`] = `
 <pre
-  class="rsg--pre-26"
+  class="rsg--pre-2855345150"
 >
   this is preformatted
 so is this
@@ -321,20 +321,20 @@ so is this
 
 exports[`Markdown > should render unordered lists 1`] = `
 <ul
-  class="rsg--list-21"
+  class="rsg--list-2999071948"
 >
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     list
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     item
   </li>
   <li
-    class="rsg--li-23"
+    class="rsg--li-2999071948"
   >
     three
   </li>

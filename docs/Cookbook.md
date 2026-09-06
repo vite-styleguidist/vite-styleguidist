@@ -234,11 +234,11 @@ module.exports = {
 }
 ```
 
-> **Info:** See available [theme variables](../src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts). Colour tokens are CSS custom properties that switch with [dark mode](#how-to-customize-dark-mode); overriding one through `theme` gives you a fixed colour in both schemes.
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
-> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-53">` corresponds to an example above.
+> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-1234567890">` corresponds to an example above (the number is derived from the component, all its classes share it).
 
 > **Tip:** Use a function instead of an object for [styles](Configuration.md#styles) to access all theme variables in your custom styles.
 
@@ -304,6 +304,67 @@ module.exports = {
         }
       }
     }
+  }
+}
+```
+
+## How to customize dark mode?
+
+The style guide UI has a light and a dark scheme. By default ([colorScheme](Configuration.md#colorscheme) `system`) it follows the visitor’s operating system and shows a system / light / dark toggle in the sidebar header; the choice is remembered in `localStorage` and applied before the first paint. Your components are not restyled: they render with their own CSS, inside a frame that is light or dark.
+
+To start every visitor in one scheme and remove the toggle:
+
+```javascript
+module.exports = {
+  colorScheme: 'dark'
+}
+```
+
+Colours are CSS custom properties named after the [theme](Configuration.md#theme) tokens (`color.sidebarBackground` is `--rsg-color-sidebar-background`), so a colour that should differ between the schemes is set on `:root` (light), on `[data-rsg-theme="dark"]` (the toggle’s dark choice) and inside the `prefers-color-scheme` media query (the system setting). The easiest place is an inline style in [template](Configuration.md#template):
+
+```javascript
+module.exports = {
+  template: {
+    head: {
+      raw: `<style>
+  :root { --rsg-color-sidebar-background: #f0f4f8; }
+  [data-rsg-theme="dark"] { --rsg-color-sidebar-background: #0b1620; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-rsg-theme="light"]) { --rsg-color-sidebar-background: #0b1620; }
+  }
+</style>`
+    }
+  }
+}
+```
+
+A stylesheet listed in [require](Configuration.md#require) works the same way. Do not set such colours through `theme.color.*`: that replaces the custom property with a literal, and the token stops switching. `theme.color.*` is the right tool when you want one colour in both schemes, or when you set [colorScheme](Configuration.md#colorscheme) to `light` or `dark`.
+
+The toggle is the `ThemeToggle` component: restyle it with `styles: { ThemeToggle: { root: {…}, button: {…}, isActive: {…} } }`, or replace `ThemeToggleRenderer` through [styleguideComponents](Configuration.md#styleguidecomponents) (it receives `value`, one of `system`, `light`, `dark`, and `onChange`). A custom `StyleGuideRenderer` can import it from `vite-styleguidist/lib/client/rsg-components/ThemeToggle/index.js` and place it anywhere.
+
+If you use a [template](Configuration.md#template) function, keep the `<meta name="color-scheme">` tag and the inline script that applies the stored choice, otherwise the page renders light first and switches once the bundle runs:
+
+```javascript
+const {
+  colorSchemeScript
+} = require('vite-styleguidist/lib/vite/html.js')
+
+module.exports = {
+  template({ colorScheme, title, container, js }) {
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="${
+      colorScheme === 'system' ? 'light dark' : colorScheme
+    }">
+<script>${colorSchemeScript(colorScheme)}</script>
+<title>${title}</title>
+</head>
+<body><div id="${container}"></div>${js
+      .map(file => `<script type="module" src="${file}"></script>`)
+      .join('')}</body>
+</html>`
   }
 }
 ```
@@ -393,7 +454,7 @@ We have [an example style guide](../examples/customised) with custom components.
 
 ## How to change syntax highlighting colors?
 
-Styleguidist uses [Prism](https://prismjs.com/) to highlight static code blocks (in Markdown and in the “Usage” tab) and [CodeMirror](https://codemirror.net/) in the live code editor. Both are colored by the same palette, the `theme.color.code*` keys: the editor emits Prism’s token class names, so a change to these colors applies to static blocks and to the editor alike. You can change the colors using the [theme](Configuration.md#theme) config option:
+Styleguidist uses [Prism](https://prismjs.com/) to highlight static code blocks (in Markdown and in the “Usage” tab) and [CodeMirror](https://codemirror.net/) in the live code editor. Both are colored by the same palette, the `theme.color.code*` keys: the editor emits Prism’s token class names, so a change to these colors applies to static blocks and to the editor alike. You can change the colors using the [theme](Configuration.md#theme) config option (these values then apply in both light and [dark mode](#how-to-customize-dark-mode); override the `--rsg-color-code-*` custom properties instead to give each scheme its own colors):
 
 ```javascript
 // styleguide.config.js

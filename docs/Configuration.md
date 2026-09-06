@@ -35,6 +35,25 @@ Styleguidist uses [Sucrase](https://github.com/alangpierce/sucrase) to compile e
 
 > **Caution:** The option replaces the default value, it isn’t merged with it. Start from the defaults, which you can import from `vite-styleguidist/lib/client/utils/compileCode.js` as `DEFAULT_COMPILER_CONFIG`.
 
+## `colorScheme`
+
+Type: `String`, default: `system`
+
+Colour scheme of the style guide UI (not of your components):
+
+- `system`: follow the visitor’s operating system (`prefers-color-scheme`) and show a system / light / dark toggle in the sidebar header. The visitor’s choice is remembered in `localStorage`.
+- `light` or `dark`: always use that scheme and hide the toggle.
+
+```javascript
+module.exports = {
+  colorScheme: 'dark'
+}
+```
+
+The scheme is applied to the `<html>` element as the `data-rsg-theme` attribute (`light`, `dark`, or absent for `system`) by an inline script in the generated page, before the first paint, so there is no flash of the wrong scheme. See [dark mode](Cookbook.md#how-to-customize-dark-mode) in the cookbook for how the colours work, and [theme](#theme) for the rule about overridden colours.
+
+> **Note:** A custom [template](#template) function receives `colorScheme` in its context and has to include the `<meta name="color-scheme">` tag and the inline script itself; `colorSchemeScript(colorScheme)` from `vite-styleguidist/lib/vite/html.js` returns the script.
+
 ## `components`
 
 Type: `String`, `Function` or `Array`, default: `src/@(components|Components)/**/*.{js,jsx,ts,tsx}` (see [Locating components](Components.md) for the Windows fallback)
@@ -587,7 +606,7 @@ Customize styles of any Styleguidist’s component using an object, a function r
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](../src/client/styles/theme.ts). The returned object folows the same format as when configured as a litteral.
+> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](../src/client/styles/theme.ts) and the [theme](#theme) option for what the colour tokens contain. The returned object follows the same format as when configured as a literal.
 
 ```javascript
 module.exports = {
@@ -605,6 +624,8 @@ module.exports = {
 ```
 
 **Note:** If using a file path, it has to be absolute or relative to the config file. The file is bundled for the browser and must be an ES module (`export default {…}` or `export default theme => ({…})`).
+
+**Note:** Component names and the keys inside them (`Logo`, `logo`) are part of the public contract: keys are only ever added, never renamed, so a `styles` config keeps working across minor releases. The generated class names look like `rsg--logo-1234567890`; the number is derived from the component and its keys, it is not something to target.
 
 ## `template`
 
@@ -685,11 +706,35 @@ The path is relative to the config file or absolute. The file is bundled for the
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Info:** See available [theme variables](../src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts). The light and dark values of the colour tokens live in [colorSchemes.ts](../src/client/styles/colorSchemes.ts).
+
+### Colour tokens and dark mode
+
+Every `theme.color.*` token is a CSS custom property with the light value as fallback, `var(--rsg-color-<name>, <light value>)`, where `<name>` is the token name in kebab-case: `color.baseBackground` is `--rsg-color-base-background`. The style guide defines the light values on `:root`, the dark values on `[data-rsg-theme="dark"]` and, for the `system` [colorScheme](#colorscheme), inside `@media (prefers-color-scheme: dark)`.
+
+This has one consequence for the `theme` option: **overriding a colour token opts that token out of dark mode**. `theme: { color: { link: 'firebrick' } }` replaces the whole `var()` expression with a literal that no longer switches, so you own both schemes for that token. To change a colour in both schemes, override the custom property instead of the token, for example with [template](#template) `head.raw` or a stylesheet listed in [require](#require):
+
+```css
+:root {
+  --rsg-color-link: firebrick;
+}
+[data-rsg-theme='dark'] {
+  --rsg-color-link: salmon;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-rsg-theme='light']) {
+    --rsg-color-link: salmon;
+  }
+}
+```
+
+Or set [colorScheme](#colorscheme) to `light` if your theme only has one scheme. Numeric tokens (`space`, `fontSize`, `borderRadius`, `maxWidth`, `sidebarWidth`) stay numbers and are the same in both schemes.
+
+Tokens that components used to hard-code and that you can now override: `lineHeight.base` (1.5) and `lineHeight.heading` (1.2); `fontWeight.normal` and `fontWeight.bold`; `transition.fast` (`150ms ease-in`) and `transition.slow` (`750ms ease-out`, duration and easing only); `shadow.tooltip` and `shadow.ribbon` (complete `box-shadow` / `text-shadow` values); `mq.small` (`@media (max-width: 600px)`) and `mq.medium` (`@media (max-width: 1024px)`). Token names are only ever added, never renamed.
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-plugin-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-plugin-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-plugin-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-plugin-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-plugin-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-plugin-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
-> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-53">` corresponds to an example above.
+> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-1234567890">` corresponds to the `Logo` / `logo` example above; the number is derived from the component and is the same for all its classes.
 
 ## `title`
 

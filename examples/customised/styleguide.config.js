@@ -4,6 +4,11 @@ module.exports = {
 	title: 'Style guide example',
 	components: './src/components/**/[A-Z]*.js',
 	showSidebar: false,
+	// The theme below pins a light `baseBackground`, which opts that one token out of dark
+	// mode (see docs/Configuration.md, "Colour tokens and dark mode"), and there is no sidebar
+	// so no toggle: force the light scheme, or a visitor with a dark OS would get the dark
+	// text colours on this light background.
+	colorScheme: 'light',
 	// Partial theme: it is deep-merged into Styleguidist’s default theme
 	// (see src/client/styles/theme.ts for all the keys)
 	theme: {

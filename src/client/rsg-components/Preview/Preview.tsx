@@ -61,15 +61,27 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	}
 
 	public componentWillUnmount() {
-		if (this.errorTimeoutId) {
-			clearTimeout(this.errorTimeoutId);
-		}
+		this.clearPendingError();
 		this.unmountPreview();
 	}
 
+	/**
+	 * Drops the error handleError() deferred to the next macrotask. Anything that supersedes the
+	 * run that reported it (a new render, an unmount) has to call this: the timer holds the
+	 * previous code’s message and would otherwise paint it over the new result.
+	 */
+	private clearPendingError() {
+		if (this.errorTimeoutId) {
+			clearTimeout(this.errorTimeoutId);
+			this.errorTimeoutId = null;
+		}
+	}
+
 	public unmountPreview() {
+		this.clearPendingError();
 		if (this.timeoutId) {
 			clearTimeout(this.timeoutId);
+			this.timeoutId = null;
 		}
 		// React forbids unmounting a root synchronously while another root renders,
 		// so the unmount is deferred to the next macrotask
@@ -82,6 +94,16 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 	}
 
 	private executeCode() {
+		// Both timers belong to the previous code: a pending unmount would blank the preview this
+		// run is about to render into, and a pending error would land on top of code that has
+		// just cleared it. Cancel them before the state reset, not after, so the new run owns
+		// whatever is on screen.
+		this.clearPendingError();
+		if (this.timeoutId) {
+			clearTimeout(this.timeoutId);
+			this.timeoutId = null;
+		}
+
 		this.setState({
 			error: null,
 		});
@@ -130,9 +152,7 @@ export default class Preview extends Component<PreviewProps, PreviewState> {
 		// update targets a component in another root; 17 and later only complain about the
 		// component that is itself rendering. Deferring to the next macrotask (the same way
 		// unmountPreview() defers the unmount) keeps every supported React quiet.
-		if (this.errorTimeoutId) {
-			clearTimeout(this.errorTimeoutId);
-		}
+		this.clearPendingError();
 		this.errorTimeoutId = setTimeout(() => {
 			this.errorTimeoutId = null;
 			this.setState({

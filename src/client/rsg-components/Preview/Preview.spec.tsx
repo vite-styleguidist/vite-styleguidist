@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import Preview from './index.js';
 import Context, { StyleGuideContextContents } from '../Context/index.js';
 import { DEFAULT_COMPILER_CONFIG } from '../../utils/compileCode.js';
@@ -158,4 +158,43 @@ it('should clear console on second mount', () => {
 		</Provider>
 	);
 	expect(console.clear).toHaveBeenCalledTimes(1);
+});
+
+it('should not show the previous code’s error once new code has rendered', () => {
+	// Fake timers hold the macrotask handleError() defers the error to (and the one
+	// unmountPreview() defers the unmount to), so the new code can land in between the way it
+	// does with previewDelay: 0 and two edits inside one frame. Only the timeout functions are
+	// faked: test/setup.ts runs requestAnimationFrame synchronously, and faking it too would
+	// defer the example’s render as well.
+	vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+	console.error = vi.fn();
+
+	try {
+		const { rerender, getByTestId, queryByText } = render(
+			<Provider>
+				<Preview code={'<invalid code'} evalInContext={evalInContext} />
+			</Provider>
+		);
+
+		// Reported to the console synchronously, not yet on screen
+		expect(console.error).toHaveBeenCalled();
+		expect(queryByText(/^SyntaxError: /)).toBeNull();
+
+		rerender(
+			<Provider>
+				<Preview code={code} evalInContext={evalInContext} />
+			</Provider>
+		);
+
+		act(() => {
+			vi.runAllTimers();
+		});
+
+		// Both pending timers belonged to the previous code: the error must not be painted over
+		// the healthy preview, and the deferred unmount must not blank it
+		expect(queryByText(/^SyntaxError: /)).toBeNull();
+		expect(getByTestId('mountNode').innerHTML).toMatch('<button');
+	} finally {
+		vi.useRealTimers();
+	}
 });

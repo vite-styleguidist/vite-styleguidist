@@ -42,7 +42,7 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 							</Text>
 						</PropDefault>
 					);
-				} catch (e) {
+				} catch {
 					// eval will throw if it contains a reference to a property not in the
 					// local scope. To avoid any breakage we fall back to rendering the
 					// prop without any formatting

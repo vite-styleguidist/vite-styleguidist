@@ -31,7 +31,7 @@ export default function parseExample(
 		} else {
 			try {
 				example.settings = JSON.parse(modifiers);
-			} catch (err) {
+			} catch {
 				return {
 					error: `Cannot parse modifiers for "${modifiers}". Use space-separated strings or JSON:\n\n${DOCS_DOCUMENTING}`,
 				};

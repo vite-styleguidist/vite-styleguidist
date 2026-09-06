@@ -14,7 +14,6 @@ import type * as Rsg from '../../../typings/index.js';
 // 8/10 padding); a `size` prop set by UsageTabButton would be the way to add that later, but it
 // buys a second visual variant of the same control, so the smaller pair ships as is.
 export const styles = ({
-	space,
 	color,
 	fontFamily,
 	fontSize,

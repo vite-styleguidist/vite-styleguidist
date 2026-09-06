@@ -22,9 +22,9 @@ module.exports = {
 	// GitHub Pages serves `foo/index.html` for `/foo/` but redirects `/foo` -> `/foo/`
 	// itself; emitting trailing slashes avoids that extra redirect on every deep link.
 	trailingSlash: true,
-	// TODO(branding): this favicon is still the original React Styleguidist mark by
-	// Andrey Okonetchnikov and Sara Vieira. Replace it once the fork has its own icon.
-	favicon: 'img/favicon.ico',
+	// Fork-owned icon (source: static/img/favicon.svg, rendered to PNG for older browsers);
+	// the original React Styleguidist mark belongs to its authors and is not reused.
+	favicon: 'img/favicon.png',
 	organizationName: 'vite-styleguidist',
 	projectName: 'vite-styleguidist',
 

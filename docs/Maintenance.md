@@ -179,6 +179,7 @@ For every release:
 3. Wait for the release workflow to finish. Check the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases) and `npm view vite-styleguidist dist-tags`.
 4. Edit the release notes on GitHub if the generated notes need context: a screenshot or GIF for visual changes, a code example for a new option, a link to the relevant docs page (see [Changelogs](#changelogs)).
 5. For breaking changes, verify that the migration guide was updated in the same pull request and that the release notes link to it.
+6. While 1.0 is in beta only: semantic-release tags prereleases with `next`, while npm’s `latest` stays on the first version ever published, so a plain `npm install` would get a stale beta. Move it by hand after each prerelease: `npm dist-tag add vite-styleguidist@1.0.0-next.N latest` (asks for a 2FA code). The first stable release takes over `latest` automatically.
 
 ### Promoting next to main
 

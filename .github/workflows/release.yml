@@ -35,7 +35,12 @@ jobs:
   release:
     # Forks (contributor forks, and the old react-styleguidist fork this project grew out of)
     # must never publish; only the canonical repository has the credentials and the tags; run only in the canonical repo.
-    if: github.repository == 'vite-styleguidist/vite-styleguidist'
+    # RELEASES_ENABLED is a repository variable (Settings > Secrets and variables > Actions >
+    # Variables). It is "false" until the very first version has been published by hand and the
+    # npm trusted publisher exists (see the release checklist in docs/Maintenance.md); before
+    # that every run would fail at verifyConditions. It also works as a pause switch: set it
+    # to "false" to stop publishing without touching the code, "true" to resume.
+    if: github.repository == 'vite-styleguidist/vite-styleguidist' && vars.RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

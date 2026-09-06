@@ -99,8 +99,8 @@ export const shadow = {
 
 export const mq = {
 	small: '@media (max-width: 600px)',
-	// Not used by any component yet: sidebar (232) + content (1000) + paddings no longer
-	// fit side by side around this width, so it is the natural next breakpoint.
+	// Used by StyleGuideRenderer to tighten the page paddings: sidebar (232) + content
+	// (960) + paddings no longer fit side by side around this width.
 	medium: '@media (max-width: 1024px)',
 };
 

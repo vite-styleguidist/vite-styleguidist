@@ -328,6 +328,33 @@ describe('configureServer', () => {
 			expect(manifest.sections[0].components.map((c: any) => c.name)).toContain('Button');
 		});
 
+		// One page that cannot be compiled used to 500 all three files for the whole guide
+		// in development (C8); the build keeps failing, see machineReadable.spec.ts
+		it('should serve the rest of the guide when one MDX page does not compile', async () => {
+			const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-plugin-mdx-manifest-'));
+			const broken = path.join(dir, 'Broken.mdx');
+			fs.writeFileSync(broken, 'Prose.\n\n<Callout>\n');
+			try {
+				const middleware = getMiddleware({
+					sections: [
+						{ name: 'Broken', content: broken },
+						{ name: 'Components', components: 'components/**/[A-Z]*.js' },
+					],
+				});
+				const res = response();
+				const next = vi.fn();
+				await middleware({ method: 'GET', url: '/docs.json' }, res, next);
+
+				expect(next).not.toHaveBeenCalled();
+				expect(res.statusCode).toBe(200);
+				const manifest = JSON.parse(res.end.mock.calls[0][0]);
+				expect(manifest.sections[0].error).toMatch(broken);
+				expect(manifest.sections[1].components.map((c: any) => c.name)).toContain('Button');
+			} finally {
+				fs.rmSync(dir, { recursive: true, force: true });
+			}
+		});
+
 		it('should serve llms.txt and llms-full.txt as text', async () => {
 			const middleware = getMiddleware({ title: 'Served' });
 			for (const url of ['/llms.txt', '/llms-full.txt']) {

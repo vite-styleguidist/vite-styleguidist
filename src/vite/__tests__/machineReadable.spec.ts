@@ -819,3 +819,105 @@ describe('renderers', () => {
 		expect(files['llms-full.txt']).toMatch(/^# Fixtures\n/);
 	});
 });
+
+// An `.mdx` page that does not compile: the whole manifest used to reject, taking docs.json,
+// llms.txt and llms-full.txt down for every page of the guide in development (C8).
+describe('an examples file that cannot be read', () => {
+	let dir: string;
+
+	beforeAll(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-manifest-broken-mdx-'));
+		fs.mkdirSync(path.join(dir, 'components'), { recursive: true });
+		fs.writeFileSync(
+			path.join(dir, 'components/Broken.js'),
+			`import React from 'react';
+/** A component whose page does not compile. */
+export default function Broken() {
+	return <span />;
+}
+`
+		);
+		fs.writeFileSync(
+			path.join(dir, 'components/Fine.js'),
+			`import React from 'react';
+/** A component whose page is fine. */
+export default function Fine() {
+	return <span />;
+}
+`
+		);
+		// An unclosed JSX tag: @mdx-js/mdx rejects with "Expected a closing tag"
+		fs.writeFileSync(path.join(dir, 'components/Broken.mdx'), 'Prose.\n\n<Callout>\n');
+		fs.writeFileSync(
+			path.join(dir, 'components/Fine.md'),
+			'Fine prose.\n\n```jsx\n<Fine />\n```\n'
+		);
+		fs.writeFileSync(path.join(dir, 'broken-page.mdx'), 'Intro.\n\n<Callout>\n');
+	});
+	afterAll(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	const brokenConfig = (options: Rsg.StyleguidistConfig = {}) =>
+		configIn(dir, {
+			title: 'Broken',
+			sections: [
+				{ name: 'Guide', content: 'broken-page.mdx' },
+				{ name: 'Components', components: 'components/*.js' },
+			],
+			...options,
+		});
+
+	// A build must still fail: the module graph fails on the same file, so a manifest that
+	// quietly dropped the page would describe a style guide that was never written
+	it('should reject by default, as a build needs', async () => {
+		await expect(buildManifest(brokenConfig(), undefined, { now: NOW })).rejects.toThrow(
+			/Expected a closing tag/
+		);
+	});
+
+	it('should skip only the broken page with tolerateErrors, keeping the rest', async () => {
+		const manifest = await buildManifest(brokenConfig(), undefined, {
+			now: NOW,
+			tolerateErrors: true,
+		});
+
+		const broken = findComponent(manifest, 'Broken');
+		expect(broken.examples).toEqual([]);
+		expect(broken.notes).toBe('');
+		// The reason names the file and what is wrong with it
+		expect(broken.error).toMatch(path.join(dir, 'components/Broken.mdx'));
+		expect(broken.error).toMatch(/Expected a closing tag/);
+
+		// Everything else is untouched
+		const fine = findComponent(manifest, 'Fine');
+		expect(fine.error).toBeUndefined();
+		expect(fine.examples).toMatchObject([{ code: '<Fine />' }]);
+
+		const guide = manifest.sections[0];
+		expect(guide.name).toBe('Guide');
+		expect(guide.content).toBe('');
+		expect(guide.error).toMatch(path.join(dir, 'broken-page.mdx'));
+	});
+
+	it('should render the machine-readable files of the healthy pages', async () => {
+		const manifest = await buildManifest(brokenConfig(), undefined, {
+			now: NOW,
+			tolerateErrors: true,
+		});
+		expect(renderLlmsFullTxt(manifest)).toContain('<Fine />');
+		expect(JSON.parse(renderDocsJson(manifest)).sections).toHaveLength(2);
+	});
+
+	it('should leave a healthy guide without an error field', async () => {
+		const manifest = await buildManifest(
+			configIn(dir, {
+				title: 'Healthy',
+				sections: [{ name: 'Components', components: 'components/Fine.js' }],
+			}),
+			undefined,
+			{ now: NOW, tolerateErrors: true }
+		);
+		expect(JSON.stringify(manifest)).not.toContain('"error"');
+	});
+});

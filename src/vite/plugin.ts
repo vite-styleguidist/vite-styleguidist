@@ -100,7 +100,9 @@ export function createMachineReadableMiddleware(
 			return;
 		}
 		try {
-			const manifest = await buildManifest(config, undefined, { cache });
+			// `tolerateErrors`: a page that cannot be read (an `.mdx` file mid-edit, say) is
+			// skipped with its reason recorded, so the rest of the guide keeps being served
+			const manifest = await buildManifest(config, undefined, { cache, tolerateErrors: true });
 			res.statusCode = 200;
 			res.setHeader('Content-Type', machineReadableContentType(name));
 			// Never cached: the next request may follow an edit

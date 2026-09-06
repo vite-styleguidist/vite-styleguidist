@@ -22,6 +22,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import doctrine from 'doctrine';
+import createLogger from 'glogg';
 import { getLanguages } from '../loaders/utils/highlightCode.js';
 import getUrl from '../client/utils/getUrl.js';
 import { collectSections } from './modules/styleguide.js';
@@ -31,6 +32,8 @@ import parseMdx from '../loaders/utils/mdx.js';
 import { MDX_PREFIX, NULL, parseExamplesId, toPosix } from './ids.js';
 import { isImportMarker } from '../typings/index.js';
 import type * as Rsg from '../typings/index.js';
+
+const logger = createLogger('rsg');
 
 /** Names of the generated files, relative to the style guide root (next to index.html). */
 export const DOCS_JSON = 'docs.json';
@@ -129,6 +132,12 @@ export interface ManifestComponent {
 	 * last playground, or the whole file when it has no playground at all.
 	 */
 	notes: string;
+	/**
+	 * Why this component has no examples here: the message of the examples file that could
+	 * not be read (an `.mdx` page that does not compile, say). Only in development, where a
+	 * broken page degrades instead of failing the whole manifest — a build fails first.
+	 */
+	error?: string;
 }
 
 export interface ManifestSection {
@@ -148,6 +157,8 @@ export interface ManifestSection {
 	format: 'md' | 'mdx';
 	components: ManifestComponent[];
 	sections: ManifestSection[];
+	/** Why this section has no content page: see `ManifestComponent.error`. */
+	error?: string;
 }
 
 export interface DocsManifest {
@@ -186,6 +197,14 @@ export const createManifestCache = (): ManifestCache => ({ docs: new Map(), exam
 
 export interface BuildManifestOptions {
 	cache?: ManifestCache;
+	/**
+	 * Keep going when an examples file cannot be read: that page contributes no examples and
+	 * carries the reason in its `error`, the rest of the guide is still served. The dev
+	 * middleware sets it, so that one uncompilable `.mdx` page does not take docs.json,
+	 * llms.txt and llms-full.txt down with it; a build leaves it off and fails, which is what
+	 * the module graph does with the same file anyway.
+	 */
+	tolerateErrors?: boolean;
 	/** The `generatedAt` timestamp (defaults to now, or to SOURCE_DATE_EPOCH when set); tests pass a fixed date. */
 	now?: Date;
 }
@@ -533,7 +552,8 @@ const isMdxMarker = (marker: Rsg.ImportMarker | null | undefined): boolean =>
 class ManifestBuilder {
 	constructor(
 		private config: Rsg.SanitizedStyleguidistConfig,
-		private cache: ManifestCache | undefined
+		private cache: ManifestCache | undefined,
+		private tolerateErrors: boolean = false
 	) {}
 
 	/** Component documentation, straight from the props virtual module generator. */
@@ -589,6 +609,33 @@ class ManifestBuilder {
 		return chunks;
 	}
 
+	/**
+	 * The chunks of an examples module, or nothing plus the reason when `tolerateErrors`
+	 * is set (development).
+	 *
+	 * An `.mdx` page that does not compile rejects here, and one broken page must not cost
+	 * the whole guide its docs.json, llms.txt and llms-full.txt — every other page is fine
+	 * and the dev server regenerates all three on the next request anyway. A build keeps the
+	 * hard failure: the module graph fails on the same file, so a half-empty manifest would
+	 * never be written.
+	 */
+	private async readExamplesOrDegrade(
+		marker: Rsg.ImportMarker | null | undefined
+	): Promise<{ chunks: Chunk[]; error?: string }> {
+		try {
+			return { chunks: await this.readExamples(marker) };
+		} catch (err) {
+			if (!this.tolerateErrors) {
+				throw err;
+			}
+			// The message of an MDX compile error starts with the file path (see
+			// toMdxCompileError), so it names both the file and the reason
+			const error = err instanceof Error ? err.message : String(err);
+			logger.warn(`Cannot read examples for the machine-readable docs, skipping them:\n${error}`);
+			return { chunks: [], error };
+		}
+	}
+
 	private async component(
 		component: Rsg.LoaderComponent,
 		link: LinkOptions
@@ -599,10 +646,10 @@ class ManifestBuilder {
 		const name = docs.displayName;
 		// Examples file first, then the `@example` doclet file, like the client does
 		// (see src/client/utils/processComponents.ts)
-		const chunks = [
-			...(await this.readExamples(docs.examples)),
-			...(await this.readExamples(docs.example)),
-		];
+		const examplesFile = await this.readExamplesOrDegrade(docs.examples);
+		const docletFile = await this.readExamplesOrDegrade(docs.example);
+		const chunks = [...examplesFile.chunks, ...docletFile.chunks];
+		const error = [examplesFile.error, docletFile.error].filter(Boolean).join('\n');
 		return {
 			name,
 			displayName: name,
@@ -625,18 +672,23 @@ class ManifestBuilder {
 			methods: (docs.methods || []).map(toManifestMethod),
 			format: isMdxMarker(docs.examples) || isMdxMarker(docs.example) ? 'mdx' : 'md',
 			...toManifestExamples(chunks),
+			// Absent unless a page failed, so the manifest of a healthy guide is unchanged
+			...(error ? { error } : {}),
 		};
 	}
 
-	private async content(content: Rsg.LoaderSection['content']): Promise<string | null> {
+	private async content(
+		content: Rsg.LoaderSection['content']
+	): Promise<{ content: string | null; error?: string }> {
 		if (!content) {
-			return null;
+			return { content: null };
 		}
 		if (!isImportMarker(content)) {
 			// `content` config option given as a function returning Markdown
-			return content.content;
+			return { content: content.content };
 		}
-		return chunksToMarkdown(await this.readExamples(content));
+		const { chunks, error } = await this.readExamplesOrDegrade(content);
+		return { content: chunksToMarkdown(chunks), ...(error ? { error } : {}) };
 	}
 
 	public async sections(
@@ -667,17 +719,19 @@ class ManifestBuilder {
 								LINK_LOCATION
 							)
 						: null);
+				const content = await this.content(section.content);
 				return {
 					name: section.name || null,
 					slug: section.slug || '',
 					href,
 					description: section.description || null,
-					content: await this.content(section.content),
+					content: content.content,
 					format: isMdxMarker(section.content as Rsg.ImportMarker) ? 'mdx' : 'md',
 					components: await Promise.all(
 						section.components.map((component) => this.component(component, childLink))
 					),
 					sections: await this.sections(section.sections, childLink),
+					...(content.error ? { error: content.error } : {}),
 				};
 			})
 		);
@@ -706,7 +760,7 @@ export async function buildManifest(
 	sections: Rsg.LoaderSection[] = collectSections(config),
 	options: BuildManifestOptions = {}
 ): Promise<DocsManifest> {
-	const builder = new ManifestBuilder(config, options.cache);
+	const builder = new ManifestBuilder(config, options.cache, options.tolerateErrors);
 	return {
 		schemaVersion: MANIFEST_SCHEMA_VERSION,
 		source: 'vite-styleguidist',

@@ -237,6 +237,12 @@ Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.m
   }
 ```
 
+The default appearance has changed (new palette, type scale and a [dark mode](Cookbook.md#how-to-customize-dark-mode)), and `theme.color.*` values are now `var(--rsg-color-…, fallback)` strings instead of raw colours. Styles that use them as they are keep working; anything that did colour math on them (`color.lighten(theme.color.link)`) must move to the raw values in your own theme file. Overriding a colour token in `theme` pins it for both schemes, opting it out of dark mode; set the `--rsg-color-*` custom properties per scheme instead to keep dark mode (see the Cookbook).
+
+### Code editor
+
+The live editor is now [CodeMirror 6](https://codemirror.net/), loaded on demand when a code tab is opened. It is coloured by the same `theme.color.code*` keys as static code blocks. A custom editor passed through `styleguideComponents.Editor` receives the same props as before (`code`, `onChange`, `name`, `active`, `onClick`, `evalInContext`), now documented as a public contract in [Configuration](Configuration.md#styleguidecomponents).
+
 ### Examples
 
 - Examples are compiled by Sucrase, so TypeScript syntax works in `js`/`jsx` examples, and `ts`, `tsx` and `typescript` code blocks render playgrounds too.
@@ -246,7 +252,7 @@ Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.m
 
 ### Output
 
-`styleguidist build` writes `index.html` into `styleguideDir` and the bundle into `styleguideDir/build/`, like before. The page loads the bundle as an ES module with relative URLs, so it can be served from any sub-path, but it can’t be opened from a `file://` URL: serve the folder over HTTP to check it locally (for example `npx serve styleguide`). Only `styleguideDir/build` is cleaned before a build, other files in the folder (`CNAME`, `.nojekyll`) are kept.
+`styleguidist build` writes `index.html` into `styleguideDir` and the bundle into `styleguideDir/build/`, like before. The page loads the bundle as an ES module with relative URLs, so it can be served from any sub-path, but it can’t be opened from a `file://` URL: serve the folder over HTTP to check it locally (for example `npx serve styleguide`). Only `styleguideDir/build` is cleaned before a build, other files in the folder (`CNAME`, `.nojekyll`) are kept. The build also writes `docs.json`, `llms.txt` and `llms-full.txt` next to `index.html` for AI tools (switch off with [machineReadable](Configuration.md#machinereadable)).
 
 ### Dev server
 

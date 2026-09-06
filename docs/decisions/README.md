@@ -14,6 +14,10 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0006](0006-brand-and-logo.md) | Brand and logo | accepted |
 | [0007](0007-backlog-adoption.md) | Upstream backlog adoption | accepted |
 | [0008](0008-support-policy.md) | Support policy | accepted |
+| [0009](0009-end-to-end-testing.md) | End-to-end testing | accepted |
+| [0010](0010-code-editor.md) | Code editor | accepted |
+| [0011](0011-facelift-and-dark-mode-contract.md) | Facelift and dark-mode contract | accepted |
+| [0012](0012-ai-integration.md) | AI integration | accepted |
 
 ## Convention
 

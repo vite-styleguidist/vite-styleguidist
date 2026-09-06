@@ -108,7 +108,7 @@ function ExamplePlaceholderRenderer({ classes }) {
 export default Styled(styles)(ExamplePlaceholderRenderer)
 ```
 
-Check available theme variables in [src/client/styles/theme.ts](../src/client/styles/theme.ts).
+Check available theme variables in [src/client/styles/theme.ts](../src/client/styles/theme.ts). Colour values are defined per scheme in [src/client/styles/colorSchemes.ts](../src/client/styles/colorSchemes.ts); `theme.color.*` values are `var(--rsg-color-…, fallback)` strings, not raw colours, so use them as they are (no colour math) and they follow dark mode automatically.
 
 Because of isolation and theming you need to explicitly declare `fontFamily`, `fontSize` and `color`. Add `isolate: false` to your hover styles, otherwise you’ll have to repeat base non-hover styles.
 
@@ -138,3 +138,5 @@ test('should render active styles', () => {
 ```
 
 Run `npm test` to run linters, the type checker and all tests, `npm run test:watch` to run tests in watch mode, and `npx vitest -u` to update snapshots.
+
+End-to-end tests live in `test/e2e/` and run with [Playwright](https://playwright.dev/) against the built examples (`npm run test:e2e`, see [Contributing](../.github/CONTRIBUTING.md#end-to-end-tests-playwright)).

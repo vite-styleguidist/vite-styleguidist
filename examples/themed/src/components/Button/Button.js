@@ -6,7 +6,15 @@ import './Button.css';
 /**
  * The only true button.
  */
-export default function Button({ color, size, onClick, disabled, children }) {
+export default function Button({
+	color = '#333',
+	size = 'normal',
+	onClick = (event) => {
+		console.log('You have clicked me!', event.target);
+	},
+	disabled,
+	children,
+}) {
 	const styles = {
 		color,
 		fontSize: Button.sizes[size],
@@ -29,13 +37,6 @@ Button.propTypes = {
 	disabled: PropTypes.bool,
 	/** Gets called when the user clicks on the button */
 	onClick: PropTypes.func,
-};
-Button.defaultProps = {
-	color: '#333',
-	size: 'normal',
-	onClick: (event) => {
-		console.log('You have clicked me!', event.target);
-	},
 };
 Button.sizes = {
 	small: '10px',

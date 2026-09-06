@@ -6,7 +6,7 @@ import './PushButton.css';
 /**
  * An example-less button.
  */
-export default function PushButton({ color, size, children }) {
+export default function PushButton({ color = '#333', size = 'normal', children }) {
 	const styles = {
 		color,
 		fontSize: PushButton.sizes[size],
@@ -25,10 +25,6 @@ PushButton.propTypes = {
 	children: PropTypes.string.isRequired,
 	color: PropTypes.string,
 	size: PropTypes.oneOf(['small', 'normal', 'large']),
-};
-PushButton.defaultProps = {
-	color: '#333',
-	size: 'normal',
 };
 PushButton.sizes = {
 	small: '10px',

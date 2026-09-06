@@ -6,7 +6,7 @@ import s from './Button.module.css';
 /**
  * The only true button.
  */
-export default function Button({ color, size, children }) {
+export default function Button({ color = '#333', size = 'normal', children }) {
 	const styles = {
 		color,
 		fontSize: Button.sizes[size],
@@ -25,10 +25,6 @@ Button.propTypes = {
 	children: PropTypes.string.isRequired,
 	color: PropTypes.string,
 	size: PropTypes.oneOf(['small', 'normal', 'large']),
-};
-Button.defaultProps = {
-	color: '#333',
-	size: 'normal',
 };
 Button.sizes = {
 	small: '10px',

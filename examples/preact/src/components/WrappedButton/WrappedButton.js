@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 /**
  * A button wrapped by a Decorator/Enhancer
  */
-const WrappedButton = ({ color, size, children }) => {
+const WrappedButton = ({ color = '#333', size = 'normal', children }) => {
 	const styles = {
 		color,
 		fontSize: WrappedButton.sizes[size],
@@ -23,10 +23,6 @@ WrappedButton.propTypes = {
 	children: PropTypes.string.isRequired,
 	color: PropTypes.string,
 	size: PropTypes.oneOf(['small', 'normal', 'large']),
-};
-WrappedButton.defaultProps = {
-	color: '#333',
-	size: 'normal',
 };
 WrappedButton.sizes = {
 	small: '10px',

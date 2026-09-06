@@ -25,6 +25,11 @@ export const styles = ({ space, color, borderRadius }: Rsg.Theme) => ({
 		marginLeft: 'auto',
 	},
 	tab: {}, // expose className to allow using it in 'styles' settings
+	// The tab-button row rendered `classes.tabs` since the tabs were introduced, but only
+	// `tab` (the tab body) was ever declared, so the row carried no class at all and a
+	// `styles: { Playground: { tabs: … } }` override silently did nothing. `tab` stays:
+	// rule keys are append-only (ADR 0011).
+	tabs: {},
 	padded: {
 		// add padding between each example element rendered
 		'& > *': {

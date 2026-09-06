@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { EditorView } from '@codemirror/view';
-import { Editor } from './Editor.js';
+import { Editor, styles } from './Editor.js';
 
 const code = '<button>MyAwesomeCode</button>';
 const newCode = '<button>MyNewAwesomeCode</button>';
@@ -40,6 +40,47 @@ describe('Editor', () => {
 		// Token classes are Prism’s so the theme.color.code* JSS rules apply (prismHighlightStyle.ts)
 		expect(container.querySelector('.cm-content .token.tag')).toHaveTextContent('button');
 		expect(container.querySelector('.cm-content .token.punctuation')).not.toBeNull();
+	});
+
+	it('should colour component tags like Prism’s class-name tokens', () => {
+		const { container } = render(<Editor {...props} code="<Button>x</Button>" />);
+
+		// <button> is a tag for Prism, <Button> a class-name (see prismHighlightStyle.ts)
+		expect(container.querySelector('.cm-content .token.class-name')).toHaveTextContent('Button');
+		expect(container.querySelector('.cm-content .token.tag')).toBeNull();
+	});
+
+	it('should restyle CodeMirror’s tooltip and panels from the theme', () => {
+		const theme = {
+			color: {
+				base: 'base',
+				baseBackground: 'bg',
+				sidebarBackground: 'sidebar',
+				border: 'border',
+				link: 'link',
+				focus: 'focus',
+				codeBase: 'code',
+				codeBackground: 'codeBg',
+			},
+			space: [0, 4, 8],
+			borderRadius: 3,
+			fontFamily: { monospace: 'mono' },
+			fontSize: { small: 13 },
+		} as any;
+		const root = styles(theme).root as Record<string, any>;
+
+		// The base theme paints these in fixed light colours; every selector goes through
+		// .cm-editor so it outranks the base theme’s two-class rules
+		expect(root['& .cm-editor .cm-tooltip']).toMatchObject({
+			isolate: false,
+			background: 'bg',
+			color: 'base',
+		});
+		expect(root['& .cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected]']).toMatchObject({
+			background: 'sidebar',
+		});
+		expect(root['& .cm-editor .cm-panels']).toMatchObject({ background: 'sidebar', color: 'base' });
+		expect(root['& .cm-editor .cm-textfield']).toMatchObject({ background: 'bg' });
 	});
 
 	it('should label the editor and explain how to leave it', () => {

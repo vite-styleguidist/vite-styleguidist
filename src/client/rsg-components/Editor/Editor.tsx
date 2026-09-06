@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { Annotation, EditorState } from '@codemirror/state';
+import { Annotation, EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language';
@@ -23,10 +23,12 @@ import type * as Rsg from '../../../typings/index.js';
  * All of the editor’s look comes from JSS rather than from `EditorView.theme`: JSS already
  * merges the user’s `theme` over the defaults, applies the `styles` option (`styles.Editor`)
  * and swaps stylesheets on hot reload, and a CodeMirror theme extension would have to
- * duplicate all three. CodeMirror’s own base theme only supplies layout defaults; the rules
- * below override its colours and metrics (they win by specificity, `.root .cm-editor .x` is
- * three classes against the base theme’s two). Every nested rule needs `isolate: false`,
- * otherwise jss-plugin-isolate resets inherited properties on CodeMirror’s elements.
+ * duplicate all three. CodeMirror’s own base theme only supplies layout defaults and a light
+ * palette for its chrome; the rules below override its colours and metrics. Every selector
+ * goes through `.cm-editor`, so each rule has at least one class more than the base theme’s
+ * (`.ͼ1 .cm-line`, `.ͼ2 .cm-tooltip`) and wins by specificity, not by the order of the
+ * stylesheets in <head>. Every nested rule needs `isolate: false`, otherwise
+ * jss-plugin-isolate resets inherited properties on CodeMirror’s elements.
  */
 export const styles = (theme: Rsg.Theme): Styles => {
 	const { color, space, borderRadius } = theme;
@@ -48,7 +50,7 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				borderColor: color.link,
 				boxShadow: [[0, 0, 0, 2, color.focus]],
 			},
-			'& .cm-scroller': {
+			'& .cm-editor .cm-scroller': {
 				isolate: false,
 				// The base theme hardcodes `monospace` and a 1.4 line height; inherit ours instead
 				fontFamily: 'inherit',
@@ -61,9 +63,51 @@ export const styles = (theme: Rsg.Theme): Styles => {
 				// The base theme hardcodes a black caret, invisible on a dark `codeBackground`
 				caretColor: color.codeBase,
 			},
-			'& .cm-line': {
+			'& .cm-editor .cm-line': {
 				isolate: false,
 				padding: 0,
+			},
+			// The autocompletion tooltip and the search panel: the base theme paints them in fixed
+			// light colours, which are unreadable on the dark scheme. Theme tokens are CSS
+			// variables, so one rule set covers both schemes.
+			'& .cm-editor .cm-tooltip': {
+				isolate: false,
+				border: [[1, color.border, 'solid']],
+				borderRadius,
+				background: color.baseBackground,
+				color: color.base,
+			},
+			'& .cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected]': {
+				isolate: false,
+				background: color.sidebarBackground,
+				color: color.base,
+			},
+			'& .cm-editor .cm-completionMatchedText': {
+				isolate: false,
+				color: color.link,
+				textDecoration: 'none',
+				fontWeight: 'bold',
+			},
+			'& .cm-editor .cm-panels': {
+				isolate: false,
+				background: color.sidebarBackground,
+				color: color.base,
+				borderColor: color.border,
+			},
+			'& .cm-editor .cm-textfield': {
+				isolate: false,
+				background: color.baseBackground,
+				color: color.base,
+				border: [[1, color.border, 'solid']],
+				borderRadius,
+			},
+			'& .cm-editor .cm-button': {
+				isolate: false,
+				background: color.baseBackground,
+				backgroundImage: 'none',
+				color: color.base,
+				border: [[1, color.border, 'solid']],
+				borderRadius,
 			},
 			// Token colours: CodeMirror emits Prism’s class names (see prismHighlightStyle.ts),
 			// so this is the very same rule set that styles static code blocks
@@ -145,6 +189,22 @@ export function Editor({ code, onChange, classes, exampleName, exampleIndex }: E
 					EditorView.lineWrapping,
 					javascript({ jsx: true, typescript: true }),
 					syntaxHighlighting(prismHighlightStyle),
+					// Escape arms CodeMirror’s tab-focus mode (Tab then moves focus for two seconds)
+					// before any other binding sees the key: the default, completion and search
+					// keymaps also handle Escape (clear selection, close popup, close panel) and would
+					// otherwise swallow it, so “Escape, then Tab” only worked with nothing selected
+					// and no panel open. `false` lets those bindings run as well.
+					Prec.highest(
+						keymap.of([
+							{
+								key: 'Escape',
+								run: (editorView) => {
+									editorView.setTabFocusMode(2000);
+									return false;
+								},
+							},
+						])
+					),
 					keymap.of([
 						...closeBracketsKeymap,
 						...defaultKeymap,

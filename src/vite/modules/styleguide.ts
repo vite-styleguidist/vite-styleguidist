@@ -41,6 +41,25 @@ export interface StyleguideModule {
 }
 
 /**
+ * The section tree of a style guide, in sidebar order: `getSections()` run on the config,
+ * minus the components without an examples file when `skipComponentsWithoutExample` is on.
+ *
+ * Shared by the styleguide virtual module and the machine-readable docs
+ * (src/vite/machineReadable.ts) so that both describe exactly the same guide: same
+ * components, same order, same slugs.
+ */
+export function collectSections(config: Rsg.SanitizedStyleguidistConfig): Rsg.LoaderSection[] {
+	// Clear cache so it would detect new or renamed files
+	fileExistsCaseInsensitive.clearCache();
+
+	// Reset slugger for each code reload to be deterministic
+	slugger.reset();
+
+	const sections = getSections(config.sections, config);
+	return config.skipComponentsWithoutExample ? filterComponentsWithExample(sections) : sections;
+}
+
+/**
  * Generate the `virtual:rsg-styleguide` module: the list of sections with their
  * components, examples and the part of the config the client needs.
  *
@@ -50,16 +69,7 @@ export interface StyleguideModule {
 export default function generateStyleguideModule(
 	config: Rsg.SanitizedStyleguidistConfig
 ): StyleguideModule {
-	// Clear cache so it would detect new or renamed files
-	fileExistsCaseInsensitive.clearCache();
-
-	// Reset slugger for each code reload to be deterministic
-	slugger.reset();
-
-	let sections = getSections(config.sections, config);
-	if (config.skipComponentsWithoutExample) {
-		sections = filterComponentsWithExample(sections);
-	}
+	const sections = collectSections(config);
 
 	const allComponentFiles = getComponentFilesFromSections(
 		config.sections,

@@ -158,6 +158,13 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	logger: {
 		type: 'object',
 	},
+	// docs.json + llms.txt + llms-full.txt next to index.html (see src/vite/machineReadable.ts).
+	// On by default: a deployed style guide is public already, and the files are what AI
+	// tools and the planned MCP server read.
+	machineReadable: {
+		type: 'boolean',
+		default: true,
+	},
 	minimize: {
 		type: 'boolean',
 		default: true,

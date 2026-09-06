@@ -79,3 +79,44 @@ test('only cleans the build/ folder', () => {
 	expect(fs.existsSync(path.join(styleguideDir, 'CNAME'))).toBe(true);
 	expect(fs.existsSync(path.join(styleguideDir, 'build/stale.js'))).toBe(false);
 });
+
+test('emits the machine-readable docs next to index.html', () => {
+	for (const name of ['docs.json', 'llms.txt', 'llms-full.txt']) {
+		expect(fs.existsSync(path.join(styleguideDir, name)), `${name} should exist`).toBe(true);
+	}
+	const manifest = JSON.parse(fs.readFileSync(path.join(styleguideDir, 'docs.json'), 'utf8'));
+	expect(manifest).toMatchObject({
+		schemaVersion: 1,
+		source: 'vite-styleguidist',
+		name: 'Build test',
+		version: null,
+		generatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+	});
+	expect(manifest.sections).toHaveLength(1);
+	const components = manifest.sections[0].components;
+	expect(components.map((component: any) => component.name)).toEqual([
+		'Annotation',
+		'Button',
+		'Placeholder',
+		'Price',
+		'RandomButton',
+	]);
+	const button = components.find((component: any) => component.name === 'Button');
+	expect(button).toMatchObject({
+		filePath: 'components/Button/Button.js',
+		href: 'index.html#button',
+		description: 'The only true button.',
+	});
+	expect(button.props.map((prop: any) => prop.name)).toEqual(['children', 'color', 'size']);
+	expect(button.examples[0]).toMatchObject({ lang: 'jsx', code: '<Button>Push Me</Button>' });
+	expect(components.find((component: any) => component.name === 'Placeholder').methods).toEqual([
+		expect.objectContaining({ name: 'getImageUrl' }),
+	]);
+
+	const llms = fs.readFileSync(path.join(styleguideDir, 'llms.txt'), 'utf8');
+	expect(llms).toMatch(/^# Build test\n\n> /);
+	expect(llms).toContain('- [Button](index.html#button): The only true button.');
+	const full = fs.readFileSync(path.join(styleguideDir, 'llms-full.txt'), 'utf8');
+	expect(full).toContain('## Button');
+	expect(full).toContain('| `children` | string | yes |');
+});

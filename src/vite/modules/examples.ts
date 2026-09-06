@@ -42,6 +42,54 @@ export function resolveExampleImport(request: string, markdownFile: string): str
 const safeIdentifier = (name: string): string => name.replace(/\W/g, '');
 
 /**
+ * Split a Markdown file into its chunks: prose (`markdown`) and playground examples
+ * (`code`), see chunkify(). The `updateExample` config option is applied to every
+ * code block on the way.
+ *
+ * Shared by the examples virtual module and the machine-readable docs
+ * (src/vite/machineReadable.ts), so both see the same examples.
+ */
+export function parseExamples(
+	config: Rsg.SanitizedStyleguidistConfig,
+	options: Rsg.ExamplesModuleOptions,
+	source: string
+): (Rsg.CodeExample | Rsg.MarkdownExample)[] {
+	const { file, displayName, shouldShowDefaultExample } = options;
+
+	// Replace placeholders (__COMPONENT__) with the passed-in component name
+	if (shouldShowDefaultExample && displayName) {
+		source = expandDefaultComponent(source, displayName);
+	}
+
+	// chunkify() drops the fence language of playground examples (the browser compiles
+	// them all the same way), but the machine-readable docs want it back to write
+	// ```jsx / ```tsx fences. `updateExample` is called once per code block, in document
+	// order, with the same `content` that ends up in the chunk, so the languages are
+	// recorded here and matched back to the code chunks below.
+	const seen: { lang?: string | null; content: string }[] = [];
+	const updateExample = (props: Omit<Rsg.CodeExample, 'type'>) => {
+		const updated = config.updateExample ? config.updateExample(props, file) : props;
+		seen.push({ lang: updated.lang, content: updated.content });
+		return updated;
+	};
+
+	const examples = chunkify(source, updateExample);
+
+	let cursor = 0;
+	return examples.map((example) => {
+		if (example.type !== 'code') {
+			return example;
+		}
+		// Static and non-playground blocks were seen too but produced no chunk: skip them
+		while (cursor < seen.length && seen[cursor].content !== example.content) {
+			cursor++;
+		}
+		const lang = cursor < seen.length ? seen[cursor++].lang : undefined;
+		return lang ? { ...example, lang } : example;
+	});
+}
+
+/**
  * Generate the `rsg-examples:<file>?...` module: the examples of a Markdown file,
  * each code example bundled with an `evalInContext()` function that can run it in
  * the browser with access to the modules it imports.
@@ -53,19 +101,10 @@ export default function generateExamplesModule(
 	options: Rsg.ExamplesModuleOptions,
 	source: string
 ): string {
-	const { file, displayName, componentPath, shouldShowDefaultExample } = options;
-
-	// Replace placeholders (__COMPONENT__) with the passed-in component name
-	if (shouldShowDefaultExample && displayName) {
-		source = expandDefaultComponent(source, displayName);
-	}
-
-	const updateExample = config.updateExample
-		? (props: Omit<Rsg.CodeExample, 'type'>) => config.updateExample(props, file)
-		: undefined;
+	const { file, displayName, componentPath } = options;
 
 	// Load examples
-	const examples = chunkify(source, updateExample);
+	const examples = parseExamples(config, options, source);
 
 	// Find all import statements and require() calls in examples to make them
 	// available at runtime. Browsers have no require(), and the examples are compiled

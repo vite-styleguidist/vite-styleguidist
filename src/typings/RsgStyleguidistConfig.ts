@@ -54,6 +54,8 @@ interface BaseStyleguidistConfig {
 		warn(message: string): void;
 		debug(message: string): void;
 	};
+	/** Emit docs.json, llms.txt and llms-full.txt with the style guide (and serve them in development). */
+	machineReadable: boolean;
 	minimize: boolean;
 	mountPointId: string;
 	moduleAliases: Record<string, string>;

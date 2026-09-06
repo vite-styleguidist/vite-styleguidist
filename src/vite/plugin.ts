@@ -9,6 +9,14 @@ import generateStyleguideModule from './modules/styleguide.js';
 import generatePropsModule from './modules/props.js';
 import generateExamplesModule from './modules/examples.js';
 import {
+	buildManifest,
+	createManifestCache,
+	isMachineReadableFile,
+	machineReadableContentType,
+	renderMachineReadableFile,
+	renderMachineReadableFiles,
+} from './machineReadable.js';
+import {
 	ENTRY_ID,
 	STYLEGUIDE_ID,
 	RESOLVED_ENTRY_ID,
@@ -71,6 +79,34 @@ export interface StyleguidistPluginOptions {
 	env: Rsg.StyleguidistEnv;
 	/** Absolute path of Styleguidist’s browser entry (lib/client/index.js). */
 	clientEntry: string;
+}
+
+/**
+ * Serve docs.json, llms.txt and llms-full.txt in development (`machineReadable` option).
+ * The files are regenerated on every request so they always reflect the sources; the
+ * expensive part (react-docgen) is memoized on file mtimes, see ManifestCache.
+ */
+export function createMachineReadableMiddleware(
+	config: Rsg.SanitizedStyleguidistConfig
+): Connect.NextHandleFunction {
+	const cache = createManifestCache();
+	return (req, res, next) => {
+		const name = (req.url || '').split('?')[0].replace(/^\//, '');
+		if ((req.method !== 'GET' && req.method !== 'HEAD') || !isMachineReadableFile(name)) {
+			next();
+			return;
+		}
+		try {
+			const manifest = buildManifest(config, undefined, { cache });
+			res.statusCode = 200;
+			res.setHeader('Content-Type', machineReadableContentType(name));
+			// Never cached: the next request may follow an edit
+			res.setHeader('Cache-Control', 'no-store');
+			res.end(renderMachineReadableFile(name, manifest));
+		} catch (err) {
+			next(err);
+		}
+	};
 }
 
 /**
@@ -198,6 +234,13 @@ export default function styleguidistPlugin({
 					}
 				});
 
+				// Machine-readable docs, before the static assets: like in builds (where
+				// `assetsDir` is copied with `force: false`), the generated files win over
+				// a docs.json or llms.txt the user keeps in `assetsDir`
+				if (config.machineReadable) {
+					devServer.middlewares.use(createMachineReadableMiddleware(config));
+				}
+
 				// Static assets (`assetsDir` option) are served from the root URL
 				castArray(config.assetsDir || []).forEach((dir) => {
 					devServer.middlewares.use(createAssetsMiddleware(dir));
@@ -288,6 +331,15 @@ export default function styleguidistPlugin({
 				css: Array.from(css),
 			});
 			this.emitFile({ type: 'asset', fileName: 'index.html', source: html });
+
+			// docs.json, llms.txt and llms-full.txt next to index.html (`machineReadable`
+			// option). Emitted as assets, so Vite writes them with the rest of the output
+			// and `closeBundle` can’t let an `assetsDir` copy overwrite them.
+			if (config.machineReadable) {
+				Object.entries(renderMachineReadableFiles(config)).forEach(([fileName, source]) => {
+					this.emitFile({ type: 'asset', fileName, source });
+				});
+			}
 		},
 
 		closeBundle() {

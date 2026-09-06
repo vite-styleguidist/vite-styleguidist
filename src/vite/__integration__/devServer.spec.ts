@@ -143,6 +143,30 @@ test('serves static assets and custom middlewares', async () => {
 	});
 });
 
+test('serves the machine-readable docs, regenerated from the sources', async () => {
+	const response = await fetch(BASE + '/docs.json');
+	expect(response.status).toBe(200);
+	expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
+	const manifest = await response.json();
+	expect(manifest).toMatchObject({ source: 'vite-styleguidist', name: 'Integration test' });
+	const names = manifest.sections[0].components.map((component: any) => component.name);
+	expect(names).toContain('Button');
+
+	const llms = await fetch(BASE + '/llms.txt');
+	expect(llms.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+	expect(await llms.text()).toContain('- [Button](index.html#button)');
+
+	// An edit shows up on the next request, no restart needed
+	const readme = path.join(projectDir, 'components/Button/Readme.md');
+	fs.appendFileSync(readme, '\nA fresh example:\n\n```jsx\n<Button>Fresh</Button>\n```\n');
+	const updated = await (await fetch(BASE + '/docs.json')).json();
+	const button = updated.sections[0].components.find((c: any) => c.name === 'Button');
+	expect(button.examples.at(-1)).toMatchObject({
+		code: '<Button>Fresh</Button>',
+		description: 'A fresh example:',
+	});
+});
+
 test('serves the whole module graph', async () => {
 	const urls = await crawl('/@id/__x00__virtual:rsg-entry');
 	const list = [...urls];

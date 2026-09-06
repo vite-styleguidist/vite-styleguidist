@@ -175,12 +175,19 @@ describe('configureServer', () => {
 		const { server, postHook } = configure(
 			createPlugin({ assetsDir: [testDir, path.join(testDir, 'components')] })
 		);
-		// Static assets are registered in the post hook, AFTER the page middleware:
-		// an index.html inside assetsDir must not shadow the style guide itself
+		// Static assets are registered in the post hook, AFTER the page middleware and the
+		// machine-readable docs: an index.html (or docs.json) inside assetsDir must not
+		// shadow the generated files
 		expect(server.middlewares.use).not.toHaveBeenCalled();
 		postHook();
-		expect(server.middlewares.use).toHaveBeenCalledTimes(3);
+		expect(server.middlewares.use).toHaveBeenCalledTimes(4);
 		expect(server.middlewares.use).toHaveBeenCalledWith(expect.any(Function));
+	});
+
+	it('should not serve the machine-readable docs when the option is off', () => {
+		const { server, postHook } = configure(createPlugin({ machineReadable: false }));
+		postHook();
+		expect(server.middlewares.use).toHaveBeenCalledTimes(1);
 	});
 
 	it('should watch the components directory for added and removed files', () => {
@@ -190,16 +197,17 @@ describe('configureServer', () => {
 		expect(server.watcher.add).toHaveBeenCalledWith(path.join(testDir, 'components'));
 	});
 
+	const response = () => ({ statusCode: 0, setHeader: vi.fn(), end: vi.fn() });
+
 	describe('HTML middleware', () => {
 		const getMiddleware = () => {
-			const { server, postHook } = configure(createPlugin());
+			const { server, postHook } = configure(createPlugin({ machineReadable: false }));
 			postHook();
 			return { server, middleware: server.middlewares.use.mock.calls.at(-1)?.[0] };
 		};
-		const response = () => ({ statusCode: 0, setHeader: vi.fn(), end: vi.fn() });
 
 		it('should be registered after Vite’s own middlewares', () => {
-			const { server, postHook } = configure(createPlugin());
+			const { server, postHook } = configure(createPlugin({ machineReadable: false }));
 			expect(server.middlewares.use).not.toHaveBeenCalled();
 			postHook();
 			expect(server.middlewares.use).toHaveBeenCalledTimes(1);
@@ -248,6 +256,64 @@ describe('configureServer', () => {
 			const next = vi.fn();
 			await middleware({ url: '/' }, response(), next);
 			expect(next).toHaveBeenCalledWith(error);
+		});
+	});
+
+	describe('machine-readable docs middleware', () => {
+		// Registered right after the page middleware, before the static assets
+		const getMiddleware = (overrides: Partial<Rsg.SanitizedStyleguidistConfig> = {}) => {
+			const { server, postHook } = configure(createPlugin(overrides));
+			postHook();
+			return server.middlewares.use.mock.calls[1][0];
+		};
+
+		it('should serve docs.json, regenerated from the sources', () => {
+			const middleware = getMiddleware();
+			const res = response();
+			const next = vi.fn();
+			middleware({ method: 'GET', url: '/docs.json?nocache' }, res, next);
+			expect(next).not.toHaveBeenCalled();
+			expect(res.statusCode).toBe(200);
+			expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json; charset=utf-8');
+			expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
+			const manifest = JSON.parse(res.end.mock.calls[0][0]);
+			expect(manifest.source).toBe('vite-styleguidist');
+			expect(manifest.sections[0].components.map((c: any) => c.name)).toContain('Button');
+		});
+
+		it('should serve llms.txt and llms-full.txt as text', () => {
+			const middleware = getMiddleware({ title: 'Served' });
+			for (const url of ['/llms.txt', '/llms-full.txt']) {
+				const res = response();
+				middleware({ method: 'GET', url }, res, vi.fn());
+				expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/plain; charset=utf-8');
+				expect(res.end.mock.calls[0][0]).toMatch(/^# Served\n/);
+			}
+		});
+
+		it('should pass other requests and methods on', () => {
+			const middleware = getMiddleware();
+			for (const req of [
+				{ method: 'GET', url: '/docs.json.map' },
+				{ method: 'GET', url: '/build/docs.json' },
+				{ method: 'POST', url: '/docs.json' },
+			]) {
+				const next = vi.fn();
+				const res = response();
+				middleware(req, res, next);
+				expect(next).toHaveBeenCalledWith();
+				expect(res.end).not.toHaveBeenCalled();
+			}
+		});
+
+		it('should pass errors on', () => {
+			// A section content file that disappeared makes getSections() throw
+			const middleware = getMiddleware({
+				sections: [{ name: 'Gone', content: 'nope.md' }],
+			});
+			const next = vi.fn();
+			middleware({ method: 'GET', url: '/llms.txt' }, response(), next);
+			expect(next).toHaveBeenCalledWith(expect.any(Error));
 		});
 	});
 });
@@ -373,8 +439,18 @@ describe('generateBundle', () => {
 		return ctx;
 	};
 
+	const bundle = () => ({
+		'build/bundle.abc.js': {
+			type: 'chunk',
+			isEntry: true,
+			fileName: 'build/bundle.abc.js',
+			imports: [],
+			viteMetadata: { importedCss: new Set() },
+		},
+	});
+
 	it('should emit index.html referencing the entry chunk and its CSS', () => {
-		const ctx = generateBundle(createPlugin(), {
+		const ctx = generateBundle(createPlugin({ machineReadable: false }), {
 			'build/bundle.abc.js': {
 				type: 'chunk',
 				isEntry: true,
@@ -407,6 +483,29 @@ describe('generateBundle', () => {
 			'build/style.css': { type: 'asset', fileName: 'build/style.css' },
 		});
 		expect(ctx.emitFile).not.toHaveBeenCalled();
+	});
+
+	it('should emit the machine-readable docs next to index.html', () => {
+		const ctx = generateBundle(createPlugin({ title: 'Built' }), bundle());
+		const emitted = ctx.emitFile.mock.calls.map((call) => call[0]);
+		expect(emitted.map((file) => file.fileName)).toEqual([
+			'index.html',
+			'docs.json',
+			'llms.txt',
+			'llms-full.txt',
+		]);
+		expect(emitted.every((file) => file.type === 'asset')).toBe(true);
+		expect(JSON.parse(emitted[1].source)).toMatchObject({
+			name: 'Built',
+			source: 'vite-styleguidist',
+		});
+		expect(emitted[2].source).toMatch(/^# Built\n/);
+		expect(emitted[3].source).toMatch(/^# Built\n/);
+	});
+
+	it('should emit only index.html when machineReadable is off', () => {
+		const ctx = generateBundle(createPlugin({ machineReadable: false }), bundle());
+		expect(ctx.emitFile).toHaveBeenCalledTimes(1);
 	});
 });
 

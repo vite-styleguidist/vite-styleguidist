@@ -10,13 +10,24 @@ import { unquote, getType, showSpaces, PropDescriptor, TypeDescriptor } from './
 import renderDefault from './renderDefault.js';
 import { renderType } from './renderType.js';
 
+// A `value` that is not a list is a computed expression (`PropTypes.oneOf(list)`) and is
+// shown as is; TypeScript and Flow unions carry `elements` instead and have no `value`,
+// and returning null keeps renderDescription from wrapping nothing in a paragraph
+function renderPlainValue(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
+	return type.value ? <span>{type.value}</span> : null;
+}
+
 function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
 	if (!Array.isArray(type.value)) {
-		return <span>{type.value}</span>;
+		return renderPlainValue(type);
 	}
 
+	// Literal values read as types in the description: monospace in the type colour, with
+	// the <code> element kept for its semantics
 	const values = type.value.map(({ value }) => (
-		<Code key={value}>{showSpaces(unquote(value))}</Code>
+		<Type key={value}>
+			<Code>{showSpaces(unquote(value))}</Code>
+		</Type>
 	));
 	return (
 		<span>
@@ -27,7 +38,7 @@ function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode 
 
 function renderUnion(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
 	if (!Array.isArray(type.value)) {
-		return <span>{type.value}</span>;
+		return renderPlainValue(type);
 	}
 
 	const values = type.value.map((value, index) => (

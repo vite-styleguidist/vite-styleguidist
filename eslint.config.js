@@ -113,11 +113,5 @@ export default tseslint.config(
 		rules: {
 			'import-x/extensions': 'off',
 		},
-	},
-	{
-		files: ['test/cypress/**'],
-		languageOptions: {
-			globals: { ...globals.mocha, cy: 'readonly', Cypress: 'readonly' },
-		},
 	}
 );

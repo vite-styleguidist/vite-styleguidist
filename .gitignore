@@ -13,9 +13,10 @@ Thumbs.db
 *.log
 .eslintcache
 yarn.lock
-/cypress/
-test/cypress/screenshots/
-test/cypress/videos/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 stats.json
 /site/build/
 /site/.docusaurus/

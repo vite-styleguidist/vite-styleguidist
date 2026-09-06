@@ -9,19 +9,22 @@ const styles = ({ space, color, fontSize, fontFamily, borderRadius }: Rsg.Theme)
 	pre: {
 		fontFamily: fontFamily.monospace,
 		fontSize: fontSize.small,
-		lineHeight: 1.5,
-		color: color.base,
-		whiteSpace: 'pre-wrap',
+		// Code is set looser than prose (13 / 1.6): the syntax colours need the air
+		lineHeight: 1.6,
+		color: color.codeBase,
+		// Long lines scroll inside the block instead of wrapping, like the code editor
+		whiteSpace: 'pre',
 		wordWrap: 'normal',
 		tabSize: 2,
 		hyphens: 'none',
 		backgroundColor: color.codeBackground,
-		padding: [[space[1], space[2]]],
-		border: [[1, color.codeBackground, 'solid']],
+		// 14 / 16 as in the artboards: the block's own line height supplies the rest
+		padding: [[14, space[2]]],
+		border: [[1, 'solid', color.border]],
 		borderRadius,
 		marginTop: 0,
 		marginBottom: space[2],
-		overflow: 'auto',
+		overflowX: 'auto',
 		...prismTheme({ color }),
 	},
 });

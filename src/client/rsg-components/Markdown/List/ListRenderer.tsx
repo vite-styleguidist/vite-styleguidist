@@ -3,7 +3,7 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../../typings/index.js';
 
-const styles = ({ space, color, fontFamily }: Rsg.Theme) => ({
+const styles = ({ space, color, fontFamily, fontSize, lineHeight }: Rsg.Theme) => ({
 	list: {
 		marginTop: 0,
 		marginBottom: space[2],
@@ -14,11 +14,23 @@ const styles = ({ space, color, fontFamily }: Rsg.Theme) => ({
 		listStyleType: 'decimal',
 	},
 	li: {
+		marginBottom: space[1],
 		color: color.base,
 		fontFamily: fontFamily.base,
-		fontSize: 'inherit',
-		lineHeight: 1.5,
+		// The prose size, like Para, so lists and paragraphs of one document line up
+		fontSize: fontSize.text,
+		lineHeight: lineHeight.base,
 		listStyleType: 'inherit',
+		'&:last-child': {
+			isolate: false,
+			marginBottom: 0,
+		},
+		// A nested list continues the item: no extra gap above it, the item gap below
+		'& $list': {
+			isolate: false,
+			marginTop: space[1],
+			marginBottom: 0,
+		},
 	},
 });
 

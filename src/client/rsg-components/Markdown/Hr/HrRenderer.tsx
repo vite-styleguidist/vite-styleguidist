@@ -5,9 +5,11 @@ import type * as Rsg from '../../../../typings/index.js';
 
 const styles = ({ space, color }: Rsg.Theme) => ({
 	hr: {
-		borderBottom: [[1, color.border, 'solid']],
-		marginTop: 0,
-		marginBottom: space[2],
+		// A single hairline: the browser default is a 2px inset box
+		border: 0,
+		borderBottom: [[1, 'solid', color.border]],
+		height: 0,
+		margin: [[space[4], 0]],
 	},
 });
 

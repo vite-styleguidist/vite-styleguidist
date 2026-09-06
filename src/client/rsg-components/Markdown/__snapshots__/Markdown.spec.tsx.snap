@@ -26,7 +26,9 @@ exports[`Markdown > should render a table 1`] = `
   <thead
     class="rsg--thead-3739114682"
   >
-    <tr>
+    <tr
+      class="rsg--tr-308858832"
+    >
       <th
         class="rsg--th-1677232350 rsg--td-1677232350"
       >
@@ -39,8 +41,12 @@ exports[`Markdown > should render a table 1`] = `
       </th>
     </tr>
   </thead>
-  <tbody>
-    <tr>
+  <tbody
+    class="rsg--tbody-2304104702"
+  >
+    <tr
+      class="rsg--tr-308858832"
+    >
       <td
         class="rsg--td-1677232350"
       >
@@ -52,7 +58,9 @@ exports[`Markdown > should render a table 1`] = `
         bar
       </td>
     </tr>
-    <tr>
+    <tr
+      class="rsg--tr-308858832"
+    >
       <td
         class="rsg--td-1677232350"
       >

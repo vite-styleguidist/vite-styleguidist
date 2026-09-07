@@ -28,7 +28,13 @@
       "types": "./lib/scripts/index.d.ts",
       "default": "./lib/scripts/index.js"
     },
-    "./lib/*": "./lib/*",
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*.cjs": "./lib/*.cjs",
+    "./lib/*.d.ts": "./lib/*.d.ts",
+    "./lib/*": [
+      "./lib/*.js",
+      "./lib/*"
+    ],
     "./package.json": "./package.json"
   },
   "bin": {

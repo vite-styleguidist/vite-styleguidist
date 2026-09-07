@@ -11,10 +11,10 @@ Measured on the performance harness at 350 components (Mac14,6, Node 26.7, Vite 
 
 |  | production build | dev server |
 | --- | --- | --- |
-| entry chunk | 4,711,285 bytes (2 scripts in total) | — |
-| bytes before the first render | 4,711,285 | 43.7 MB over **1130 requests** |
-| time to the first render | — | 2759 ms of fetching |
-| cold build | 2580–2600 ms, peak RSS 820 MB | — |
+| entry chunk | 4,711,314 bytes (2 scripts in total) | — |
+| bytes before the first render | 4,711,314 | 43.7 MB over **1130 requests** |
+| time to the first render | — | 2726 ms of fetching |
+| cold build | 2550–2600 ms, peak RSS 818 MB | — |
 
 Two thirds of those bytes are documentation of components the reader is not looking at, and in `pagePerSection` — one section per page — the proportion is worse still: every page carries every other page.
 
@@ -51,17 +51,17 @@ Add a `lazyDocs` config option, `true` by default. With it on, the serializer em
 
   |  | `lazyDocs: false` | `lazyDocs` (default) |
   | --- | --- | --- |
-  | entry chunk | 4,711,285 bytes | 1,198,154 bytes (−75%) |
-  | bytes before the first render (build) | 4,711,285 | 1,198,154 |
+  | entry chunk | 4,711,314 bytes | 1,198,183 bytes (−75%) |
+  | bytes before the first render (build) | 4,711,314 | 1,198,183 |
   | scripts emitted | 2 | 702 |
-  | all scripts together | 5,187,263 bytes | 5,326,553 bytes (+2.7%) |
+  | all scripts together | 5,187,292 bytes | 5,326,582 bytes (+2.7%) |
   | dev requests before the first render | 1130 | **67** |
-  | dev bytes / time before the first render | 43.7 MB / 2759 ms | 14.0 MB / 344 ms |
-  | dev, plus the first ten components | — | 99 requests / 15.0 MB / 482 ms |
-  | cold build | 2580–2600 ms | 2710–2730 ms (**+5%**) |
-  | peak RSS | 820 MB | 763 MB (−7%) |
+  | dev bytes / time before the first render | 43.7 MB / 2726 ms | 14.0 MB / 339 ms |
+  | dev, plus the first ten components | — | 99 requests / 15.0 MB / 478 ms |
+  | cold build | 2550–2600 ms | 2690–2730 ms (**+5%**) |
+  | peak RSS | 818 MB | 768 MB (−6%) |
 
-- **The cold build is about 140 ms slower at 350 components**, which is the bundler emitting 702 chunks instead of 2, not extra parsing: the plugin does exactly the same work. The cost is proportional to the number of chunks — grouping them per section brings the build back to 2590 ms — and is invisible on a small guide (the ten example builds are unchanged).
+- **The cold build is about 140 ms slower at 350 components** (+5%), which is the bundler emitting 702 chunks instead of 2, not extra parsing: the plugin does exactly the same work. The cost is proportional to the number of chunks — grouping them per section brings the build back to 2590 ms — and is invisible on a small guide (the ten example builds are unchanged).
 - **Chunk count is the price of the smallest possible first paint.** Grouping is all-or-nothing: with one chunk per section, a single component the first page needs pulls its whole section in, and the measured first paint went from 1.20 MB (702 files) to 1.21 MB (353 files, one chunk per component) to 1.92 MB (13 files, one per section). The default is therefore no grouping at all, and the Cookbook carries the `advancedChunks` recipe for guides that would rather have fewer files.
 - **A component’s own stylesheet now loads with its documentation**, so it is appended to the document _after_ the style guide’s own runtime styles instead of before them. A rule of yours that ties with one of ours on specificity now wins where it used to lose. Seen in `examples/basic`: the `.checks` class the `{ "props": { "className": "checks" } }` fence documents draws its transparency checkerboard now and did not before. Everything else in the before/after screenshots of the `basic` and `sections` examples is identical, pixel for pixel (masking `RandomButton`, which picks its label at random on every render).
 - **A style guide where a component’s `displayName` is not the name of its file** — `Foo/Foo.js` exporting a component react-docgen resolves as `Bar` — shows the file-path name in the sidebar until that component’s documentation is loaded, and its own name afterwards. Both resolve as a route the whole time. `docs.json` and `llms.txt` are unaffected: they are built on the Node side from the same section tree, before it is made lazy.
@@ -70,4 +70,5 @@ Add a `lazyDocs` config option, `true` by default. With it on, the serializer em
 - **`component.module` is loaded with the documentation**, which is a second dynamic import per component and half of the 702 chunks. Nothing in the client reads it; it is kept because it is part of the public `Rsg.Component` shape a replaced renderer may use, and because it is the only thing that puts a component with no examples file into the bundle at all.
 - **The store is keyed by file**, so a component listed in two sections is fetched once and both entries show it.
 - **A failed import is reported to the console and retried** the next time something asks for that component (scrolling past it again, a hot update). It is not rendered as an error in the page: the component keeps its container and its heading, exactly as it has while loading.
-- **The e2e suite gained five cases** (`test/e2e/lazy-docs.spec.ts`): containers before any documentation, a body appearing on scroll, a deep link to the last component, the isolated view, and — with request interception on the built `sections` example — a `pagePerSection` page fetching its own section’s documentation and no other’s. The scroll case narrows the observer’s look-ahead to zero for that one page, because the six components of the `basic` example fit inside 1200 px of empty containers and there would otherwise be nothing left below the fold.
+- **A route built out of the documentation is evaluated twice**: `#!/Button/1` picks an example by index out of a list that is empty until the component is loaded, so `filterComponentExamples` leaves such a component alone and the route runs again when the answer arrives. (An index that is out of range for a component that _is_ loaded still renders “example not found” as a chunk and throws, exactly as it did before this record; that is a separate bug.)
+- **The e2e suite gained six cases** (`test/e2e/lazy-docs.spec.ts`): containers before any documentation, a body appearing on scroll, a deep link to the last component, the isolated view, an isolated single example, and — with request interception on the built `sections` example — a `pagePerSection` page fetching its own section’s documentation and no other’s. The scroll case narrows the observer’s look-ahead to zero for that one page, because the six components of the `basic` example fit inside 1200 px of empty containers and there would otherwise be nothing left below the fold.

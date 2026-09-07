@@ -141,14 +141,32 @@ export default function useScrollSpy(
 	// means “geometry decides”. A ref, not state: changing it must not re-render.
 	const pinnedAtRef = useRef<number | undefined>(undefined);
 
+	// The address the pin was last set for, so that the deep link below is honoured once per
+	// address rather than every time the watched ids change underneath it
+	const pinnedHashRef = useRef<string | undefined>(undefined);
+
 	// A deep link (or a reload on a scrolled page) is a navigation like any other: the
 	// browser scrolls to the fragment somewhere around mount, and until it has, geometry
-	// would answer “the first anchor”. Mount-only, and before the effect that measures.
+	// would answer “the first anchor”.
+	//
+	// Not mount-only, because a caller may not know what it is watching yet: PageNav collects
+	// its headings from the rendered DOM in an effect, so on the render that mounts this hook
+	// it is watching nothing at all and the fragment can match nothing. Guarded by the address
+	// instead, so a list that changes later (an example expands, a lazily loaded page arrives)
+	// cannot pin the reader back to a link they followed minutes ago. Declared before the
+	// effect that measures, so the pin is in place before any listener it registers can fire.
 	useEffect(() => {
-		if (readHashId(idsRef.current) !== undefined) {
-			pinnedAtRef.current = now();
+		const hash = typeof window === 'undefined' ? '' : window.location.hash;
+		if (pinnedHashRef.current === hash) {
+			return;
 		}
-	}, []);
+		const id = readHashId(idsRef.current);
+		if (id !== undefined) {
+			pinnedHashRef.current = hash;
+			pinnedAtRef.current = now();
+			setActiveId(id);
+		}
+	}, [idsKey]);
 
 	useEffect(() => {
 		if (!enabled || typeof window === 'undefined') {
@@ -242,6 +260,7 @@ export default function useScrollSpy(
 		const handleHashChange = () => {
 			const id = readHashId(idsRef.current);
 			if (id !== undefined) {
+				pinnedHashRef.current = window.location.hash;
 				pinnedAtRef.current = now();
 				setActiveId(id);
 			}

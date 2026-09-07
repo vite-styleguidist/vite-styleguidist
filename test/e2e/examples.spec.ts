@@ -181,7 +181,9 @@ test('keeps the sidebar header intact when the sidebar has to scroll', async ({
 
 	// The premise: this viewport really does overflow the sidebar
 	expect(measured.overflows).toBe(true);
-	// …and the header still renders all of its content, title included
-	expect(measured.headerHeight).toBeGreaterThanOrEqual(measured.headerContent);
-	expect(measured.titleHeight).toBeGreaterThanOrEqual(measured.titleInk);
+	// …and the header still renders all of its content, title included. `scrollHeight` is
+	// an integer while the laid-out height is fractional, so a pixel of rounding is allowed;
+	// the bug this pins cost the header 25 px and the title all 42 of its own.
+	expect(measured.headerContent - measured.headerHeight).toBeLessThanOrEqual(1);
+	expect(measured.titleInk - measured.titleHeight).toBeLessThanOrEqual(1);
 });

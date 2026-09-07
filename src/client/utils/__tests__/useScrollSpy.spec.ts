@@ -323,6 +323,49 @@ describe('following a link', () => {
 		expect(result.current).toBe('three');
 	});
 
+	it('should pin a deep link once the ids it watches arrive', () => {
+		// PageNav collects its headings from the rendered DOM in an effect, so on the render
+		// that mounts the hook it watches nothing and the fragment can match nothing. Without
+		// a second look the deep link would never pin, and the bottom rule would answer for a
+		// heading in the last screenful.
+		setUpPage({ one: 0, two: 1000, three: 2000 });
+		window.history.replaceState(null, '', '#/Files/One?id=three');
+
+		const { result, rerender } = renderHook(({ ids }: { ids: string[] }) => useScrollSpy(ids), {
+			initialProps: { ids: [] as string[] },
+		});
+		expect(result.current).toBeUndefined();
+
+		rerender({ ids: ['one', 'two', 'three'] });
+
+		expect(result.current).toBe('three');
+		// …and it is really pinned: geometry would answer `one` here
+		clock += 100;
+		scrollTo(0);
+		expect(result.current).toBe('three');
+	});
+
+	it('should not pin a deep link again when the watched ids change later', () => {
+		// An example expands or a lazy page arrives minutes after the reader followed the
+		// link and scrolled on; re-pinning would yank the highlight back to it.
+		setUpPage({ one: 0, two: 1000, three: 2000 });
+		window.history.replaceState(null, '', '#/Files/One?id=three');
+
+		const { result, rerender } = renderHook(({ ids }: { ids: string[] }) => useScrollSpy(ids), {
+			initialProps: { ids: ['one', 'two', 'three'] },
+		});
+		expect(result.current).toBe('three');
+
+		fire('wheel');
+		setScroll(1200);
+		fire('scroll');
+		expect(result.current).toBe('two');
+
+		rerender({ ids: ['one', 'two', 'three', 'four'] });
+
+		expect(result.current).toBe('two');
+	});
+
 	it('should start pinned on a deep link', () => {
 		setUpPage({ one: 0, two: 1000, three: 2000 });
 		window.history.replaceState(null, '', '#three');

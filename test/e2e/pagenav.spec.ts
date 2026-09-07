@@ -220,22 +220,42 @@ test.describe('page navigation', () => {
 		// fresh page with no `hashchange` of its own, so src/client/index.ts has to scroll once
 		// after the first render, or the shared link opens at the top of the page.
 		await page.setViewportSize(WIDE);
-		await page.goto(`${examplesServer}${PAGE}?id=details`);
+		await page.goto(`${examplesServer}${PAGE}?id=heading-3`);
 		await page.waitForLoadState('networkidle');
 
 		await expect
 			.poll(() =>
 				page.evaluate(() =>
 					Math.round(
-						(document.getElementById('details') as HTMLElement).getBoundingClientRect().top
+						(document.getElementById('heading-3') as HTMLElement).getBoundingClientRect().top
 					)
 				)
 			)
 			.toBeLessThan(8);
-		// …and the entry the link names is the current one, not the last one
+	});
+
+	test('marks the entry a cold `?id=` link names, even in the last screenful', async ({
+		page,
+		examplesServer,
+	}) => {
+		// `Details` cannot reach the activation line — the page bottoms out first — so only
+		// the pin can mark it, and the pin has to recognise the `?id=` form to fire at all.
+		await page.setViewportSize(WIDE);
+		await page.goto(`${examplesServer}${PAGE}?id=details`);
+		await page.waitForLoadState('networkidle');
+
 		await expect(
 			page.locator('[data-testid="rsg-pagenav-link"][aria-current="location"]')
 		).toHaveText('Details');
+		// …and the heading really is on screen, which is the other half of the deep link
+		expect(
+			await page.evaluate(() => {
+				const { top, bottom } = (
+					document.getElementById('details') as HTMLElement
+				).getBoundingClientRect();
+				return top >= 0 && bottom <= window.innerHeight;
+			})
+		).toBe(true);
 	});
 
 	test('clears the sticky header when an entry is clicked on a phone', async ({

@@ -89,6 +89,8 @@ Nothing in it is secret that the style guide does not already publish, but it is
 
 > **Note:** `styleguidist doctor` prints where the cache is, how large it is, and whether component documentation is being cached.
 
+> **Note:** The location follows Vite's root, which is the folder your config file is in — so two style guide configs sitting side by side in the same folder share one cache file. If they differ in one of the options listed above, each run empties what the other one wrote: correct, but never warm. Give one of them its own `viteConfig.cacheDir` if that is your layout.
+
 ## `colorScheme`
 
 Type: `String`, default: `system`

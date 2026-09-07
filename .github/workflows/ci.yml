@@ -161,13 +161,18 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     # The style guide mounts through one of two React root implementations chosen from the
     # project's react-dom (createRoot on 18+, ReactDOM.render on 16.14 and 17; see
-    # docs/decisions/0013-react-16-support.md). `integration` above only exercises the modern
-    # one with the React 19 from the lockfile, so this job swaps React and repeats the compile,
-    # the ten example builds and the browser tests on the oldest supported version, on 17 and
-    # on 18. The unit tests are not run here: @testing-library/react 16 needs React 18 or 19.
-    # 17.0.2 takes the same legacy branch as 16.14.0 and has never behaved differently in it,
-    # but it is a supported version with its own event system, so it is kept; the entries run
-    # in parallel, so it costs runner minutes, not wall time.
+    # docs/decisions/0013-react-16-support.md). This job swaps React for an exact version and
+    # repeats the compile, the ten example builds and the browser tests on it. The unit tests
+    # are not run here: @testing-library/react 16 needs React 18 or 19.
+    #
+    # One entry per supported React major, which is what docs/Compatibility.md promises:
+    # 16.14.0 is the floor (the automatic JSX runtime first shipped there), 17.0.2 takes the
+    # same legacy branch as 16.14.0 and has never behaved differently in it but is a supported
+    # version with its own event system, and 18 and 19 take the modern branch. The 19 entry
+    # overlaps with `integration`, which builds on the lockfile's React — deliberately: this
+    # one pins an exact version, so a lockfile that drifts off the latest 19 cannot silently
+    # take React 19 out of the matrix, and a red square here names the React version outright.
+    # The entries run in parallel, so the overlap costs runner minutes, not wall time.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -178,6 +183,7 @@ jobs:
           - '16.14.0'
           - '17.0.2'
           - '18.3.1'
+          - '19.2.8'
     steps:
       - uses: actions/checkout@v7
         with:

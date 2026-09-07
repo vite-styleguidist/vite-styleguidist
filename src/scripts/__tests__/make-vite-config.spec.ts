@@ -358,6 +358,16 @@ describe('makeViteConfig', () => {
 		).toEqual(['rsg:scan-glob-jsx-in-js']);
 	});
 
+	it('should not run the dependency scanner in a build', async () => {
+		// `optimizeDeps` only drives the dev server's pre-bundling; filling it costs a run of
+		// the component globs and a read of every examples file, which a build must not pay
+		const result = await makeViteConfig(loadConfig('defaults'), 'production');
+		expect(result.optimizeDeps?.entries).toEqual([
+			expect.stringMatching(/\/client\/index\.[jt]s$/),
+		]);
+		expect(result.optimizeDeps?.include).toEqual([]);
+	});
+
 	it('should pre-bundle dependencies imported from examples', async () => {
 		const dir = createTempDir({
 			'package.json': '{ "name": "pizza" }',

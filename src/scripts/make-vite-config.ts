@@ -293,18 +293,23 @@ export default async function makeViteConfig(
 		: config.configDir;
 
 	const clientEntry = findClientEntry();
-	const componentFiles = getComponentFilesFromSections(
-		config.sections,
-		config.configDir,
-		config.ignore
-	);
+
+	// Dependency pre-bundling is a dev-server concern: `optimizeDeps` is what makes the first
+	// render of an example fast and reload-free, and a build never reads it. Filling the two
+	// lists costs a full run of the component globs plus one examples-file lookup and one
+	// read per component, so a build skips them entirely.
+	const componentFiles = isProd
+		? []
+		: getComponentFilesFromSections(config.sections, config.configDir, config.ignore);
 	// Markdown and MDX: getExampleFilename() and section content pages return either
-	const exampleFiles = [
-		...componentFiles
-			.map((file) => config.getExampleFilename(file))
-			.filter((file): file is string => !!file),
-		...getAllContentFiles(config.sections, config.configDir),
-	];
+	const exampleFiles = isProd
+		? []
+		: [
+				...componentFiles
+					.map((file) => config.getExampleFilename(file))
+					.filter((file): file is string => !!file),
+				...getAllContentFiles(config.sections, config.configDir),
+			];
 
 	const plugins: PluginOption[] = [];
 	// Don’t add @vitejs/plugin-react twice if the user already has it

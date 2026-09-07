@@ -206,6 +206,42 @@ For components that do not have an example, a default one can be used. When set 
 
 When writing your own default example file, `__COMPONENT__` will be replaced by the actual component name at compile time.
 
+## `envPrefix`
+
+Type: `String` or `Array`, default: `[]` (nothing is exposed)
+
+Prefixes of the environment variable names your components and examples may read as `process.env.NAME`. This is the option that makes code brought over from webpack or Create React App work as it did:
+
+```javascript
+module.exports = {
+  envPrefix: ['REACT_APP_']
+}
+```
+
+```jsx
+// in a component or an example
+export default function Header() {
+  return <h1>{process.env.REACT_APP_TITLE}</h1>
+}
+```
+
+A single prefix may be written as a string, `envPrefix: 'REACT_APP_'`.
+
+The values are read with Vite’s own loader, so they come from two places at once:
+
+- the environment of the command, `REACT_APP_TITLE='Pizza' npx styleguidist build`;
+- the project’s `.env`, `.env.local`, `.env.development` / `.env.production` and `.env.<mode>.local` files, read from the folder of the config file (or from `viteConfig.envDir` when you moved them). The mode is `development` for the dev server and `production` for a build.
+
+The environment of the command wins over the files, exactly as in a Vite application.
+
+> **Danger:** every matching value is inlined, in clear, into the JavaScript bundle of the style guide, which is usually deployed publicly. Expose the variables you would be happy to print on the page, never an API key or a token. This is why nothing is exposed by default, why an empty prefix (`''`) is refused, and why Styleguidist prints the names it inlines when it starts or builds.
+
+`NODE_ENV` and `STYLEGUIDIST_ENV` are never taken from the environment, whatever the prefixes match: Styleguidist and Vite define those two themselves.
+
+This option is about `process.env`. Vite’s own [envPrefix](https://vite.dev/config/shared-options#envprefix) is a different setting with the same name: it governs `import.meta.env` and is untouched here — set it in [viteConfig](#viteconfig) as well if your examples read `import.meta.env.REACT_APP_TITLE` too.
+
+Without the option, a `process.env.SOMETHING` in a component isn’t an error in the browser: Vite replaces `process.env` with an empty object, so the value is silently `undefined` and the page renders a blank spot. If a variable doesn’t appear where you expect it, check the prefix first.
+
 ## `exampleMode`
 
 Type: `String`, default: `collapse`

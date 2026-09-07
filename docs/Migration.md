@@ -6,6 +6,8 @@ This guide covers upgrading from `react-styleguidist` 13.x (last release 13.1.4)
 
 Styleguidist no longer uses webpack: it compiles and serves your components with [Vite](https://vite.dev/), which ships with Styleguidist. Most of the configuration users had to write for webpack (loaders, Babel presets, `webpackConfig`) is simply gone. This guide covers everything you may need to change to upgrade a style guide from the webpack-based versions.
 
+This changes the style guide, not your application. Your app keeps its own toolchain — webpack, Create React App, Next.js, Vite, whatever it builds with — because Styleguidist bundles the style guide separately, with its own copy of Vite, and never touches your build. What moves is the configuration you had written _for Styleguidist_: a webpack alias added so that examples could import your components with a nice name becomes a [moduleAliases](Configuration.md#modulealiases) entry, and the rest of `webpackConfig` is usually deleted rather than translated.
+
 ## Start with the doctor
 
 Run `npx vite-styleguidist doctor` in your project first. It reads your style guide config, looks at what is installed and scans your components, then prints everything that has to change — all of it in one run, instead of one error per build:
@@ -292,7 +294,17 @@ Doesn’t exist in Vite, use [import.meta.glob](https://vite.dev/guide/features#
 
 ### Environment variables
 
-Only `process.env.NODE_ENV` (and `process.env.STYLEGUIDIST_ENV`) are replaced in your components’ code. Other `process.env.*` values need a [define](https://vite.dev/config/shared-options#define) entry in `viteConfig`, or use `import.meta.env`.
+`process.env.NODE_ENV` and `process.env.STYLEGUIDIST_ENV` are replaced in your components’ code as they were. Everything else is opt-in, with the [envPrefix](Configuration.md#envprefix) option — components carried over from webpack or Create React App usually need this one line:
+
+```javascript
+module.exports = {
+  envPrefix: ['REACT_APP_']
+}
+```
+
+It covers both sources the old setup had: the environment of the command (`REACT_APP_TITLE='Pizza' npx styleguidist build`) and the project’s `.env` files, with the environment winning over the files. Expose only what may be public: the values are inlined into a bundle that is usually deployed, see the option for the whole note. A single value can still be defined by hand with a [define](https://vite.dev/config/shared-options#define) entry in `viteConfig`, and `import.meta.env` works as in any Vite app.
+
+One thing to know while you migrate: a variable you forgot to expose doesn’t fail loudly. Vite replaces `process.env` with an empty object in the browser bundle, so `process.env.REACT_APP_TITLE` reads as `undefined` — a blank spot in the page, not an error in the console.
 
 ### Theme and styles files
 
@@ -340,7 +352,7 @@ The live editor is now [CodeMirror 6](https://codemirror.net/), loaded on demand
 
 ### Output
 
-`styleguidist build` writes `index.html` into `styleguideDir` and the bundle into `styleguideDir/build/`, like before. The page loads the bundle as an ES module with relative URLs, so it can be served from any sub-path, but it can’t be opened from a `file://` URL: serve the folder over HTTP to check it locally (for example `npx serve styleguide`). Only `styleguideDir/build` is cleaned before a build, other files in the folder (`CNAME`, `.nojekyll`) are kept. The build also writes `docs.json`, `llms.txt` and `llms-full.txt` next to `index.html` for AI tools (switch off with [machineReadable](Configuration.md#machinereadable)).
+`styleguidist build` writes `index.html` into `styleguideDir` and the bundle into `styleguideDir/build/`, like before. The page loads the bundle as an ES module with relative URLs, so it can be served from any sub-path (see [deploying under a sub-path](Cookbook.md#how-to-deploy-a-style-guide-under-a-sub-path-github-pages)), but it can’t be opened from a `file://` URL: serve the folder over HTTP to check it locally (for example `npx serve styleguide`). Only `styleguideDir/build` is cleaned before a build, other files in the folder (`CNAME`, `.nojekyll`) are kept. The build also writes `docs.json`, `llms.txt` and `llms-full.txt` next to `index.html` for AI tools (switch off with [machineReadable](Configuration.md#machinereadable)).
 
 ### Dev server
 

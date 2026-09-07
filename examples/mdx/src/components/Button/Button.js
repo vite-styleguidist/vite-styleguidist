@@ -6,7 +6,10 @@ import './Button.css';
 /**
  * A button, documented in MDX.
  */
-export default function Button({ size = 'normal', color = '#333', disabled, onClick, children }) {
+// No default for `color`: an unset inline colour lets Button.css decide, and that
+// stylesheet reads the label colour from the style guide's colour scheme. The literal
+// default this used to carry (`#333`) was unreadable once dark mode arrived.
+export default function Button({ size = 'normal', color, disabled, onClick, children }) {
 	const styles = {
 		color,
 		fontSize: Button.sizes[size],
@@ -22,7 +25,7 @@ export default function Button({ size = 'normal', color = '#333', disabled, onCl
 Button.propTypes = {
 	/** Button label */
 	children: PropTypes.node.isRequired,
-	/** The color of the label */
+	/** The color of the label. Defaults to the muted text colour of the colour scheme. */
 	color: PropTypes.string,
 	/** The size of the button */
 	size: PropTypes.oneOf(['small', 'normal', 'large']),

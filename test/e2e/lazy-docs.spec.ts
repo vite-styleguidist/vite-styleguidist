@@ -120,6 +120,22 @@ test.describe('on-demand documentation', () => {
 		await expect(page.getByTestId(`${LAST}-examples`)).toBeVisible();
 		// …and the page is at it, not at the top
 		expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+		// …and it is still at it once everything on screen has filled in. The components
+		// between the viewport and the target load *after* the scroll and grow the document
+		// under it, which used to leave the reader a screenful or more above what they asked
+		// for (deepLinks.ts). Either the target is at the top of the viewport or the page is
+		// scrolled as far as it goes, which is as close to the top as it can be put.
+		await page.waitForLoadState('networkidle');
+		const placed = await page.evaluate((id) => {
+			const element = document.getElementById(id);
+			return {
+				top: element ? element.getBoundingClientRect().top : null,
+				fromBottom:
+					document.documentElement.scrollHeight - window.innerHeight - Math.round(window.scrollY),
+			};
+		}, LAST.toLowerCase());
+		expect(placed.top === null || placed.top < 8 || placed.fromBottom < 8).toBe(true);
 	});
 
 	test('renders the one example an isolated example route shows', async ({ page }) => {

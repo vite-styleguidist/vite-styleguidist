@@ -50,11 +50,15 @@ interface DocsEntry {
 	promise?: Promise<void>;
 	docs?: Rsg.ComponentDocs;
 	module?: unknown;
+	/** The last attempt failed. Kept so a hot update knows there is something to retry. */
+	failed?: boolean;
 }
 
 const entries = new Map<string, DocsEntry>();
 const componentListeners = new Map<string, Set<() => void>>();
 const treeListeners = new Set<() => void>();
+/** Told whenever any load settles, successfully or not; see subscribeToLoads. */
+const loadListeners = new Set<() => void>();
 
 /**
  * Components whose documentation something has taken responsibility for loading, and how
@@ -105,6 +109,25 @@ export function getLoadedModule(component: Rsg.Component): unknown {
 
 function notifyComponent(key: string): void {
 	componentListeners.get(key)?.forEach((listener) => listener());
+}
+
+/**
+ * Told that a load has settled — with its documentation or with an error.
+ *
+ * Not a re-render hook: it is how something outside React can wait for the page to stop
+ * growing. The deep links use it (src/client/utils/deepLinks.ts), because the height of the
+ * document is a function of how much documentation has arrived, and the element a link
+ * points at moves every time a component above it fills in.
+ */
+export function subscribeToLoads(listener: () => void): () => void {
+	loadListeners.add(listener);
+	return () => {
+		loadListeners.delete(listener);
+	};
+}
+
+function notifyLoad(): void {
+	loadListeners.forEach((listener) => listener());
 }
 
 /**
@@ -176,22 +199,27 @@ export function loadComponentDocs(
 	entry.promise = loader().then(
 		(loaded) => {
 			entry.promise = undefined;
+			entry.failed = false;
 			entry.docs = (loaded && loaded.props) || {};
 			entry.module = loaded && loaded.module;
 			notifyComponent(key);
 			if (refreshTree || identityChanged(component, entry.docs)) {
 				notifyTree();
 			}
+			notifyLoad();
 		},
 		(error) => {
 			// The entry is left empty so that the next trigger (the reader scrolling past
 			// the component again, a hot update) tries once more
 			entry.promise = undefined;
+			entry.failed = true;
 			// eslint-disable-next-line no-console
 			console.error(
 				`Cannot load the documentation of ${component.nameFromPath || key}:`,
 				error
 			);
+			// Whatever was waiting for the page to settle should stop waiting for this one
+			notifyLoad();
 		}
 	);
 }
@@ -232,6 +260,14 @@ export function refreshLoadedDocs(sections: Rsg.Section[]): void {
 	eachComponent(sections, (component) => {
 		const key = docsKey(component);
 		const entry = entries.get(key);
+		// A load that failed is retried here as well as re-imported: the loaders of the new
+		// module point at new URLs, which is the one retry that can succeed after a network
+		// failure — a browser remembers a module whose fetch failed and refuses to fetch the
+		// same URL again (see ADR 0019)
+		if (entry && entry.failed && component.loadDocs) {
+			loadComponentDocs(component, { refreshTree: true });
+			return;
+		}
 		if (!entry || !entry.docs || !component.loadDocs) {
 			return;
 		}
@@ -245,7 +281,10 @@ export function refreshLoadedDocs(sections: Rsg.Section[]): void {
 	});
 	if (inFlight.length > 0) {
 		// The tree is rebuilt once at the end: a hot update can change a documented name
-		Promise.all(inFlight).then(notifyTree, () => undefined);
+		Promise.all(inFlight).then(() => {
+			notifyTree();
+			notifyLoad();
+		}, () => undefined);
 	}
 }
 
@@ -342,6 +381,7 @@ export function resetComponentDocs(): void {
 	entries.clear();
 	componentListeners.clear();
 	treeListeners.clear();
+	loadListeners.clear();
 	selfManaged.clear();
 	treeUpdateScheduled = false;
 }

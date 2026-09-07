@@ -8,6 +8,7 @@ import {
 	refreshLoadedDocs,
 	resetComponentDocs,
 	subscribeToComponent,
+	subscribeToLoads,
 	subscribeToTree,
 	withPlaceholderDocs,
 } from '../componentDocs.js';
@@ -202,6 +203,47 @@ describe('refreshLoadedDocs', () => {
 		expect(getLoadedDocs(edited)).toEqual({ displayName: 'One', description: 'Edited' });
 		expect(untouched.loads).toBe(0);
 		expect(listener).toHaveBeenCalledTimes(1);
+	});
+
+	// ADR 0019 promises a hot update as one of the retries of a failed load, and this is the
+	// retry that can actually succeed after a network failure: a browser remembers a module
+	// whose fetch failed and will not fetch the same URL again, and a hot update's loaders
+	// point at new URLs.
+	it('should retry a component whose load failed', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const failing = makeComponent({ displayName: 'One' }, { filepath: 'One.js' });
+		failing.loadDocs = () => Promise.reject(new Error('Failed to fetch'));
+		loadComponentDocs(failing);
+		await flush();
+		expect(getLoadedDocs(failing)).toBeUndefined();
+
+		const fixed = makeComponent({ displayName: 'One', description: 'Back' }, { filepath: 'One.js' });
+		refreshLoadedDocs([{ components: [fixed] }] as unknown as Rsg.Section[]);
+		await flush();
+		runFrame();
+
+		expect(fixed.loads).toBe(1);
+		expect(getLoadedDocs(fixed)).toEqual({ displayName: 'One', description: 'Back' });
+		error.mockRestore();
+	});
+});
+
+describe('subscribeToLoads', () => {
+	it('should say when a load has settled, either way', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const listener = vi.fn();
+		subscribeToLoads(listener);
+
+		loadComponentDocs(makeComponent({ displayName: 'One' }, { filepath: 'One.js' }));
+		await flush();
+		expect(listener).toHaveBeenCalledTimes(1);
+
+		const failing = makeComponent({ displayName: 'Two' }, { filepath: 'Two.js' });
+		failing.loadDocs = () => Promise.reject(new Error('Failed to fetch'));
+		loadComponentDocs(failing);
+		await flush();
+		expect(listener).toHaveBeenCalledTimes(2);
+		error.mockRestore();
 	});
 });
 

@@ -236,6 +236,7 @@ describe('on-demand documentation', () => {
 		element: Element;
 		options?: IntersectionObserverInit;
 		fire: () => void;
+		disconnected: boolean;
 	}[] = [];
 
 	beforeEach(() => {
@@ -248,18 +249,25 @@ describe('on-demand documentation', () => {
 					private callback: IntersectionObserverCallback,
 					private options?: IntersectionObserverInit
 				) {}
+				private record?: (typeof observed)[number];
 				observe(element: Element) {
-					observed.push({
+					this.record = {
 						element,
 						options: this.options,
+						disconnected: false,
 						fire: () =>
 							this.callback(
 								[{ isIntersecting: true, target: element } as IntersectionObserverEntry],
 								this as unknown as IntersectionObserver
 							),
-					});
+					};
+					observed.push(this.record);
 				}
-				disconnect() {}
+				disconnect() {
+					if (this.record) {
+						this.record.disconnected = true;
+					}
+				}
 				unobserve() {}
 			}
 		);
@@ -364,5 +372,45 @@ describe('on-demand documentation', () => {
 		const { getByText } = renderComponent({ ...component, docsLoaded: true } as Rsg.Component);
 		expect(observed).toHaveLength(0);
 		expect(getByText('Bar')).toBeInTheDocument();
+	});
+
+	// ADR 0019: “A failed import is reported to the console and retried the next time
+	// something asks for that component (scrolling past it again…)”. The observer used to be
+	// disconnected the moment a load *started*, so a component whose chunk failed to arrive
+	// stayed empty for the life of the page and nothing tried again.
+	it('should try again when the reader scrolls past a component whose load failed', async () => {
+		const failing = lazyComponent();
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		failing.loadDocs = vi
+			.fn()
+			.mockRejectedValueOnce(new Error('Failed to fetch dynamically imported module'))
+			.mockResolvedValue({ props: { displayName: 'Foo', description: 'Bar' } });
+
+		const { findByText, queryByText } = renderComponent(failing);
+		observed[0].fire();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(failing.loadDocs).toHaveBeenCalledTimes(1);
+		expect(queryByText('Bar')).not.toBeInTheDocument();
+		expect(error).toHaveBeenCalled();
+
+		// Still watching, so scrolling past it again is a second attempt
+		observed[0].fire();
+
+		expect(failing.loadDocs).toHaveBeenCalledTimes(2);
+		expect(await findByText('Bar')).toBeInTheDocument();
+		error.mockRestore();
+	});
+
+	it('should stop watching the viewport once the documentation is there', async () => {
+		const loaded = lazyComponent();
+		const { findByText } = renderComponent(loaded);
+		expect(observed[0].disconnected).toBe(false);
+
+		observed[0].fire();
+		expect(await findByText('Bar')).toBeInTheDocument();
+
+		expect(observed[0].disconnected).toBe(true);
 	});
 });

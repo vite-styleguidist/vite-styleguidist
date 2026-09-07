@@ -8,9 +8,8 @@ import type { StyleguideRoot } from './utils/reactRoot.js';
 import styleguide from 'virtual:rsg-styleguide';
 import renderStyleguide from './utils/renderStyleguide.js';
 import type { StyleguideObject } from './utils/renderStyleguide.js';
-import { getOriginId } from './utils/handleHash.js';
+import createDeepLinkScroller from './utils/deepLinks.js';
 import { refreshLoadedDocs, subscribeToTree } from './utils/componentDocs.js';
-import { readStickyOffset } from './styles/styles.js';
 
 // Examples code revision to rerender only code examples (not the whole page) when code changes
 let codeRevision = 0;
@@ -18,72 +17,17 @@ let codeRevision = 0;
 // The latest style guide data; replaced on hot updates
 let currentStyleguide: StyleguideObject = styleguide;
 
-const scrollToElement = (element: HTMLElement) => {
-	// On small screens the sidebar is a sticky header that would cover the
-	// target; `scrollIntoView` aligns to the very top, so the same offset the
-	// `scroll-padding-top` in styles.ts uses is subtracted here by hand
-	const offset = readStickyOffset();
-	if (offset > 0) {
-		const top = element.getBoundingClientRect().top + window.pageYOffset - offset;
-		window.scrollTo(0, Math.max(0, top));
-	} else {
-		element.scrollIntoView(true);
-	}
-};
-
-// Scrolls to origin when current window location hash points to an isolated view.
-const scrollToOrigin = () => {
-	const hash = window.location.hash;
-	if (!hash) {
-		return;
-	}
-	const idHashParam = getOriginId(hash);
-	if (idHashParam) {
-		const idElement = document.getElementById(idHashParam);
-		if (idElement) {
-			scrollToElement(idElement);
-		}
-	} else {
-		window.scrollTo(0, 0);
-	}
-};
-
 /**
- * How many frames the initial scroll waits for its target to appear. `render()` commits
- * asynchronously (React 18’s `createRoot`), and a lazily loaded page can take a few more
- * frames after that, so one attempt is not enough. ~10 frames is a sixth of a second, after
- * which a fragment whose element never appeared is treated as the stale link it is.
- */
-const INITIAL_SCROLL_FRAMES = 10;
-
-/**
- * Honours the fragment of the address the page was *opened* with.
+ * Fragments of the address, honoured on a cold load and on every `hashchange`.
  *
- * `scrollToOrigin` is otherwise a `hashchange` listener, and a cold load fires no such
- * event: pasting, bookmarking or sharing a `#!/Button?id=sizes` link — the shape every
- * “on this page” entry has (ADR 0016) and the one the sidebar produces at `sectionDepth: 0`
- * — landed at the top of the page, because that fragment is a route and matches no element
- * id, so the browser’s own fragment scrolling had nothing to do either.
- *
- * Only a fragment that names an element is acted on: `scrollToOrigin`’s “otherwise scroll
- * to the top” branch is deliberately not reused here, because on a load it would fight the
- * browser’s own scroll restoration on every routed page.
+ * A cold load fires no `hashchange` event, so pasting, bookmarking or sharing a
+ * `#!/Button?id=sizes` link — the shape every “on this page” entry has (ADR 0016) and the
+ * one the sidebar produces at `sectionDepth: 0` — landed at the top of the page, because
+ * that fragment is a route and matches no element id, so the browser’s own fragment
+ * scrolling had nothing to do either. See utils/deepLinks.ts for what happens after that
+ * on a page whose documentation is still arriving.
  */
-const scrollToOriginOnLoad = (framesLeft = INITIAL_SCROLL_FRAMES) => {
-	const id = getOriginId(window.location.hash);
-	if (!id) {
-		return;
-	}
-	const element = document.getElementById(id);
-	if (element) {
-		scrollToElement(element);
-		return;
-	}
-	/* istanbul ignore else: every browser has requestAnimationFrame; jsdom in the specs may not */
-	if (framesLeft > 0 && typeof window.requestAnimationFrame === 'function') {
-		window.requestAnimationFrame(() => scrollToOriginOnLoad(framesLeft - 1));
-	}
-};
+const deepLinks = createDeepLinkScroller({ getSections: () => currentStyleguide.sections });
 
 let reactRoot: StyleguideRoot | null = null;
 
@@ -101,7 +45,7 @@ const render = () => {
 };
 
 window.addEventListener('hashchange', render);
-window.addEventListener('hashchange', scrollToOrigin);
+window.addEventListener('hashchange', () => deepLinks.onHashChange());
 
 // On-demand documentation (`lazyDocs`, ADR 0019) is merged into the section tree while it
 // is being processed, so the guide is re-rendered when a loaded answer would change the
@@ -127,4 +71,4 @@ if (import.meta.hot) {
 }
 
 render();
-scrollToOriginOnLoad();
+deepLinks.onLoad();

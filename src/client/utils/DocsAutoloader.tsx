@@ -81,11 +81,11 @@ export default class DocsAutoloader extends Component<DocsAutoloaderProps> {
 			}
 
 			// The whole guide is re-rendered when this arrives: a replacement does not
-			// subscribe to its own component, so nothing else would show the answer
-			const load = () => {
-				this.stopObserving(key);
-				loadComponentDocs(component, { refreshTree: true });
-			};
+			// subscribe to its own component, so nothing else would show the answer. The
+			// observer is left armed on purpose — it is dropped by the branch above once the
+			// documentation is really here, so a load that failed is retried when the reader
+			// scrolls past the component again (ADR 0019).
+			const load = () => loadComponentDocs(component, { refreshTree: true });
 
 			if (isRouteTarget || (!!deepLinkTarget && deepLinkTarget === component.slug)) {
 				load();

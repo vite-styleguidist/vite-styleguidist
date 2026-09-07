@@ -76,6 +76,8 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 	public componentDidUpdate() {
 		const { component } = this.props;
 		if (!component.loadDocs || component.docsLoaded || getLoadedDocs(component)) {
+			// The documentation is here; there is nothing left to watch the viewport for
+			this.stopObserving();
 			return;
 		}
 		const { displayMode } = this.context as StyleGuideContextContents;
@@ -147,10 +149,13 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 			load();
 			return;
 		}
+		// Kept until the documentation has actually arrived (componentDidUpdate above), not
+		// dropped as soon as a load is started: a load that fails leaves the component empty,
+		// and scrolling past it again is the retry ADR 0019 promises. An observer whose
+		// element is still intersecting fires no second time, so this costs nothing.
 		this.observer = new IntersectionObserver(
 			(entries) => {
 				if (entries.some((entry) => entry.isIntersecting)) {
-					this.stopObserving();
 					load();
 				}
 			},

@@ -10,6 +10,7 @@ import {
 	SIDEBAR_SEARCH_ID,
 	useSidebar,
 } from 'rsg-components/StyleGuide/SidebarContext';
+import keepInView from '../../utils/keepInView.js';
 import type * as Rsg from '../../../typings/index.js';
 
 // The small-screen chip row: 44 px touch targets (Mobile artboard)
@@ -206,12 +207,30 @@ export const TableOfContentsRenderer: React.FunctionComponent<TableOfContentsRen
 	chips = [],
 }) => {
 	const { isPanelOpen, closePanel } = useSidebar();
+
+	// The chip row is a horizontal scroller, and its selection follows the reader's scroll
+	// now (`scrollSync`, ADR 0015): on a phone the current chip drifted off the right edge
+	// within the first screenful and nothing ever brought it back, leaving the reader with
+	// no indication of where they were. Keyed on the slug, so it runs when the selection
+	// moves rather than on every render of the row.
+	const row = React.useRef<HTMLDivElement>(null);
+	const currentChip = chips.find((chip) => chip.selected)?.slug;
+	React.useEffect(() => {
+		const chip = currentChip
+			? row.current?.querySelector<HTMLElement>('[aria-current]')
+			: undefined;
+		if (chip) {
+			keepInView(chip);
+		}
+	}, [currentChip]);
+
 	return (
 		<div>
 			<div className={classes.root}>
 				<nav className={classes.nav}>
 					{chips.length > 0 && (
 						<div
+							ref={row}
 							className={cx(classes.chips, { [classes.isChipsHidden]: isPanelOpen })}
 							role="group"
 							aria-label="Sections"

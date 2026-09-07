@@ -6,6 +6,7 @@ import { Styles } from 'jss';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import { useStyleGuideContext } from 'rsg-components/Context';
 import { useSidebar } from 'rsg-components/StyleGuide/SidebarContext';
+import keepInView from '../../utils/keepInView.js';
 import type * as Rsg from '../../../typings/index.js';
 
 // Exported for the specs that assert the override contract of the doubled-class rules
@@ -207,8 +208,26 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 	// only, on purpose: re-opening a section the reader has just collapsed would be worse
 	// than leaving it closed and saying where they are.
 	const current = selected || (!open && !forcedOpen && !!containsSelected);
+
+	// A sidebar taller than the window scrolls on its own, and the selection follows the
+	// reader's scroll now (`scrollSync`, ADR 0015), so the current row can be somewhere the
+	// reader cannot see — a highlight nobody can see says nothing. Only the sidebar's own
+	// scroller moves; see keepInView.
+	const item = React.useRef<HTMLLIElement>(null);
+	React.useEffect(() => {
+		if (current && item.current) {
+			// The row itself, not the `<li>`: that one also contains the whole nested subtree,
+			// and fitting *it* into view would scroll the section's last entry to the top
+			const row = item.current.querySelector<HTMLElement>(':scope > a');
+			if (row) {
+				keepInView(row);
+			}
+		}
+	}, [current]);
+
 	return (
 		<li
+			ref={item}
 			className={cx(classes.item, {
 				[classes.isChild]: !content && !shouldOpenInNewTab,
 				[classes.isSelected]: current,

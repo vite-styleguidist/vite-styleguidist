@@ -121,6 +121,18 @@ export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
 }
 
 /**
+ * Where a `styleguideComponents` value points. It is written like an import: an absolute
+ * path, a package name — or a path relative to the config file, which is the one form a
+ * Vite alias cannot express. An alias is a plain rewrite, so `./styleguide/Logo` would end
+ * up being resolved against the *importing* file, which is Styleguidist’s own
+ * `rsg-components/Logo/Logo.js` inside node_modules, and never found. Anchor it to the
+ * config file, which is what the path means to the person who wrote it.
+ */
+function resolveComponentPath(filepath: string, configDir: string): string {
+	return filepath.startsWith('.') ? toPosix(path.resolve(configDir, filepath)) : filepath;
+}
+
+/**
  * Build the alias list implementing `moduleAliases` and `styleguideComponents`.
  *
  * Order matters (first match wins): user overrides of individual Styleguidist
@@ -144,7 +156,7 @@ export function getAliases(config: Rsg.SanitizedStyleguidistConfig): Alias[] {
 			: name;
 		alias.push({
 			find: new RegExp(`^rsg-components/${escapeRegExp(fullName)}$`),
-			replacement: filepath,
+			replacement: resolveComponentPath(filepath, config.configDir),
 		});
 	});
 

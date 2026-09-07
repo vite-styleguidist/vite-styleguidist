@@ -128,6 +128,27 @@ describe('getAliases', () => {
 		expect((logo.find as RegExp).test('rsg-components/Logo/LogoRenderer')).toBe(true);
 		expect((logo.find as RegExp).test('rsg-components/Logo')).toBe(false);
 	});
+
+	// A Vite alias is a plain rewrite and the importer is Styleguidist’s own component
+	// inside node_modules, so a relative path only means anything once it is resolved here
+	it('should resolve relative styleguideComponents paths against the config file', () => {
+		const config = loadConfig('defaults', {
+			styleguideComponents: {
+				Wrapper: './styleguide/Wrapper',
+				LogoRenderer: '../shared/Logo.js',
+				// Absolute paths and package names are imports in their own right: untouched
+				PathlineRenderer: '/absolute/Pathline.js',
+				SectionsRenderer: 'my-design-system/Sections',
+			},
+		});
+		const aliases = getAliases(config);
+		expect(aliases.slice(0, 4).map((alias) => alias.replacement)).toEqual([
+			path.join(config.configDir, 'styleguide/Wrapper'),
+			path.resolve(config.configDir, '../shared/Logo.js'),
+			'/absolute/Pathline.js',
+			'my-design-system/Sections',
+		]);
+	});
 });
 
 describe('getReactRootFlavor', () => {

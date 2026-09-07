@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { readStickyOffset } from '../styles/styles.js';
+import { getParameterByName } from './handleHash.js';
 
 /**
  * How far below the sticky header the activation line sits, in pixels. An anchor becomes
@@ -40,8 +41,19 @@ const now = (): number =>
 /**
  * The id the current location points at, when it is one of `ids`.
  *
- * Only a plain `#slug` can match: `#!/Button` and `#/Section/Name?id=x` are routes, and no
- * element id looks like one, so the `ids.includes()` test is the whole guard.
+ * Two fragment shapes reach an element on the page, and the pin below has to recognise
+ * both, because the two navigations that use this hook write different ones:
+ *
+ * - a plain `#slug`, which is what the sidebar links to in the default display mode;
+ * - `#/Route?id=slug` (or `#!/Route?id=slug`), which is what an in-page link has to look
+ *   like on a routed page, where the fragment *is* the route — the `?id=` parameter
+ *   src/client/index.ts scrolls to, and the shape of every PageNav entry (getHeadingHref).
+ *
+ * Reading only the first shape is what made the pin dead for PageNav: `#/Files/One?id=x`
+ * is never an element id, so `ids.includes()` failed and clicking an entry in the last
+ * screenful highlighted the last one instead — the exact failure rule 5 of ADR 0015 exists
+ * to prevent. A route *without* an `?id=` is still ignored, which is what keeps a plain
+ * navigation (`#!/Button`) from pinning anything.
  */
 function readHashId(ids: string[]): string | undefined {
 	if (typeof window === 'undefined') {
@@ -50,6 +62,11 @@ function readHashId(ids: string[]): string | undefined {
 	const hash = window.location.hash;
 	if (hash.length < 2) {
 		return undefined;
+	}
+	if (hash.startsWith('#/') || hash.startsWith('#!/')) {
+		// `getParameterByName` decodes the value, the same way index.ts reads it
+		const id = getParameterByName(hash, 'id');
+		return id && ids.includes(id) ? id : undefined;
 	}
 	let id: string;
 	try {
@@ -87,8 +104,9 @@ function readHashId(ids: string[]): string | undefined {
  * - a page that does not scroll at all has no bottom rule, otherwise every short page
  *   would permanently highlight its last anchor.
  *
- * Following a link *pins* the result: a `hashchange` to one of `ids` selects that id at
- * once and geometry is ignored until the reader scrolls by hand (a `wheel` or `touchmove`,
+ * Following a link *pins* the result: a `hashchange` to one of `ids` — written either as
+ * `#slug` or as the `?id=` parameter of a routed fragment — selects that id at once and
+ * geometry is ignored until the reader scrolls by hand (a `wheel` or `touchmove`,
  * or any scroll arriving more than {@link NAVIGATION_SETTLE_MS} after the navigation, which
  * covers the keyboard and the scrollbar). Without the pin, clicking an entry in the last
  * screenful of the document would highlight the last one instead.

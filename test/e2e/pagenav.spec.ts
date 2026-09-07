@@ -161,6 +161,30 @@ test.describe('page navigation', () => {
 			.toBeLessThan(8);
 	});
 
+	test('keeps the highlight on an entry clicked in the last screenful', async ({
+		page,
+		examplesServer,
+	}) => {
+		// The bottom rule of ADR 0015 answers “the last anchor” once the page cannot scroll
+		// any further, so only the pin can hold the entry the reader clicked. The pin is a
+		// `hashchange` to a watched id, and on a routed page that id travels in `?id=` —
+		// which `readHashId` has to recognise, or clicking “Details” lights “Label”.
+		await page.setViewportSize(WIDE);
+		await page.goto(`${examplesServer}${PAGE}`);
+		await page.waitForLoadState('networkidle');
+
+		await page.getByTestId('rsg-pagenav-link').filter({ hasText: 'Details' }).click();
+
+		const current = page.locator('[data-testid="rsg-pagenav-link"][aria-current="location"]');
+		await expect(current).toHaveText('Details');
+		// The page really is at its bottom, i.e. this is the case the pin exists for
+		expect(
+			await page.evaluate(
+				() => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
+			)
+		).toBe(true);
+	});
+
 	test('clears the sticky header when an entry is clicked on a phone', async ({
 		page,
 		examplesServer,

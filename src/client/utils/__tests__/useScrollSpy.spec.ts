@@ -281,6 +281,48 @@ describe('following a link', () => {
 		expect(result.current).toBe('two');
 	});
 
+	it('should pin the `?id=` target of a routed hash, which is how PageNav links', () => {
+		// Every “on this page” entry on a routed page links to `#/Route?id=heading` — the
+		// fragment is the route there, so a plain `#heading` would navigate away. Without
+		// this the pin never fired for the rail and the bottom rule below took over.
+		setUpPage({ one: 0, two: 1000, three: 2000 });
+		const { result } = renderHook(() => useScrollSpy(['one', 'two', 'three']));
+
+		navigateTo('#/Documentation/Files/First%20File?id=three');
+
+		expect(result.current).toBe('three');
+	});
+
+	it('should pin the `?id=` target of an isolated route as well', () => {
+		setUpPage({ one: 0, two: 1000 });
+		const { result } = renderHook(() => useScrollSpy(['one', 'two']));
+
+		navigateTo('#!/Button?id=two');
+
+		expect(result.current).toBe('two');
+	});
+
+	it('should ignore an `?id=` that names no watched anchor', () => {
+		setUpPage({ one: 0, two: 1000 });
+		const { result } = renderHook(() => useScrollSpy(['one', 'two']));
+
+		navigateTo('#!/Button?id=elsewhere');
+
+		expect(result.current).toBe('one');
+		// …and geometry is still in charge, i.e. nothing was pinned
+		scrollTo(1200);
+		expect(result.current).toBe('two');
+	});
+
+	it('should start pinned on a `?id=` deep link', () => {
+		setUpPage({ one: 0, two: 1000, three: 2000 });
+		window.history.replaceState(null, '', '#/Components/Buttons?id=three');
+
+		const { result } = renderHook(() => useScrollSpy(['one', 'two', 'three']));
+
+		expect(result.current).toBe('three');
+	});
+
 	it('should start pinned on a deep link', () => {
 		setUpPage({ one: 0, two: 1000, three: 2000 });
 		window.history.replaceState(null, '', '#three');

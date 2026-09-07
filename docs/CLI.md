@@ -79,7 +79,7 @@ It checks three things:
 
 - **The config.** Every unknown, removed, deprecated and invalid option, all of them in one run, each with its replacement. Unknown options get a “did you mean” when a real option looks like what you typed.
 - **The environment.** Your Node.js version against the [supported range](Compatibility.md), the `react` and `react-dom` your project resolves against the peer range, which React root the style guide will mount with, whether `react-styleguidist` is still installed, and which package manager the project uses.
-- **The project.** Your components (found with the same patterns the style guide uses) and the files named by the `theme`, `styles`, `require`, `styleguideComponents` and `mdxComponents` options, scanned for the four things Vite does not understand: CommonJS in a theme or styles file, `require.context()`, `process.env` variables other than `NODE_ENV` and `STYLEGUIDIST_ENV`, and imports of the old package name.
+- **The project.** Your components (found with the same patterns the style guide uses) and the files named by the `theme`, `styles`, `require`, `styleguideComponents` and `mdxComponents` options, scanned for the four things Vite does not understand: CommonJS in a theme or styles file, or in a project file one of those imports, `require.context()`, `process.env` variables other than `NODE_ENV` and `STYLEGUIDIST_ENV`, and imports of the old package name.
 
 Findings are grouped as errors, warnings and info, and every error and warning carries a one-line fix and a link to the documentation section that explains it. The command exits with `1` when there is at least one error and `0` otherwise, so it can guard a migration in CI.
 

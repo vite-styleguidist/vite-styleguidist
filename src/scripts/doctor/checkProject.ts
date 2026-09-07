@@ -64,6 +64,14 @@ const CJS_EXPORTS = /^[ \t]*module\.exports\s*[=[.]/m;
 const CJS_REQUIRE = /^[ \t]*(?:const|let|var)\s+.*=\s*require\s*\(/m;
 // `require.context(…)`: webpack-only, and there is no shape of it Vite understands
 const REQUIRE_CONTEXT = /(^|[^.\w$])require\.context\s*\(/;
+// The module a file imports: `from '…'`, `import '…'` and `import('…')` all end up here.
+// Deliberately loose — a match is only ever used to look for a file that exists, and the
+// finding needs that file to contain CommonJS too, so a stray match costs a stat and nothing else.
+const IMPORT_SOURCE = /\b(?:from|import)\s*\(?\s*['"]([^'"\n]+)['"]/g;
+// Comments, removed before the regex above runs so an import somebody commented out is not
+// followed. The lookbehind keeps `https://…` inside a string from starting a comment; the
+// worst a mis-strip can do is hide an import, which costs a finding, never invents one.
+const COMMENTS = /\/\*[\s\S]*?\*\/|(?<![:\\])\/\/[^\n]*/g;
 const PROCESS_ENV_DOT = /process\.env\.([A-Za-z_$][\w$]*)/g;
 const PROCESS_ENV_INDEX = /process\.env\[\s*['"]([^'"]+)['"]\s*\]/g;
 // Any string literal naming the old package: an import, a `require()`, a jest mock, an alias
@@ -172,6 +180,57 @@ export function collectConfigFiles(
 }
 
 /**
+ * The `name` → `absolute path` import aliases the style guide will be built with, as far as
+ * the config knows them: the `moduleAliases` option and, when `viteConfig` is written as an
+ * object, its `resolve.alias` entries. A RegExp alias, a function `viteConfig` and the
+ * project’s own `vite.config.js` are out of reach here — an alias that is not found simply
+ * means one import is not followed.
+ */
+export function collectImportAliases(
+	config: Partial<Rsg.SanitizedStyleguidistConfig>
+): [string, string][] {
+	const aliases = Object.entries(config.moduleAliases || {});
+	const viteConfig = config.viteConfig as
+		{ resolve?: { alias?: unknown } } | ((...args: unknown[]) => unknown) | undefined;
+	const alias =
+		viteConfig && typeof viteConfig === 'object' ? viteConfig.resolve?.alias : undefined;
+	if (Array.isArray(alias)) {
+		for (const entry of alias) {
+			aliases.push([entry?.find, entry?.replacement]);
+		}
+	} else if (alias && typeof alias === 'object') {
+		aliases.push(...Object.entries(alias));
+	}
+	return aliases.filter(
+		(entry): entry is [string, string] =>
+			typeof entry[0] === 'string' && typeof entry[1] === 'string'
+	);
+}
+
+/**
+ * Where an import of `file` points, when it points at another file of this project.
+ *
+ * Only relative specifiers and the ones going through `moduleAliases` are followed: a bare
+ * package name is a dependency, which Vite pre-bundles (and converts from CommonJS on the way)
+ * whatever it is written in.
+ */
+export function resolveImport(
+	specifier: string,
+	fromDir: string,
+	aliases: [string, string][]
+): string | undefined {
+	if (specifier.startsWith('.')) {
+		return resolveModuleFile(specifier, fromDir);
+	}
+	for (const [name, target] of aliases) {
+		if (specifier === name || specifier.startsWith(`${name}/`)) {
+			return resolveModuleFile(target + specifier.slice(name.length), fromDir);
+		}
+	}
+	return undefined;
+}
+
+/**
  * Look for the four things a webpack-era project carries that Vite does not understand.
  *
  * Deliberately a regex pass over the raw text and not a parse: the doctor runs before anything
@@ -249,6 +308,9 @@ export default function checkProject(
 	}
 
 	const cjsFiles: string[] = [];
+	// Absolute paths of the project files the scanned ones import, checked for CommonJS below
+	const importedFiles = new Set<string>();
+	const importAliases = collectImportAliases(config);
 	const requireContextFiles: string[] = [];
 	const oldPackageFiles: string[] = [];
 	const envFiles: string[] = [];
@@ -300,6 +362,54 @@ export default function checkProject(
 		if (found) {
 			envFiles.push(file);
 		}
+
+		const importable = code.replace(COMMENTS, '');
+		IMPORT_SOURCE.lastIndex = 0;
+		let importMatch = IMPORT_SOURCE.exec(importable);
+		while (importMatch) {
+			const imported = resolveImport(importMatch[1], path.dirname(file), importAliases);
+			// Dependencies are Vite’s business, and a file that is scanned in its own right is
+			// covered by the checks above
+			if (imported && !imported.includes(`${path.sep}node_modules${path.sep}`)) {
+				importedFiles.add(imported);
+			}
+			importMatch = IMPORT_SOURCE.exec(importable);
+		}
+	}
+
+	/**
+	 * CommonJS one import away from a file that is bundled: an ES module theme (the fix the
+	 * report above asks for) that still imports a `module.exports` helper, or a component that
+	 * does. Worth its own pass because dev and build disagree about it — the build converts the
+	 * file, the dev server serves it as it is and the page stays blank with a single console
+	 * error naming a file the user did not think was part of the style guide.
+	 *
+	 * Only one level deep, and only files nothing else already scanned: this is a migration
+	 * aid, not a module graph. `.cjs`/`.cts` are left out on purpose — a file with that
+	 * extension is deliberate CommonJS, and Vite has its own interop for it.
+	 */
+	const cjsImportedFiles: string[] = [];
+	const importedTargets = [...importedFiles]
+		.filter(
+			(file) =>
+				!scanned.includes(file) &&
+				CODE_EXTENSIONS.includes(path.extname(file)) &&
+				!['.cjs', '.cts'].includes(path.extname(file))
+		)
+		.sort()
+		.slice(0, Math.max(0, maxFiles - scanned.length));
+	for (const file of importedTargets) {
+		try {
+			if (fs.statSync(file).size > maxFileSize) {
+				continue;
+			}
+			const code = fs.readFileSync(file, 'utf8');
+			if (CJS_EXPORTS.test(code) || CJS_REQUIRE.test(code)) {
+				cjsImportedFiles.push(file);
+			}
+		} catch {
+			// Unreadable: not something a migration report should stop for
+		}
 	}
 
 	if (cjsFiles.length > 0) {
@@ -311,6 +421,20 @@ export default function checkProject(
 			files: cjsFiles,
 			fix: 'Replace module.exports with export default, and require() with import.',
 			docs: `${consts.DOCS_MIGRATION}#theme-and-styles-files`,
+		});
+	}
+
+	if (cjsImportedFiles.length > 0) {
+		findings.push({
+			id: 'project.commonjs-import',
+			level: 'error',
+			title: `CommonJS syntax in ${plural(cjsImportedFiles.length, 'imported file')}`,
+			detail:
+				'Your theme, styles or components import these, so they are bundled for the browser and must be ES modules. ' +
+				'A build converts them anyway, the dev server does not: it serves a blank page with one console error naming the file.',
+			files: cjsImportedFiles,
+			fix: 'Replace module.exports with export default, and require() with import.',
+			docs: `${consts.DOCS_MIGRATION}#commonjs-in-your-project-files`,
 		});
 	}
 

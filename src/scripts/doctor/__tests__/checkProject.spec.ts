@@ -205,6 +205,89 @@ describe('code that Vite cannot run', () => {
 		expect(ids(findings)).not.toContain('project.commonjs-theme');
 	});
 
+	it('should find CommonJS in a file the theme imports', () => {
+		const dir = createProject({
+			// Exactly what the fix line for a CommonJS theme leaves behind: the theme is an ES
+			// module now, the file it imports is not
+			'theme.js': "import brand from './src/brand.js'\nexport default { color: brand }\n",
+			'src/brand.js': "module.exports = { link: 'firebrick' }\n",
+		});
+		const findings = checkProject(config({ theme: path.join(dir, 'theme.js') }), dir);
+		expect(byId(findings, 'project.commonjs-import')[0]).toMatchObject({
+			level: 'error',
+			title: 'CommonJS syntax in 1 imported file',
+			files: [path.join(dir, 'src/brand.js')],
+			docs: expect.stringContaining('#commonjs-in-your-project-files'),
+		});
+		// The theme file itself is fine, and must not be reported as if it were not
+		expect(ids(findings)).not.toContain('project.commonjs-theme');
+	});
+
+	it('should find CommonJS behind a moduleAliases import in a component', () => {
+		const dir = createProject({
+			'components/Button.js': "import brand from '@/brand.js'\nexport default Button\n",
+			'src/brand.js': "module.exports = { link: 'firebrick' }\n",
+		});
+		const findings = checkProject(
+			config({
+				components: 'components/*.js',
+				moduleAliases: { '@': path.join(dir, 'src') },
+			}),
+			dir
+		);
+		expect(byId(findings, 'project.commonjs-import')[0]).toMatchObject({
+			files: [path.join(dir, 'src/brand.js')],
+		});
+	});
+
+	it('should find CommonJS behind an alias declared in viteConfig', () => {
+		const dir = createProject({
+			'components/Button.js': "import brand from '@/brand.js'\nexport default Button\n",
+			'src/brand.js': "module.exports = { link: 'firebrick' }\n",
+		});
+		const findings = checkProject(
+			config({
+				components: 'components/*.js',
+				viteConfig: { resolve: { alias: { '@': path.join(dir, 'src') } } },
+			} as any),
+			dir
+		);
+		expect(byId(findings, 'project.commonjs-import')[0]).toMatchObject({
+			files: [path.join(dir, 'src/brand.js')],
+		});
+	});
+
+	it('should not follow an import that is commented out', () => {
+		const dir = createProject({
+			'components/Button.js':
+				"// import brand from './brand-old.js'\n/* import x from './brand-old.js' */\nexport default Button\n",
+			'components/brand-old.js': "module.exports = { link: 'firebrick' }\n",
+		});
+		const findings = checkProject(config({ components: 'components/[A-Z]*.js' }), dir);
+		expect(ids(findings)).not.toContain('project.commonjs-import');
+	});
+
+	it('should not follow imports into dependencies or .cjs files', () => {
+		const dir = createProject({
+			'components/Button.js':
+				"import get from 'lodash/get'\nimport data from './data.cjs'\nexport default Button\n",
+			'components/data.cjs': 'module.exports = { a: 1 }\n',
+			'node_modules/lodash/get.js': 'module.exports = function get() {}\n',
+		});
+		const findings = checkProject(config({ components: 'components/[A-Z]*.js' }), dir);
+		expect(ids(findings)).not.toContain('project.commonjs-import');
+	});
+
+	it('should not report a file that is scanned in its own right twice', () => {
+		const dir = createProject({
+			'components/Button.js': "import './Card.js'\nexport default Button\n",
+			'components/Card.js': 'module.exports = Card\n',
+		});
+		const findings = checkProject(config({ components: 'components/*.js' }), dir);
+		// Components go through Vite, which reports CommonJS in them far more precisely
+		expect(ids(findings)).not.toContain('project.commonjs-import');
+	});
+
 	it('should find require.context in a component', () => {
 		const dir = createProject({
 			'components/Button.js': "const icons = require.context('./icons', true)\n",

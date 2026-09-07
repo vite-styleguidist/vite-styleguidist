@@ -282,7 +282,22 @@ Works as before, the modules are imported at the top of the style guide bundle. 
 
 ### JSX in `.js` files, no Babel
 
-JSX in `.js` files is compiled by Styleguidist, no configuration needed. Everything else Babel used to do for your components (proposals, macros, `babel-plugin-styled-components`, etc.) doesn’t happen anymore, unless you add [@rolldown/plugin-babel](https://www.npmjs.com/package/@rolldown/plugin-babel) to `viteConfig.plugins`. Vite doesn’t support CommonJS `require()` in your source files either: use `import`.
+JSX in `.js` files is compiled by Styleguidist, no configuration needed. Everything else Babel used to do for your components (proposals, macros, `babel-plugin-styled-components`, etc.) doesn’t happen anymore, unless you add [@rolldown/plugin-babel](https://www.npmjs.com/package/@rolldown/plugin-babel) to `viteConfig.plugins`.
+
+### CommonJS in your project files
+
+Every file the style guide bundles has to be an ES module: your components, the files given to [theme](Configuration.md#theme) and [styles](Configuration.md#styles) — and everything those import. `module.exports` and `require()` were a Babel courtesy, Vite has neither:
+
+```diff
+- const colors = require('./colors.js')
+- module.exports = { primary: colors.red }
++ import colors from './colors.js'
++ export default { primary: colors.red }
+```
+
+The leftovers are usually one import away from the files you converted: a theme that is an ES module now but still imports a `module.exports` helper. That one is worth knowing about, because the two commands disagree — `styleguidist build` converts the file and succeeds, `styleguidist server` serves it as it is and the style guide stays blank, with a single console error naming a file you may not think of as part of the style guide. [styleguidist doctor](CLI.md#the-doctor-command) reports both cases, so run it before you go looking by hand.
+
+Packages in `node_modules` are not affected: Vite converts those for you, whatever they are written in.
 
 ### CSS modules
 
@@ -308,7 +323,7 @@ One thing to know while you migrate: a variable you forgot to expose doesn’t f
 
 ### Theme and styles files
 
-Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.md#styles) options are bundled for the browser and must be ES modules:
+Files passed to the [theme](Configuration.md#theme) and [styles](Configuration.md#styles) options are bundled for the browser and must be ES modules, and so must every file they import (see [CommonJS in your project files](#commonjs-in-your-project-files)):
 
 ```diff
 - module.exports = {

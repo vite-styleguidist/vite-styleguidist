@@ -28,6 +28,17 @@
 import type * as Rsg from '../../typings/index.js';
 
 /**
+ * How far below the fold a component’s documentation starts loading (`lazyDocs`, ADR 0019).
+ *
+ * Generous downwards, nothing upwards, and that asymmetry is deliberate. Loading a
+ * component fills its container, which pushes everything after it down; doing that *above*
+ * the viewport would move the page under the reader, and would move a deep link’s target
+ * away from where the browser has just scrolled to. A component that is only partly
+ * visible still intersects, so nothing on screen is left empty by the missing top margin.
+ */
+export const DOCS_ROOT_MARGIN = '0px 0px 1200px 0px';
+
+/**
  * Components are keyed by their file, not by their slug: the same component can be listed
  * in two sections (two slugs, one file) and its documentation is the same in both.
  */
@@ -44,6 +55,43 @@ interface DocsEntry {
 const entries = new Map<string, DocsEntry>();
 const componentListeners = new Map<string, Set<() => void>>();
 const treeListeners = new Set<() => void>();
+
+/**
+ * Components whose documentation something has taken responsibility for loading, and how
+ * many mounted things are doing so (a component listed in two sections is rendered twice).
+ *
+ * Styleguidist’s own `ReactComponent` is one of those things: it knows the display mode, it
+ * has the component’s anchor and it watches the viewport. A replaced `ReactComponent`,
+ * `Components` or `Sections` (`styleguideComponents`) knows none of that and has no reason
+ * to call `loadDocs` at all — so the guide would render empty containers for ever. This is
+ * how the safety net that catches those (DocsAutoloader) tells the two apart, instead of
+ * loading everything and undoing the whole point of the option.
+ */
+const selfManaged = new Map<string, number>();
+
+/** “I will load this component’s documentation myself.” Returns the release. */
+export function markSelfManaged(component: Rsg.Component): () => void {
+	const key = docsKey(component);
+	selfManaged.set(key, (selfManaged.get(key) || 0) + 1);
+	let released = false;
+	return () => {
+		if (released) {
+			return;
+		}
+		released = true;
+		const left = (selfManaged.get(key) || 1) - 1;
+		if (left > 0) {
+			selfManaged.set(key, left);
+		} else {
+			selfManaged.delete(key);
+		}
+	};
+}
+
+/** Is something already looking after this component’s documentation? */
+export function isSelfManaged(component: Rsg.Component): boolean {
+	return (selfManaged.get(docsKey(component)) || 0) > 0;
+}
 
 /** The documentation of a component if it has been loaded. */
 export function getLoadedDocs(component: Rsg.Component): Rsg.ComponentDocs | undefined {
@@ -149,7 +197,7 @@ export function loadComponentDocs(
 }
 
 /** Every component of a section tree, depth first. */
-function eachComponent(sections: Rsg.Section[], callback: (component: Rsg.Component) => void): void {
+export function eachComponent(sections: Rsg.Section[], callback: (component: Rsg.Component) => void): void {
 	sections.forEach((section) => {
 		(section.components || []).forEach(callback);
 		eachComponent(section.sections || [], callback);
@@ -294,5 +342,6 @@ export function resetComponentDocs(): void {
 	entries.clear();
 	componentListeners.clear();
 	treeListeners.clear();
+	selfManaged.clear();
 	treeUpdateScheduled = false;
 }

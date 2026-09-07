@@ -9,9 +9,11 @@ import ReactComponentRenderer from 'rsg-components/ReactComponent/ReactComponent
 import Context, { StyleGuideContextContents } from 'rsg-components/Context';
 import ExamplePlaceholderDefault from 'rsg-components/ExamplePlaceholder';
 import {
+	DOCS_ROOT_MARGIN,
 	applyLoadedDocs,
 	getLoadedDocs,
 	loadComponentDocs,
+	markSelfManaged,
 	subscribeToComponent,
 } from '../../utils/componentDocs.js';
 import { getOriginId } from '../../utils/handleHash.js';
@@ -22,16 +24,10 @@ import type * as Rsg from '../../../typings/index.js';
 const ExamplePlaceholder =
 	process.env.STYLEGUIDIST_ENV !== 'production' ? ExamplePlaceholderDefault : () => <div />;
 
-/**
- * How far below the fold a component’s documentation starts loading (`lazyDocs`, ADR 0019).
- *
- * Generous downwards, nothing upwards, and that asymmetry is deliberate. Loading a
- * component fills its container, which pushes everything after it down; doing that *above*
- * the viewport would move the page under the reader, and would move a deep link’s target
- * away from where the browser has just scrolled to. A component that is only partly
- * visible still intersects, so nothing on screen is left empty by the missing top margin.
- */
-export const DOCS_ROOT_MARGIN = '0px 0px 1200px 0px';
+// Defined with the store (componentDocs.ts) so that the safety net behind a replaced
+// renderer can watch the viewport by the same rule without importing this module; re-exported
+// because this is where it has always been part of the public surface.
+export { DOCS_ROOT_MARGIN } from '../../utils/componentDocs.js';
 
 interface ReactComponentProps {
 	component: Rsg.Component;
@@ -61,6 +57,12 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 	/** Watches the component’s heading, so that its documentation loads as it comes into view. */
 	private observer: IntersectionObserver | undefined;
 	private unsubscribeFromDocs: (() => void) | undefined;
+	/**
+	 * Told to the store while this component is mounted, so that the safety net behind a
+	 * replaced renderer (DocsAutoloader) leaves this component alone: everything below is
+	 * exactly the loading it would otherwise have to do.
+	 */
+	private releaseSelfManaged: (() => void) | undefined;
 
 	public componentDidMount() {
 		this.startLoadingDocs();
@@ -90,6 +92,10 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 			this.unsubscribeFromDocs();
 			this.unsubscribeFromDocs = undefined;
 		}
+		if (this.releaseSelfManaged) {
+			this.releaseSelfManaged();
+			this.releaseSelfManaged = undefined;
+		}
 	}
 
 	private stopObserving() {
@@ -114,6 +120,10 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 			return;
 		}
 		const { displayMode } = this.context as StyleGuideContextContents;
+
+		// Everything below is this component looking after itself; say so, so that the
+		// safety net does not load it as well (see DocsAutoloader)
+		this.releaseSelfManaged = markSelfManaged(component);
 
 		// Re-render this component (and only this one) when its documentation arrives
 		this.unsubscribeFromDocs = subscribeToComponent(component, () => this.forceUpdate());

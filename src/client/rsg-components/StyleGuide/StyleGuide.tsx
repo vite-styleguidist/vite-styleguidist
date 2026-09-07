@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import TableOfContents from 'rsg-components/TableOfContents';
+import ScrollSyncedToc from 'rsg-components/StyleGuide/ScrollSyncedToc';
 import StyleGuideRenderer from 'rsg-components/StyleGuide/StyleGuideRenderer';
 import Sections from 'rsg-components/Sections';
 import Welcome from 'rsg-components/Welcome';
@@ -28,6 +28,23 @@ import type * as Rsg from '../../../typings/index.js';
  */
 function hasSidebar(displayMode: string | undefined, showSidebar: boolean): boolean {
 	return displayMode === DisplayModes.notFound || (showSidebar && displayMode === DisplayModes.all);
+}
+
+/**
+ * Whether the sidebar has anything to follow while the reader scrolls.
+ *
+ * Only the default display mode puts every component on one page, which is the only shape
+ * with component-level anchors to spy on: an isolated view (`#!/Button`) has no sidebar at
+ * all, and `pagePerSection` renders one component per page, where the sidebar links are
+ * routes rather than element ids (measured in ADR 0015: zero anchors). Heading-level
+ * navigation for those pages is a separate feature (ADR 0016).
+ */
+function canScrollSync(
+	displayMode: string | undefined,
+	config: Rsg.ProcessedStyleguidistConfig,
+	pagePerSection: boolean | undefined
+): boolean {
+	return displayMode === DisplayModes.all && config.showSidebar && !pagePerSection;
 }
 
 export interface StyleGuideProps {
@@ -101,10 +118,12 @@ export default class StyleGuide extends Component<StyleGuideProps, StyleGuideSta
 					homepageUrl={HOMEPAGE}
 					toc={
 						allSections ? (
-							<TableOfContents
+							<ScrollSyncedToc
 								sections={allSections}
 								useRouterLinks={pagePerSection}
 								tocMode={config.tocMode}
+								scrollSync={config.scrollSync}
+								enabled={canScrollSync(displayMode, config, pagePerSection)}
 							/>
 						) : null
 					}

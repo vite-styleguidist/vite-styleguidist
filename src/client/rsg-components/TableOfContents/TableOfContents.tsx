@@ -10,6 +10,13 @@ interface TableOfContentsProps {
 	useRouterLinks?: boolean;
 	tocMode?: string;
 	loc?: { hash: string; pathname: string };
+	/**
+	 * Slug of the section the reader has scrolled to, from the scroll spy
+	 * (`scrollSync`, ADR 0015). When set it decides which entry is selected; when
+	 * `undefined` — scroll sync off, or nothing detected yet — selection comes from the
+	 * route exactly as it always has.
+	 */
+	activeSlug?: string;
 }
 
 interface RenderedLevel {
@@ -44,6 +51,12 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 		if (item.selected) {
 			return true;
 		}
+		// Once the scroll spy has an answer, `selected` above is the whole answer: the route
+		// still points at the entry the reader clicked, and the prefix match below would
+		// light that chip as well and show two current chips at once.
+		if (this.props.activeSlug !== undefined) {
+			return false;
+		}
 		if (!item.href || item.external) {
 			return false;
 		}
@@ -69,6 +82,7 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 		// Match selected component in both basic routing and pagePerSection routing.
 		const { hash, pathname } = this.props.loc ?? window.location;
 		const windowHash = pathname + (useRouterLinks ? hash : getHash(hash));
+		const { activeSlug } = this.props;
 
 		let childrenContainSelected = false;
 		const items: Rsg.TOCItem[] = [];
@@ -85,8 +99,14 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 					? this.renderLevel(children, useRouterLinks, childHashPath, sectionDepth === 0)
 					: { content: undefined, containsSelected: false };
 
-			const selected =
+			const routeSelected =
 				(!useRouterLinks && section.href ? getHash(section.href) : section.href) === windowHash;
+			// The scroll spy wins over the route: with `scrollSync: 'selection'` the URL is
+			// never rewritten, so the route still names the entry the reader clicked minutes
+			// ago and would fight the highlight for the section actually on screen. The route
+			// is what decides before the spy has an answer (a deep link, a fresh load) and
+			// whenever scroll sync is off, which is what keeps the pre-1.0 behaviour intact.
+			const selected = activeSlug === undefined ? routeSelected : section.slug === activeSlug;
 
 			if (containsSelected || selected) {
 				childrenContainSelected = true;

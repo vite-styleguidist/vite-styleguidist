@@ -43,6 +43,12 @@ export interface ExamplesModuleOptions {
 	shouldShowDefaultExample?: boolean;
 }
 
+/**
+ * Values of the `scrollSync` config option: `false` turns scroll syncing off, `'selection'`
+ * only moves the sidebar highlight, `'hash'` also rewrites the URL fragment.
+ */
+export type ScrollSync = false | 'selection' | 'hash';
+
 interface BaseStyleguidistConfig {
 	assetsDir: string | string[];
 	tocMode: ExpandMode;
@@ -111,6 +117,17 @@ interface BaseStyleguidistConfig {
 		text?: string;
 		url: string;
 	};
+	/**
+	 * Whether the sidebar highlight (and optionally the URL fragment) follows the reader as
+	 * the page scrolls; see docs/decisions/0015-scroll-synced-selection.md.
+	 *
+	 * - `'selection'` (default): the highlighted entry follows the scroll, the URL is never
+	 *   touched;
+	 * - `'hash'`: the same, plus the fragment is rewritten with `history.replaceState` so a
+	 *   copied link points at the section on screen;
+	 * - `false`: the selection only changes when the reader navigates, as before 1.0.
+	 */
+	scrollSync: ScrollSync;
 	serverHost: string;
 	serverPort: number;
 	showCode: boolean;

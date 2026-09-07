@@ -70,4 +70,56 @@ test.describe('Styleguidist core', () => {
 		await toggle.getByRole('button', { name: 'System' }).click();
 		await expect(html).not.toHaveAttribute('data-rsg-theme');
 	});
+
+	// `scrollSync: 'selection'`, the default in the all-in-one display mode (ADR 0015).
+	test('moves the sidebar selection with the scroll without touching the URL', async () => {
+		// A clean scroll position, whatever the tests above left behind
+		await page.goto('/');
+		// The lazily loaded editor chunks keep changing the height of the page as they
+		// arrive, and “what is at the bottom” is a different question for each height
+		await page.waitForLoadState('networkidle');
+
+		const current = page.locator('[data-testid="rsg-toc-link"][aria-current="true"]');
+		const entries = page.locator('[data-testid="rsg-toc-link"]');
+		const names = {
+			first: await entries.first().textContent(),
+			last: await entries.last().textContent(),
+		};
+		const historyLength = await page.evaluate(() => history.length);
+
+		// The top of the document selects the first entry, not nothing
+		await expect(current).toHaveText(names.first as string);
+
+		// Re-scrolled on every poll, so that a page still growing underneath cannot make
+		// this a test of the wrong document. The last component sits in the last screenful,
+		// where only the “document bottom” rule can select it: its heading never reaches the
+		// activation line.
+		await expect
+			.poll(async () => {
+				await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+				return current.textContent();
+			})
+			.toBe(names.last);
+
+		await page.evaluate(() => window.scrollTo(0, 0));
+		await expect(current).toHaveText(names.first as string);
+
+		// The default mode writes neither the URL nor the history stack
+		expect(new URL(page.url()).hash).toBe('');
+		expect(await page.evaluate(() => history.length)).toBe(historyLength);
+	});
+
+	test('keeps a clicked entry selected while the page scrolls to it', async () => {
+		const current = page.locator('[data-testid="rsg-toc-link"][aria-current="true"]');
+		const last = page.locator('[data-testid="rsg-toc-link"]').last();
+		const name = (await last.textContent()) as string;
+
+		await last.click();
+
+		// The scroll spy must not take the selection back to whatever is on the activation
+		// line: the bottom of the page cannot put the last component's heading there
+		await expect(current).toHaveText(name);
+		await page.waitForTimeout(500);
+		await expect(current).toHaveText(name);
+	});
 });

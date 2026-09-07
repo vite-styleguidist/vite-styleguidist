@@ -1,3 +1,5 @@
+import type { ScrollSync } from '../typings/RsgStyleguidistConfig.js';
+
 export const DisplayModes = Object.freeze({
 	// Show all sections and components (default)
 	all: 'all',
@@ -22,3 +24,14 @@ export const UsageModes = Object.freeze({
 	collapse: 'collapse',
 	expand: 'expand',
 });
+
+/**
+ * Every valid `scrollSync` config value, the way COLOR_SCHEMES lists the colour schemes:
+ * the type lives in the typings, the list has to be a runtime value because the config
+ * schema validates against it (see docs/decisions/0015-scroll-synced-selection.md).
+ */
+export const SCROLL_SYNC_MODES: readonly ScrollSync[] = Object.freeze([
+	false,
+	'selection',
+	'hash',
+] as ScrollSync[]);

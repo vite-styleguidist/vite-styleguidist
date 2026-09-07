@@ -24,6 +24,7 @@ export const CLIENT_CONFIG_OPTIONS = [
 	'pagePerSection',
 	'previewDelay',
 	'ribbon',
+	'scrollSync',
 	'showSidebar',
 	'styles',
 	'theme',

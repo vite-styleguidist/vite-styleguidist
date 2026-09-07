@@ -10,6 +10,7 @@ import { builtinResolvers, defaultHandlers } from 'react-docgen';
 import type { Handler, Resolver } from 'react-docgen';
 import { DEFAULT_COMPILER_CONFIG } from '../../client/utils/compileCode.js';
 import { COLOR_SCHEMES } from '../../client/styles/colorSchemes.js';
+import { SCROLL_SYNC_MODES } from '../../client/consts.js';
 import FindAnnotatedExportsResolver from '../../loaders/utils/FindAnnotatedExportsResolver.js';
 import getUserPackageJson from '../utils/getUserPackageJson.js';
 import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive.js';
@@ -307,6 +308,25 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 				components: './lib/components/**/[A-Z]*.js',
 			},
 		],
+	},
+	scrollSync: {
+		type: ['boolean', 'string'],
+		default: 'selection',
+		example: 'hash',
+		process: (value?: boolean | string): boolean | string | undefined => {
+			// Runs before the default is applied, so undefined must pass through. `true` is
+			// rejected rather than aliased to 'selection': the option has two “on” modes and
+			// guessing which one a boolean meant would be a coin toss.
+			if (value !== undefined && !SCROLL_SYNC_MODES.includes(value as Rsg.ScrollSync)) {
+				throw new StyleguidistError(
+					`${kleur.bold('scrollSync')} config option must be one of ${SCROLL_SYNC_MODES.map(
+						(mode) => JSON.stringify(mode)
+					).join(', ')}, got ${JSON.stringify(value)}.`,
+					'scrollSync'
+				);
+			}
+			return value;
+		},
 	},
 	serverHost: {
 		type: 'string',

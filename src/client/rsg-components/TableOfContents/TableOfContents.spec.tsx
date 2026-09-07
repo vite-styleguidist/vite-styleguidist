@@ -438,3 +438,70 @@ it('should mark the chip of the section a subsection page belongs to', () => {
 		['Docs', 'true'],
 	]);
 });
+
+/**
+ * `activeSlug` is the scroll spy's answer (`scrollSync`, ADR 0015). The route is what the
+ * reader last navigated to, which in the default display mode is never rewritten while
+ * they scroll, so once the spy has an answer the route must not have a say — in the list
+ * or in the chip row.
+ */
+describe('scroll-synced selection', () => {
+	const listSelection = (container: HTMLElement) =>
+		Array.from(container.querySelectorAll('[data-testid="rsg-toc-link"]'))
+			.filter((link) => link.getAttribute('aria-current') === 'true')
+			.map((link) => link.textContent);
+
+	const chipSelection = (container: HTMLElement) =>
+		Array.from(container.querySelectorAll('a'))
+			.filter((link) => !link.hasAttribute('data-testid'))
+			.filter((chip) => chip.getAttribute('aria-current') === 'true')
+			.map((chip) => chip.textContent);
+
+	it('should select the entry the reader has scrolled to instead of the one in the URL', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				loc={{ pathname: '', hash: '#input' }}
+				activeSlug="textarea"
+			/>
+		);
+
+		expect(listSelection(container)).toEqual(['Textarea']);
+	});
+
+	it('should mark the section that contains the scrolled-to component, and only it', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				// The reader clicked Introduction (a top-level entry of its own) and scrolled
+				// down into Forms; two current chips at once was the bug this guards
+				loc={{ pathname: '', hash: '#introduction' }}
+				activeSlug="textarea"
+			/>
+		);
+
+		expect(chipSelection(container)).toEqual(['Forms']);
+	});
+
+	it('should select nothing when the active anchor has no entry', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				loc={{ pathname: '', hash: '#input' }}
+				activeSlug="a-heading-inside-a-page"
+			/>
+		);
+
+		expect(listSelection(container)).toEqual([]);
+		expect(chipSelection(container)).toEqual([]);
+	});
+
+	it('should fall back to the route while the spy has no answer', () => {
+		const { container } = render(
+			<TableOfContents sections={sections} loc={{ pathname: '', hash: '#input' }} />
+		);
+
+		expect(listSelection(container)).toEqual(['Input']);
+		expect(chipSelection(container)).toEqual(['Forms']);
+	});
+});

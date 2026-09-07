@@ -143,7 +143,9 @@ MDX is not a superset of Markdown. Six constructs that a `.md` file accepts beha
 
 GitHub-flavoured Markdown — tables, task lists, strikethrough, literal URLs — works out of the box, because [remark-gfm](https://github.com/remarkjs/remark-gfm) is enabled by default. If you replace the plugin list with the [mdx](Configuration.md#mdx) option, add it back yourself.
 
-Headings get ids, so they are deep-linkable: `#!/Button?id=sizes` opens the `Button` page and scrolls to its `Sizes` heading. The id is the slug of the heading text — `## Usage & setup` becomes `usage--setup` — and a heading that appears twice in the same file gets a `-1`, `-2` suffix. An `.mdx` page and a `.md` page slug the same way, so a page rewritten from one to the other keeps every link written against it. A heading whose text has no ASCII letter or digit gets no id, in either pipeline.
+Headings get ids, so they are deep-linkable: `#!/Button?id=sizes` opens the `Button` page and scrolls to its `Sizes` heading. The id is the slug of the heading text — `## Usage & setup` becomes `usage--setup` — and a heading that appears twice gets a `-1`, `-2` suffix. An `.mdx` page and a `.md` page slug the same way, so a page rewritten from one to the other keeps every link written against it. A heading whose text has no ASCII letter or digit gets no id, in either pipeline.
+
+One case is not equivalent. A `.md` page is rendered one block at a time, split at every example, and the `-1` suffix is counted per block: two headings with the same text and an example between them both get the plain id there, where an `.mdx` page numbers the second one. A component `Readme.md` whose headings and playgrounds alternate is exactly that shape, so give repeated headings text of their own if you link to them — a duplicate id can only ever be reached at its first occurrence anyway, and the “on this page” list ([pageNav](Configuration.md#pagenav)) lists it once.
 
 ### Differences from a `.md` page
 

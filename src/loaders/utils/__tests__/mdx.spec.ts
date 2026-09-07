@@ -5,6 +5,9 @@ import path from 'node:path';
 // The Markdown pipeline's compiler, so the heading-id tests below can compare the ids the
 // two pipelines produce for the same document instead of hard-coding one of them.
 import { compiler } from 'markdown-to-jsx/react';
+// The `.md` pipeline's splitter: a Markdown page is rendered one chunk at a time, and that
+// is what makes the two pipelines' heading ids comparable only chunk by chunk.
+import chunkify from '../chunkify.js';
 import parseMdx, {
 	isMdxAvailable,
 	isMdxFile,
@@ -174,8 +177,8 @@ describe('chunks', () => {
 const mdxHeadingIds = (code: string): (string | null)[] =>
 	[...code.matchAll(/<_components\.h[1-6](?:\s+id="([^"]*)")?/g)].map((match) => match[1] ?? null);
 
-/** The heading ids markdown-to-jsx puts in the DOM for the same source — the `.md` pipeline. */
-const markdownHeadingIds = (source: string): (string | null)[] => {
+/** The heading ids one `compiler()` call — one rendered `<Markdown>` block — produces. */
+const compiledHeadingIds = (markdown: string): (string | null)[] => {
 	const ids: (string | null)[] = [];
 	const walk = (node: any): void => {
 		if (Array.isArray(node)) {
@@ -189,9 +192,24 @@ const markdownHeadingIds = (source: string): (string | null)[] => {
 			walk(node.props.children);
 		}
 	};
-	walk(compiler(source, { forceBlock: true }));
+	walk(compiler(markdown, { forceBlock: true }));
 	return ids;
 };
+
+/**
+ * The heading ids markdown-to-jsx puts in the DOM for the same source — the `.md` pipeline
+ * as the client actually runs it.
+ *
+ * Not one `compiler()` call over the document: `chunkify` splits a Markdown page at every
+ * fence and Examples renders one `<Markdown>` per markdown chunk (Examples.tsx), so one
+ * call is one *chunk*. That matters because markdown-to-jsx's duplicate-heading table lives
+ * inside a call: compiling the whole document at once hides the only shape in which the two
+ * pipelines disagree, which is exactly what this comparison is here to catch.
+ */
+const markdownHeadingIds = (source: string): (string | null)[] =>
+	chunkify(source).flatMap((chunk) =>
+		chunk.type === 'markdown' ? compiledHeadingIds(chunk.content) : []
+	);
 
 describe('heading ids', () => {
 	it('should give every heading an id, so fragment links work on an MDX page', async () => {
@@ -219,9 +237,11 @@ describe('heading ids', () => {
 
 	it('should ignore a `#` inside a fenced code block', async () => {
 		const { code } = await parse(
-			['## Real heading', '```jsx\n# Not a heading\n<A/>\n```', '```html\n<h1># Nope</h1>\n```'].join(
-				'\n\n'
-			)
+			[
+				'## Real heading',
+				'```jsx\n# Not a heading\n<A/>\n```',
+				'```html\n<h1># Nope</h1>\n```',
+			].join('\n\n')
 		);
 
 		// One heading, and the two fences became the elements the client renders
@@ -291,6 +311,24 @@ describe('heading ids', () => {
 			'a-link-heading',
 			'usage--setup-1',
 		]);
+	});
+
+	it('should differ from the Markdown pipeline only for a heading repeated across an example', async () => {
+		// The one shape where the two disagree, pinned so it cannot widen unnoticed. A `.md`
+		// page is rendered one chunk at a time and markdown-to-jsx counts duplicates within a
+		// chunk, so the second `## Usage` here starts a new count; the MDX pass has one
+		// slugger per file and suffixes it. Component Readme files, where headings and
+		// playgrounds alternate, are exactly this shape — Documenting.md says so.
+		const source = ['## Usage', '```jsx', '<Button />', '```', '## Usage'].join('\n\n');
+
+		const { code } = await parse(source);
+
+		expect(mdxHeadingIds(code)).toEqual(['usage', 'usage-1']);
+		expect(markdownHeadingIds(source)).toEqual(['usage', 'usage']);
+		// …and with nothing between them, one chunk, the two agree again
+		const together = '## Usage\n\n## Usage';
+		expect(markdownHeadingIds(together)).toEqual(['usage', 'usage-1']);
+		expect(mdxHeadingIds((await parse(together)).code)).toEqual(['usage', 'usage-1']);
 	});
 
 	it('should let a user remark plugin override the id', async () => {

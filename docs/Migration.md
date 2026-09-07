@@ -63,10 +63,10 @@ Use the longer `vite-styleguidist` name until `react-styleguidist` is uninstalle
 ## Requirements
 
 - **Node.js** 22.12 or newer (Node 23 is not supported; 24 and later are), see [Compatibility](Compatibility.md).
-- **React** 18 or newer (`react` and `react-dom` are peer dependencies).
+- **React** 16.14 or newer (`react` and `react-dom` are peer dependencies). React 16 and 17 style guides keep working — they mount with `ReactDOM.render` instead of `createRoot` — so upgrading Styleguidist doesn’t force a React upgrade, see [Compatibility](Compatibility.md).
 - The package is now an ES module. `import styleguidist from 'vite-styleguidist'` and `require('vite-styleguidist')` both work on the supported Node.js versions, see [Node.js API](API.md).
 
-The style guide config file may be CommonJS (`module.exports`) or an ES module (`export default`): `styleguide.config.js`, `styleguide.config.mjs` or `styleguide.config.cjs`. Config files are loaded synchronously, so top-level `await` isn’t supported in them.
+The style guide config file may be CommonJS (`module.exports`) or an ES module (`export default`), and it may be TypeScript: `styleguide.config.js`, `.mjs`, `.cjs`, `.ts`, `.mts` or `.cts`. The file you already have keeps working as it is; see [config file formats](Configuration.md#config-file-formats) before renaming one. Config files are loaded synchronously, so top-level `await` isn’t supported in them.
 
 ## Dependencies
 

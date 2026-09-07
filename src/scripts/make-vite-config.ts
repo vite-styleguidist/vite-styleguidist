@@ -14,7 +14,7 @@ import getComponentFilesFromSections from '../loaders/utils/getComponentFilesFro
 import getAllContentFiles from '../loaders/utils/getAllContentFiles.js';
 import mergeViteConfig, { hasReactPlugin } from '../vite/mergeViteConfig.js';
 import styleguidistPlugin from '../vite/plugin.js';
-import jsxInJs from '../vite/jsxInJs.js';
+import jsxInJs, { scanGlobJsxInJs } from '../vite/jsxInJs.js';
 import absolutePaths from '../vite/absolutePaths.js';
 import deepImports, { isLegacyPackageInstalled } from '../vite/deepImports.js';
 import { ENTRY_ID, toPosix } from '../vite/ids.js';
@@ -369,6 +369,9 @@ export default async function makeViteConfig(
 				// The scanner and the optimizer parse files on their own (our plugins don’t apply):
 				// let them understand JSX in .js files too
 				moduleTypes: { '.js': 'jsx' },
+				// …except for a `.js` file the scanner rewrites before parsing it, which loses that
+				// module type; this compiles the JSX of those files away first (see the plugin)
+				plugins: [scanGlobJsxInJs({ development: !isProd })],
 			},
 		},
 		build: {

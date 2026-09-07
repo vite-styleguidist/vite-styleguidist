@@ -351,7 +351,11 @@ describe('makeViteConfig', () => {
 			path.join(config.configDir, 'src/components/Button.js'),
 			path.join(config.configDir, 'src/components/Placeholder.js'),
 		]);
-		expect(result.optimizeDeps?.rolldownOptions).toEqual({ moduleTypes: { '.js': 'jsx' } });
+		expect(result.optimizeDeps?.rolldownOptions?.moduleTypes).toEqual({ '.js': 'jsx' });
+		// …plus the scan-only plugin that keeps that module type for files using import.meta.glob
+		expect(
+			(result.optimizeDeps?.rolldownOptions?.plugins as { name: string }[]).map((p) => p.name)
+		).toEqual(['rsg:scan-glob-jsx-in-js']);
 	});
 
 	it('should pre-bundle dependencies imported from examples', async () => {

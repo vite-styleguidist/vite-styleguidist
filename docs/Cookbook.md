@@ -581,12 +581,15 @@ module.exports = {
 ```jsx
 // src/styleguide/StyleGuideRenderer.js
 import React from 'react'
+import Markdown from 'rsg-components/Markdown'
+
 const StyleGuideRenderer = ({
   title,
   version,
   homepageUrl,
-  components,
+  children,
   toc,
+  pageNav,
   hasSidebar
 }) => (
   <div className="root">
@@ -594,7 +597,8 @@ const StyleGuideRenderer = ({
     {version && <h2>{version}</h2>}
     <main className="wrapper">
       <div className="content">
-        {components}
+        {pageNav}
+        {children}
         <footer className="footer">
           <Markdown
             text={`Created with [Vite Styleguidist](${homepageUrl})`}
@@ -605,7 +609,11 @@ const StyleGuideRenderer = ({
     </main>
   </div>
 )
+
+export default StyleGuideRenderer
 ```
+
+The documentation itself arrives as `children`; `toc` is the sidebar and `pageNav` the “on this page” list of the current page’s headings ([pageNav](Configuration.md#pagenav), empty unless the option is on). A slot you do not render is simply gone from your style guide.
 
 We have [an example style guide](../examples/customised) with custom components.
 

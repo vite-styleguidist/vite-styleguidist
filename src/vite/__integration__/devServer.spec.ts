@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
 import styleguidist from '../../scripts/index.esm.js';
-import { RESOLVED_STYLEGUIDE_ID } from '../ids.js';
+import { RESOLVED_STYLEGUIDE_ID, propsId } from '../ids.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
 const FIXTURES = path.join(REPO_ROOT, 'test/components');
@@ -22,6 +22,9 @@ const FIXTURES = path.join(REPO_ROOT, 'test/components');
 // BASE is derived from the server's resolved URL after startup.
 let BASE = '';
 const STYLEGUIDE_URL = `/@id/${RESOLVED_STYLEGUIDE_ID.replace('\0', '__x00__')}`;
+
+/** The URL the browser fetches one component’s documentation module from. */
+const propsUrl = (componentPath: string) => `/@id/__x00__${propsId(componentPath)}`;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -71,7 +74,11 @@ async function collectUpdates(): Promise<string[]> {
 }
 
 beforeAll(async () => {
-	projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-devserver-'));
+	// realpath: on macOS `os.tmpdir()` is a symlink (`/var` -> `/private/var`) and the file
+	// watcher reports resolved paths, so a fixture built on the unresolved one would compare
+	// unequal to every path the plugin sees — and the hot-update assertions below would pass
+	// or fail for reasons that have nothing to do with the plugin.
+	projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-devserver-')));
 	fs.cpSync(FIXTURES, path.join(projectDir, 'components'), { recursive: true });
 	fs.mkdirSync(path.join(projectDir, 'assets'));
 	fs.writeFileSync(path.join(projectDir, 'assets/hello.txt'), 'hello assets');
@@ -226,3 +233,30 @@ test('hot updates the style guide when the theme file changes', async () => {
 		true
 	);
 });
+
+// A component can get its first examples file while the server is running — writing the
+// Readme.md of a component you have just started documenting is the ordinary way to use
+// the dev server. The answer to “which file is this component’s examples file” comes from a
+// memoized directory listing, which is why this needs a hot update of its own.
+test('hot updates a component’s documentation when its first examples file appears', async () => {
+	const component = path.join(projectDir, 'components/Price/Price.js');
+	const url = propsUrl(component);
+
+	const before = await (await fetch(BASE + url)).text();
+	expect(before).not.toContain('rsg-examples');
+
+	const readme = path.join(projectDir, 'components/Price/Readme.md');
+	fs.writeFileSync(readme, 'An example:\n\n```jsx\n<Price fallback="Free" />\n```\n');
+	try {
+		await collectUpdates();
+		const after = await (await fetch(BASE + url)).text();
+		expect(after).toContain('rsg-examples');
+	} finally {
+		fs.unlinkSync(readme);
+		await collectUpdates();
+	}
+
+	// …and disappears again when the file does
+	const removed = await (await fetch(BASE + url)).text();
+	expect(removed).not.toContain('rsg-examples');
+}, 30000);

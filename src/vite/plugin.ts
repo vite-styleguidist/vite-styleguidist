@@ -33,6 +33,7 @@ import {
 } from './parsePool.js';
 import type { ParsePool } from './parsePool.js';
 import { getPropsParser } from '../loaders/utils/propsParser.js';
+import * as fileExistsCaseInsensitive from '../scripts/utils/findFileCaseInsensitive.js';
 import {
 	ENTRY_ID,
 	STYLEGUIDE_ID,
@@ -542,13 +543,34 @@ export default function styleguidistPlugin({
 				// component references it, so regenerate the docs of affected components
 				if (file.endsWith('.md') || file.endsWith('.mdx')) {
 					// Only components can own an examples file, and invalidate() ignores an id the
-					// graph does not hold — so the component list answers this without the graph
-					for (const componentPath of componentFiles) {
-						const examplesFile = config.getExampleFilename(componentPath);
-						if (examplesFile && toPosix(examplesFile) === toPosix(file)) {
-							invalidate(NULL + propsId(componentPath));
+					// graph does not hold — so the component list answers this without the graph.
+					//
+					// The question is asked twice, against two views of the file system, because
+					// `getExampleFilename()` reads directory listings that are memoized
+					// process-wide (findFileCaseInsensitive) and only one of the two views can
+					// answer for each kind of event:
+					//
+					// - the memoized listing was taken before this event — the last time the
+					//   styleguide module was generated — so it still names a *deleted* file, and
+					//   cannot know about a *created* one. Asking it alone is why writing a
+					//   component's first Readme.md used to do nothing at all until the server was
+					//   restarted;
+					// - the listing read again after clearing the memo names a created file, and
+					//   no longer names a deleted one, which is the mirror image of the same
+					//   problem.
+					const owners = new Set<string>();
+					const collectOwners = () => {
+						for (const componentPath of componentFiles) {
+							const examplesFile = config.getExampleFilename(componentPath);
+							if (examplesFile && toPosix(examplesFile) === toPosix(file)) {
+								owners.add(componentPath);
+							}
 						}
-					}
+					};
+					collectOwners();
+					fileExistsCaseInsensitive.clearCache();
+					collectOwners();
+					owners.forEach((componentPath) => invalidate(NULL + propsId(componentPath)));
 				}
 			}
 

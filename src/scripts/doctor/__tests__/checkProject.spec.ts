@@ -67,6 +67,38 @@ describe('collectConfigFiles', () => {
 		).toEqual([path.join(dir, 'theme.js'), path.join(dir, 'setup.js')]);
 	});
 
+	it('should take the files named by styleguideComponents and mdxComponents', () => {
+		const dir = createProject({
+			'styleguide/Link.js': '',
+			'docs/Callout/index.jsx': '',
+		});
+		expect(
+			collectConfigFiles(
+				config({
+					// Written like an import, so usually without the extension
+					styleguideComponents: { LinkRenderer: path.join(dir, 'styleguide/Link') },
+					// The schema resolves the string form; a folder with an index file is a value too
+					mdxComponents: { Callout: path.join(dir, 'docs/Callout') },
+				} as any),
+				dir
+			)
+		).toEqual([path.join(dir, 'styleguide/Link.js'), path.join(dir, 'docs/Callout/index.jsx')]);
+	});
+
+	it('should skip overrides that are not files of this project', () => {
+		const dir = createProject({ 'theme.js': '' });
+		expect(
+			collectConfigFiles(
+				config({
+					// A package name, and an actual component: neither is a file to scan
+					styleguideComponents: { Logo: 'acme-styleguide/Logo' },
+					mdxComponents: { Callout: () => null },
+				} as any),
+				dir
+			)
+		).toEqual([]);
+	});
+
 	it('should leave an object theme alone', () => {
 		expect(collectConfigFiles(config({ theme: { color: {} } } as any), '/pizza')).toEqual([]);
 	});
@@ -183,6 +215,28 @@ describe('code that Vite cannot run', () => {
 			level: 'error',
 			title: 'require.context() in 1 file',
 			files: [path.join(dir, 'components/Button.js')],
+		});
+	});
+
+	it('should scan a renderer named by styleguideComponents', () => {
+		const dir = createProject({
+			'components/Button.js': 'export default Button\n',
+			'styleguide/Link.js':
+				"import LinkRenderer from 'react-styleguidist/lib/client/rsg-components/Link/LinkRenderer'\n" +
+				"const all = require.context('./', true)\n",
+		});
+		const findings = checkProject(
+			config({
+				components: 'components/*.js',
+				styleguideComponents: { LinkRenderer: path.join(dir, 'styleguide/Link') },
+			} as any),
+			dir
+		);
+		expect(byId(findings, 'project.old-package')[0]).toMatchObject({
+			files: [path.join(dir, 'styleguide/Link.js')],
+		});
+		expect(byId(findings, 'project.require-context')[0]).toMatchObject({
+			files: [path.join(dir, 'styleguide/Link.js')],
 		});
 	});
 

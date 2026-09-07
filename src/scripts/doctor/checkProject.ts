@@ -101,6 +101,34 @@ export function collectComponentPatterns(config: Partial<Rsg.SanitizedStyleguidi
 	return patterns;
 }
 
+/**
+ * The file a module path points at, or undefined when it points at no file of this project
+ * (a package name, a component object written inline, a path that no longer exists).
+ *
+ * `styleguideComponents` values are written like imports — `./styleguide/Link`,
+ * `path.join(__dirname, 'src/styleguide/Link')` — so the extension is usually missing and the
+ * target may be a folder with an index file. Resolving them the way an import does is what
+ * makes them scannable at all.
+ */
+export function resolveModuleFile(specifier: string, fromDir: string): string | undefined {
+	const base = path.resolve(fromDir, specifier);
+	const candidates = [
+		base,
+		...CODE_EXTENSIONS.map((extension) => base + extension),
+		...CODE_EXTENSIONS.map((extension) => path.join(base, `index${extension}`)),
+	];
+	for (const candidate of candidates) {
+		try {
+			if (fs.statSync(candidate).isFile()) {
+				return candidate;
+			}
+		} catch {
+			// Not this one, keep probing
+		}
+	}
+	return undefined;
+}
+
 /** Files named directly by the config: they are bundled for the browser like components are. */
 export function collectConfigFiles(
 	config: Partial<Rsg.SanitizedStyleguidistConfig>,
@@ -113,6 +141,24 @@ export function collectConfigFiles(
 	for (const value of named) {
 		if (typeof value === 'string') {
 			files.push(path.resolve(configDir, value));
+		}
+	}
+	// The renderer overrides of `styleguideComponents` and the string values of
+	// `mdxComponents` are project files that go into the browser bundle exactly like
+	// components do (an alias and an import, see make-vite-config and vite/modules), and
+	// Migration.md singles the first out as *the* deep-import case — so they have to be
+	// scanned too. Values that name a package rather than a file, and mdxComponents entries
+	// holding a real component, resolve to nothing and are skipped.
+	const overrides: unknown[] = [
+		...Object.values(config.styleguideComponents || {}),
+		...Object.values(config.mdxComponents || {}),
+	];
+	for (const value of overrides) {
+		if (typeof value === 'string') {
+			const file = resolveModuleFile(value, configDir);
+			if (file) {
+				files.push(file);
+			}
 		}
 	}
 	for (const entry of config.require || []) {

@@ -19,6 +19,28 @@
 | `--verbose`       | Print debug information                       |
 | `--json`          | Print the `doctor` report as JSON             |
 
+## Restarting on a config change
+
+`styleguidist server` watches the config file it was started from — the one `--config` names, or the one it found. When you save it, the style guide reads it again, rebuilds its Vite config and restarts:
+
+```bash
+5:32:07 PM [vite] styleguide.config.ts changed, restarting the style guide...
+5:32:07 PM [vite] server restarted.
+```
+
+The style guide keeps its address, so the browser needs nothing but a reload.
+
+If the config you saved has a mistake in it, the error is printed and the style guide keeps running with the last config that worked:
+
+```bash
+5:32:19 PM [vite] styleguide.config.ts has an error, the style guide is still running with the previous config:
+Something is wrong with your style guide config
+
+components config option should be string, function, or array, received number.
+```
+
+> **Note:** Only the config file itself is watched, and only it is read again. Your `vite.config.js` is read again too, on every restart, but a module your config file imports keeps the value it had when the style guide started — Node.js cannot unload a module — so stop and start the server by hand after changing one.
+
 ## Usage
 
 Add these commands into your `package.json`’s `scripts` section:

@@ -2,9 +2,60 @@
 
 By default, Styleguidist will look for `styleguide.config.js` file in your project’s root folder. You can change the location of the config file using `--config` [CLI](CLI.md) option.
 
-The config file may be a CommonJS module (`module.exports = {…}`) or an ES module (`export default {…}`), named `styleguide.config.js`, `styleguide.config.mjs` or `styleguide.config.cjs`.
+## Config file formats
+
+The config file may be a CommonJS module (`module.exports = {…}`) or an ES module (`export default {…}`), written in JavaScript or TypeScript. Styleguidist looks for these names, in this order, in the current folder and its parents:
+
+1. `styleguide.config.js`
+2. `styleguide.config.mjs`
+3. `styleguide.config.cjs`
+4. `styleguide.config.ts`
+5. `styleguide.config.mts`
+6. `styleguide.config.cts`
+
+Which module system a file is written in follows Node’s own rules: `.mjs` and `.mts` are always ES modules, `.cjs` and `.cts` are always CommonJS, and a `.js` or `.ts` file is an ES module when the nearest `package.json` has `"type": "module"`.
 
 > **Caution:** Config files are loaded synchronously, top-level `await` isn’t supported in them.
+
+TypeScript config files need no `ts-node`, `tsx` or any other loader: Styleguidist strips the types itself with [Sucrase](https://github.com/alangpierce/sucrase), the same compiler it uses for examples in the browser. Two things follow from that:
+
+- only the config file itself is compiled, so a TypeScript module it imports is left to Node.js, which can strip types from version 22.18 on. Import a JavaScript module instead if you support older versions;
+- the types are stripped, not checked, and an import that is only used as a type has to say so with `import type`, or it stays in the compiled file and fails to load at run time.
+
+The compiled file is written next to the original one, loaded, and deleted again, so the folder holding your config file has to be writable.
+
+## Type checking your config
+
+`defineConfig` types a TypeScript config file. It returns the object untouched — the point is that a mistyped option is an error in your editor instead of one the next time you start the style guide:
+
+```typescript
+// styleguide.config.ts
+import { defineConfig } from 'vite-styleguidist'
+
+export default defineConfig({
+  title: 'My Style Guide',
+  components: 'src/components/**/*.tsx'
+})
+```
+
+A JavaScript config file gets the same checking from a type comment, with no import and nothing to run:
+
+```javascript
+// styleguide.config.js
+/** @type {import('vite-styleguidist').StyleguidistConfig} */
+export default {
+  title: 'My Style Guide',
+  components: 'src/components/**/*.js'
+}
+```
+
+Every type a config file needs is exported from the package: `StyleguidistConfig` for the config itself, `ConfigSection` for a [section](#sections), `Theme` and `RecursivePartial` for a [theme](#theme) of your own, `Styles` for [styles](#styles). See the [Node.js API](API.md#types) for the whole list.
+
+## Restarting on a change
+
+The dev server watches the config file it was started from. When you save it, the style guide reloads the config and restarts itself; when the config you saved has a mistake in it, the error is printed and the style guide keeps running with the last config that worked. See [CLI commands](CLI.md#restarting-on-a-config-change).
+
+The rest of this page is the config options, in alphabetical order.
 
 ## `assetsDir`
 

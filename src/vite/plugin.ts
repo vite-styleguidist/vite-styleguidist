@@ -25,7 +25,12 @@ import {
 import type { ParseCache } from './parseCache.js';
 import { cacheSummary, createPersistentCache } from './persistentCache.js';
 import type { PersistentCache } from './persistentCache.js';
-import { createParsePool, poolEligibility, resolveParallel } from './parsePool.js';
+import {
+	POOL_START_AFTER_MISSES,
+	createParsePool,
+	poolEligibility,
+	resolveParallel,
+} from './parsePool.js';
 import type { ParsePool } from './parsePool.js';
 import { getPropsParser } from '../loaders/utils/propsParser.js';
 import {
@@ -180,15 +185,22 @@ export default function styleguidistPlugin({
 	// is the list of components. Every props and examples module is imported *by* that
 	// module, so this is always true by the time the pool is first wanted.
 	let styleguideLoaded = false;
+	// How many parses have actually had to run, i.e. how many the persistent cache could not
+	// answer. `parallel: 'auto'` waits for POOL_START_AFTER_MISSES of them.
+	let parseMisses = 0;
 
 	/**
-	 * Start the pool on the first parse the cache could not answer, or answer that there
-	 * will not be one. On a warm build every module is a cache hit and the workers would be
-	 * pure overhead, which is why this is not done at buildStart.
+	 * Start the pool when there is enough parsing left to pay for it, or answer that there
+	 * will not be. Called once per parse the cache could not answer — never at buildStart,
+	 * because on a warm build there is nothing to parse and the workers would be pure
+	 * overhead (measured: +40 ms and +190 MB for nothing).
 	 */
 	const ensurePool = (): ParsePool | undefined => {
-		if (pool || poolDecided) {
+		if (pool) {
 			return pool;
+		}
+		if (poolDecided) {
+			return undefined;
 		}
 		if (!eligible.props && !eligible.examples) {
 			poolDecided = true;
@@ -203,12 +215,18 @@ export default function styleguidistPlugin({
 			// Nothing to size `parallel: 'auto'` against yet; ask again on the next parse
 			return undefined;
 		}
-		poolDecided = true;
 		const decision = resolveParallel(config.parallel, componentFiles.length);
 		if (decision.workers === 0) {
+			poolDecided = true;
 			logger.debug(`Parsing on the main thread (${decision.reason})`);
 			return undefined;
 		}
+		if (config.parallel === 'auto' && parseMisses < POOL_START_AFTER_MISSES) {
+			// Not enough work yet to be worth four threads and their memory; the decision is
+			// deliberately *not* recorded, so a build that goes on parsing gets its pool
+			return undefined;
+		}
+		poolDecided = true;
 		pool = createParsePool(config, decision.workers);
 		logger.debug(
 			`Parse pool: ${decision.workers} workers (${decision.reason}), props=${eligible.props} examples=${eligible.examples}` +
@@ -347,6 +365,7 @@ export default function styleguidistPlugin({
 
 				// react-docgen off the main thread. Awaiting here is what lets rolldown start
 				// the next load instead of blocking behind this parse.
+				parseMisses++;
 				const worker = eligible.props ? ensurePool() : undefined;
 				const { code, docs } =
 					worker && worker.alive
@@ -379,6 +398,7 @@ export default function styleguidistPlugin({
 					return cached.code;
 				}
 
+				parseMisses++;
 				const worker = eligible.examples ? ensurePool() : undefined;
 				const { code, chunks } =
 					worker && worker.alive
@@ -413,6 +433,7 @@ export default function styleguidistPlugin({
 					return cached.code;
 				}
 
+				parseMisses++;
 				const { code, chunks } = await generateMdxModule(config, options, source, {
 					isProduction: env === 'production',
 				});

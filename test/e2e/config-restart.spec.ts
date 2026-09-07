@@ -73,8 +73,24 @@ test.beforeAll(async ({ browser }) => {
 
 test.afterAll(async () => {
 	await page?.close();
+	// Wait for the style guide to be gone before deleting the folder it was started from: a
+	// dev server writes into it as it shuts down (Vite's dependency cache, and the parse
+	// cache of the `cache` option, both under node_modules/.vite), and removing a directory
+	// something is still writing to fails with ENOTEMPTY.
+	const exited = new Promise<void>((resolve) => {
+		if (!styleguide || styleguide.exitCode !== null) {
+			resolve();
+			return;
+		}
+		styleguide.once('exit', () => resolve());
+		setTimeout(() => {
+			styleguide?.kill('SIGKILL');
+			resolve();
+		}, 5000);
+	});
 	styleguide?.kill('SIGTERM');
-	fs.rmSync(configDir, { recursive: true, force: true });
+	await exited;
+	fs.rmSync(configDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test('serves the style guide its TypeScript config file describes', async () => {

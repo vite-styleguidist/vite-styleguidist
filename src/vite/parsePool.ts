@@ -59,6 +59,25 @@ export const AUTO_THRESHOLD = 150;
 export const MAX_AUTO_WORKERS = 4;
 export const MIN_AUTO_WORKERS = 2;
 
+/**
+ * How many parses `'auto'` waits for before it starts the pool.
+ *
+ * A guide can be over AUTO_THRESHOLD and still have almost nothing to parse: with the
+ * persistent cache on — the default — a rebuild after editing five components is 345 cache
+ * hits and 5 parses. Measured at 350 components: that build is 990 ms and 777 MB with the
+ * pool never started, and 1080 ms and 1071 MB when the first miss starts it. The workers
+ * cost more than the five parses they take.
+ *
+ * 25 is where the model puts the crossover: four workers save about three quarters of a
+ * ~6 ms parse, so ~4.7 ms each, against ~120 ms of worker start-up. Below it the pool is a
+ * loss, above it the loss is noise against what the pool goes on to save (the 25 parses
+ * that happen first run on the main thread while the workers are still importing
+ * react-docgen, which is time the pool would have spent waiting anyway).
+ *
+ * Only `'auto'` waits: `parallel: true` and `parallel: <n>` are instructions, not guesses.
+ */
+export const POOL_START_AFTER_MISSES = 25;
+
 /** The plain-data slice of the config a worker needs to reproduce the default parse. */
 export interface WorkerConfigPayload {
 	configDir: string;

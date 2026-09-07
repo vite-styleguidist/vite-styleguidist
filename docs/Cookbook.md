@@ -1156,8 +1156,18 @@ Two things the default parser cannot do, and what to do about them:
 npm install --save-dev react-docgen-typescript react-docgen
 ```
 
+The parser goes in a file of its own, and `styleguide.config.js` points at it:
+
 ```javascript
 // styleguide.config.js
+module.exports = {
+  components: 'src/components/**/[A-Z]*.tsx',
+  propsParser: './styleguide.parser.js'
+}
+```
+
+```javascript
+// styleguide.parser.js
 const fs = require('fs')
 const path = require('path')
 const ts = require('typescript')
@@ -1245,43 +1255,43 @@ function parseWithSharedProgram(filePath, source) {
   return match ? [match] : docs
 }
 
-module.exports = {
-  propsParser(filePath, source, resolver, handlers) {
-    // react-docgen-typescript documents nothing for plain JavaScript but would still pay
-    // the full TypeScript price for it, so leave those files to react-docgen — the parser
-    // Styleguidist uses by default.
-    if (!/\.tsx?$/.test(filePath)) {
-      return reactDocgen.parse(source, {
-        resolver,
-        handlers,
-        filename: filePath
-      })
-    }
-    return parseWithSharedProgram(filePath, source)
-  }
-}
-```
-
-`react-docgen` is the parser Styleguidist uses by default; the recipe calls it directly for the files that are not TypeScript, which is why it is in that install line. Drop that branch and the import if every component you document is a `.ts`/`.tsx` file.
-
-The trade: a `tsconfig.json` is required, one TypeScript program for your whole project is built at start-up and kept in memory, and types are printed as `T | undefined` rather than `T`. Building the four components of [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) takes 0.6 s and 433 MB of peak memory with the default parser and 1.2 s and 675 MB with this recipe. On a 50-component design system half of whose components are plain JavaScript, the same comparison is 1.0 s and 498 MB against 1.3 s and 617 MB, and the recipe documents exactly the props the default parser does. Handing the parser a program per component instead — `withCustomConfig('./tsconfig.json').parse`, the one-liner most of the internet copies — costs 7.3 s and 912 MB on those same 50 components and leaves the 25 JavaScript ones with an empty props table.
-
-You do not have to choose once for the whole style guide. `propsParser` receives the file path, so you can send one directory through the TypeScript parser and let everything else fall through to the default:
-
-```javascript
-// `parseWithSharedProgram`, `parser`, `program` and the caching host are the ones from
-// the recipe above; only the dispatch changes
-module.exports = {
-  propsParser(filePath, source, resolver, handlers) {
-    if (filePath.includes('/src/vendor/')) {
-      return parseWithSharedProgram(filePath, source)
-    }
+module.exports = function propsParser(filePath, source, resolver, handlers) {
+  // react-docgen-typescript documents nothing for plain JavaScript but would still pay
+  // the full TypeScript price for it, so leave those files to react-docgen — the parser
+  // Styleguidist uses by default.
+  if (!/\.tsx?$/.test(filePath)) {
     return reactDocgen.parse(source, {
       resolver,
       handlers,
       filename: filePath
     })
   }
+  return parseWithSharedProgram(filePath, source)
+}
+```
+
+`react-docgen` is the parser Styleguidist uses by default; the recipe calls it directly for the files that are not TypeScript, which is why it is in that install line. Drop that branch and the import if every component you document is a `.ts`/`.tsx` file.
+
+**Why a separate file rather than a `propsParser` function in the config.** Both work, and the function form is unchanged — write `propsParser(filePath, source, resolver, handlers) { … }` in `styleguide.config.js` and everything behaves as it always has. But a module can be identified across runs (its path plus its content) and a closure cannot, so only the module form lets the [parse cache](Configuration.md#cache) skip a component whose source has not changed. That matters most here: this parser is the slowest thing in the build, and with the cache a rebuild after editing a few components does not run it at all. If `styleguide.parser.js` imports helpers of its own, remember that only *it* is part of the cache key — run `styleguidist build --no-cache` once after changing a helper.
+
+Either form runs on the main thread, never in a [parallel](Configuration.md#parallel) worker: four workers would each build their own TypeScript program, about a gigabyte apiece.
+
+The trade: a `tsconfig.json` is required, one TypeScript program for your whole project is built at start-up and kept in memory, and types are printed as `T | undefined` rather than `T`. Building the four components of [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) takes 0.6 s and 433 MB of peak memory with the default parser and 1.2 s and 675 MB with this recipe. On a 50-component design system half of whose components are plain JavaScript, the same comparison is 1.0 s and 498 MB against 1.3 s and 617 MB, and the recipe documents exactly the props the default parser does. Handing the parser a program per component instead — `withCustomConfig('./tsconfig.json').parse`, the one-liner most of the internet copies — costs 7.3 s and 912 MB on those same 50 components and leaves the 25 JavaScript ones with an empty props table.
+
+You do not have to choose once for the whole style guide. `propsParser` receives the file path, so you can send one directory through the TypeScript parser and let everything else fall through to the default:
+
+```javascript
+// styleguide.parser.js — `parseWithSharedProgram`, `parser`, `program` and the caching
+// host are the ones from the recipe above; only the dispatch changes
+module.exports = function propsParser(filePath, source, resolver, handlers) {
+  if (filePath.includes('/src/vendor/')) {
+    return parseWithSharedProgram(filePath, source)
+  }
+  return reactDocgen.parse(source, {
+    resolver,
+    handlers,
+    filename: filePath
+  })
 }
 ```
 
@@ -1338,12 +1348,33 @@ export default function SectionsRenderer({ children }) {
 
 ## How do I make my style guide build faster?
 
-Styleguidist parses every component once per build and once per dev-server change, so a slow build is almost always a slow `propsParser`.
+Building a style guide is mostly parsing: react-docgen for every component, remark plus a JavaScript parse for every Markdown example. On a 350-component design system that is three quarters of the work. Two options attack it, and both are on by default — so before changing anything, check that nothing in your config has turned them off:
 
+```bash
+npx styleguidist doctor
+```
+
+The two lines to look for are `Parse cache:` and `Parallel parsing:`. On a 350-component design system with everything at its default, they are worth this (median of three runs, `/usr/bin/time -l` around the whole `styleguidist build` process):
+
+| | wall | peak memory |
+| --- | --- | --- |
+| Neither (`cache: false, parallel: false`) | 2570 ms | 818 MB |
+| Defaults, first build (cache empty) | 1770 ms | 1360 MB |
+| Defaults, nothing changed since | 940 ms | 770 MB |
+| Defaults, five components changed since | 1000 ms | 781 MB |
+
+If yours is slower than that shape, work down this list.
+
+- **Is the [cache](Configuration.md#cache) doing anything?** A rebuild in which nothing changed should be roughly a third of a first build. If it is not, the doctor says why — most often a `propsParser` written as a function, which cannot be identified across runs and therefore turns off caching of component documentation. Write it as a module and point the option at its path; see the [recipe](#components-re-exported-from-another-package). Also check that `node_modules/.vite/` survives between runs: a CI job that does not cache it starts cold every time, which is what the “first build” row costs.
+- **Is the guide big enough for [parallel](Configuration.md#parallel) parsing?** `'auto'` starts workers from 150 components. Below that they cost more memory than they save time (at 50 components: 7% faster, 379 MB more), which is why it does not. Above it, check the doctor’s line for a config function keeping parses on the main thread — `sortProps`, `updateDocs`, `resolver`, `handlers`, `getExampleFilename` or `propsParser` for component documentation, `updateExample` for examples. Dropping the one you do not need is often the whole fix.
 - **Using `react-docgen-typescript`?** Its `parse()` creates a fresh TypeScript program for every file it is given, which re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project once per component. Share a single program instead — see the [recipe](#components-re-exported-from-another-package). On a 50-component design system this is the difference between a 7.3 s build peaking at 912 MB and a 1.3 s one peaking at 617 MB, and between a 157 ms and a 17 ms refresh after saving a component in the dev server.
 - **Mixing `.js` and `.tsx` components?** `react-docgen-typescript` documents nothing for plain JavaScript but still pays the full TypeScript cost for it. Send each file to the parser that understands it, see the same recipe.
-- **Anything expensive in a custom `propsParser`?** Build it once, at the top of `styleguide.config.js`, not inside the function: the function runs once per component.
+- **Anything expensive in a custom `propsParser`?** Build it once, at the top of the parser module, not inside the function: the function runs once per component.
 - **A very large guide?** [`skipComponentsWithoutExample`](Configuration.md#skipcomponentswithoutexample) keeps undocumented components out of the guide, and out of the parser.
+
+The dev server benefits from the same two options. On the same 350-component guide, the time from `styleguidist server` to every component’s documentation having been served is 2819 ms with both off, 1373 ms on a cold cache, and 1185 ms once the cache is warm — at 371 MB, because a dev server that has nothing to parse never starts a worker.
+
+> **Memory, not just time.** Workers are the one thing here that costs more than it saves if you let them: each is a separate JavaScript heap, and four of them add about 500 MB to a build’s peak. On a memory-capped CI runner, `parallel: false` with the cache on is a perfectly good trade — it is the 940 ms row above at 770 MB.
 
 ## How to test my components?
 

@@ -74,13 +74,16 @@ export default function checkPerformance(
 		}
 	})();
 	const parserIsFunction = typeof config.propsParser === 'function';
+	// A style guide of six components makes a 30 kB cache; “0.0 MB” would read as “empty”
+	const size = (bytes: number) =>
+		bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} kB`;
 
 	findings.push({
 		id: 'perf.cache',
 		level: 'info',
 		title: cacheEnabled
 			? stat
-				? `Parse cache: ${(stat.size / 1024 / 1024).toFixed(1)} MB written`
+				? `Parse cache: ${size(stat.size)} written`
 				: 'Parse cache: on, nothing cached yet'
 			: 'Parse cache: off',
 		detail: cacheEnabled

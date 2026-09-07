@@ -65,6 +65,22 @@ export const MAX_UNUSED_RUNS = 5;
  */
 export const MAX_BYTES = 96 * 1024 * 1024;
 
+/**
+ * How the dev server's cache is written. A build flushes at `buildEnd`; a dev server never
+ * gets there, so it writes on a timer instead.
+ *
+ * The quiet period coalesces the start-up burst — at 350 components every module is parsed
+ * within about a second of each other — and the maximum wait is what makes a *short*
+ * session persist anything at all: a plain quiet-period debounce keeps postponing while
+ * parses keep arriving, and a server that is killed (Ctrl-C, `kill`, a CI step ending)
+ * never runs a shutdown hook, so a flush that has not happened yet is simply lost. Losing
+ * it is never wrong — the next run re-parses and writes what is missing — but it is a
+ * wasted parse, and a two-second-long dev session is exactly what a benchmark or a smoke
+ * test does.
+ */
+export const FLUSH_QUIET_MS = 750;
+export const FLUSH_MAX_WAIT_MS = 2000;
+
 export interface PersistedDocs {
 	/** The parsed documentation, for the machine-readable docs (see ./machineReadable.ts). */
 	docs: Rsg.PropsObject;
@@ -106,9 +122,10 @@ export interface PersistentCache {
 	/** Write the file if anything changed, evicting first. Safe to call more than once. */
 	flush(): void;
 	/**
-	 * Ask for a flush a couple of seconds from now. The dev server never reaches the end of
-	 * a build, so this is how its cache is written; the timer is `unref()`ed, so it can
-	 * never be the reason a process stays alive.
+	 * Ask for a flush soon. The dev server never reaches the end of a build, so this is how
+	 * its cache is written: FLUSH_QUIET_MS after the last change, and never later than
+	 * FLUSH_MAX_WAIT_MS after the first one. Both timers are `unref()`ed, so neither can be
+	 * the reason a process stays alive.
 	 */
 	scheduleFlush(): void;
 	/** Absolute path of the cache file, for the log line and the doctor. */
@@ -308,6 +325,7 @@ export function createPersistentCache(
 	const run = data.run;
 	let dirty = false;
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	let deadline: ReturnType<typeof setTimeout> | undefined;
 	const hits: CacheCounters = { docs: 0, examples: 0 };
 	const misses: CacheCounters = { docs: 0, examples: 0 };
 
@@ -363,6 +381,10 @@ export function createPersistentCache(
 		if (timer) {
 			clearTimeout(timer);
 			timer = undefined;
+		}
+		if (deadline) {
+			clearTimeout(deadline);
+			deadline = undefined;
 		}
 		if (!dirty) {
 			return;
@@ -445,11 +467,18 @@ export function createPersistentCache(
 		},
 		flush,
 		scheduleFlush() {
+			// Quiet period: pushed back by every new change…
 			if (timer) {
-				return;
+				clearTimeout(timer);
 			}
-			timer = setTimeout(flush, 2000);
+			timer = setTimeout(flush, FLUSH_QUIET_MS);
 			timer.unref?.();
+			// …but never past this deadline, which the first pending change sets and nothing
+			// else touches
+			if (!deadline) {
+				deadline = setTimeout(flush, FLUSH_MAX_WAIT_MS);
+				deadline.unref?.();
+			}
 		},
 	};
 }

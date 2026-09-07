@@ -71,6 +71,15 @@ describe('the cache finding', () => {
 		expect(finding.fix).toContain('--no-cache');
 	});
 
+	it('should report a small cache in kB rather than as 0.0 MB', () => {
+		const file = path.join(dir, 'node_modules', '.vite', CACHE_DIR_NAME, CACHE_FILE_NAME);
+		fs.mkdirSync(path.dirname(file), { recursive: true });
+		fs.writeFileSync(file, 'x'.repeat(30 * 1024));
+		expect(find(checkPerformance(config(), dir), 'perf.cache').title).toBe(
+			'Parse cache: 30 kB written'
+		);
+	});
+
 	it('should say when the option is off', () => {
 		const finding = find(checkPerformance(config({ cache: false }), dir), 'perf.cache');
 		expect(finding.title).toBe('Parse cache: off');

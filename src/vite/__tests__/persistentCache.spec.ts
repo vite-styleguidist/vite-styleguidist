@@ -5,6 +5,8 @@ import path from 'node:path';
 import {
 	CACHE_DIR_NAME,
 	CACHE_FILE_NAME,
+	FLUSH_MAX_WAIT_MS,
+	FLUSH_QUIET_MS,
 	MAX_UNUSED_RUNS,
 	cacheFilePath,
 	cacheSummary,
@@ -242,5 +244,47 @@ describe('cacheSummary', () => {
 	it('should say when a function propsParser keeps docs out of the cache', () => {
 		const cache = createPersistentCache(baseConfig({ propsParser: () => ({}) as never }), dir);
 		expect(cacheSummary(cache)).toContain('propsParser is a function');
+	});
+});
+
+describe('scheduleFlush', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('should write after a quiet period', () => {
+		const cache = createPersistentCache(baseConfig(), dir);
+		cache.setDocs(docsKey(), docsValue);
+		cache.scheduleFlush();
+		vi.advanceTimersByTime(FLUSH_QUIET_MS - 1);
+		expect(fs.existsSync(cache.file)).toBe(false);
+		vi.advanceTimersByTime(1);
+		expect(fs.existsSync(cache.file)).toBe(true);
+	});
+
+	it('should write within the maximum wait even while changes keep arriving', () => {
+		// The start-up burst of a dev server: a parse every few hundred milliseconds keeps
+		// pushing the quiet period back, and a server killed before the first write would
+		// have persisted nothing
+		const cache = createPersistentCache(baseConfig(), dir);
+		for (let elapsed = 0; elapsed < FLUSH_MAX_WAIT_MS; elapsed += 500) {
+			cache.setDocs(docsKey({ file: `/project/src/C${elapsed}.js` }), docsValue);
+			cache.scheduleFlush();
+			vi.advanceTimersByTime(500);
+		}
+		expect(fs.existsSync(cache.file)).toBe(true);
+	});
+
+	it('should not keep the process alive', () => {
+		const cache = createPersistentCache(baseConfig(), dir);
+		cache.setDocs(docsKey(), docsValue);
+		cache.scheduleFlush();
+		// An unref()'d timer is not counted by the loop that keeps Node running
+		expect(vi.getTimerCount()).toBeGreaterThan(0);
+		cache.flush();
+		expect(vi.getTimerCount()).toBe(0);
 	});
 });

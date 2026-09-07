@@ -63,6 +63,32 @@ Type: `String` or `Array`, optional
 
 Your application static assets folder will be accessible as `/` in the style guide dev server, and its files are copied into the [styleguideDir](#styleguidedir) folder by `styleguidist build`.
 
+## `cache`
+
+Type: `Boolean`, default: `true`
+
+Reuse the component and example parses of previous runs.
+
+Parsing is the expensive half of building a style guide — react-docgen for every component, remark plus a JavaScript parse for every Markdown example — and almost none of it changes between two runs. With this option on, each parse is written to a cache inside Vite's `cacheDir`, keyed by the SHA-256 of the file's own content, and the next run reads it back instead of parsing again. On a 350-component design system, a rebuild in which nothing changed goes from 2570 ms to 940 ms.
+
+The cache is shared by `styleguidist build` and `styleguidist server`, so a build right after a dev-server session starts warm, and it is content-addressed rather than timestamp-addressed, so switching branches or re-cloning the project still hits it.
+
+An entry is only used when everything it could depend on is unchanged: the file's content, the version of Vite Styleguidist and of the packages that do the parsing (`react-docgen`, `@mdx-js/mdx`, `remark-gfm`), and every config option a parse can read — [context](#context), [defaultExample](#defaultexample), [getExampleFilename](#getexamplefilename), [handlers](#handlers), [mdx](#mdx), [propsParser](#propsparser), [resolver](#resolver), [sortProps](#sortprops), [updateDocs](#updatedocs) and [updateExample](#updateexample), functions included, by their source text. Change any of them and the cache starts empty. Options that cannot affect a parse — [theme](#theme), [serverPort](#serverport), [styleguideDir](#styleguidedir) and the rest — deliberately do not invalidate it.
+
+```javascript
+module.exports = {
+  cache: false
+}
+```
+
+**Where it lives, and how to delete it.** `node_modules/.vite/vite-styleguidist/parse-cache.json`, next to Vite's own caches; a project that moves Vite's [cacheDir](https://vite.dev/config/shared-options.html#cachedir) moves this with it. Deleting that folder, or `node_modules`, clears it — Vite's own `--force` does not, because that only clears its dependency optimizer. `styleguidist build --no-cache` and `styleguidist server --no-cache` ignore it (and write nothing) for one run. Entries that no run has touched for five runs are dropped, and the file is capped at 96 MB; it is about 8 MB for 350 components.
+
+Nothing in it is secret that the style guide does not already publish, but it is a build artefact: keep it out of version control, like the rest of `node_modules`.
+
+> **Note:** A [propsParser](#propsparser) written as a *function* turns off caching of component documentation (examples are still cached). A function has no identity across processes — two runs can pass different closures with the same source — so a cached answer could not be trusted. Write the parser as a module and point the option at its path instead; that form is cacheable, and it is what the [cookbook recipe](Cookbook.md#components-re-exported-from-another-package) uses.
+
+> **Note:** `styleguidist doctor` prints where the cache is, how large it is, and whether component documentation is being cached.
+
 ## `colorScheme`
 
 Type: `String`, default: `system`
@@ -571,6 +597,31 @@ module.exports = {
 }
 ```
 
+## `parallel`
+
+Type: `Boolean`, `Number` or `'auto'`, default: `'auto'`
+
+Parse components and examples in worker threads.
+
+react-docgen and the Markdown pipeline are synchronous CPU work, so without this they run one after another on the main thread while the rest of the machine idles. With four workers, a 350-component design system builds in 1610 ms instead of 2570 ms — at the price of about 500 MB more peak memory, which is why the default is a decision rather than “on”.
+
+- `'auto'` (default): use workers when the style guide resolved **150 components or more** and there is real parsing to do — at least 25 files the [cache](#cache) could not answer. Two to four workers, never more (measured: six is the same speed, eight is slower, and each one costs about 100 MB).
+- `true`: always use workers, whatever the size of the guide.
+- A number: that many workers.
+- `false`: parse everything on the main thread, as Styleguidist always did.
+
+```javascript
+module.exports = {
+  parallel: 4
+}
+```
+
+**What cannot go to a worker.** A worker thread receives a copy of plain data, and a function is not copyable — so a parse that has to call one of your config functions runs on the main thread instead, whatever this option says. For component documentation that is [propsParser](#propsparser) (in either form), [resolver](#resolver), [handlers](#handlers), [sortProps](#sortprops), [updateDocs](#updatedocs) and [getExampleFilename](#getexamplefilename); for examples it is [updateExample](#updateexample). The two halves are decided separately, so a custom `sortProps` still leaves your Markdown examples parsed in parallel. `styleguidist doctor` names whichever of them applies to your config.
+
+Everything a worker produces is byte-for-byte what the main thread would have produced; the option changes when the work happens, never what comes out of it.
+
+> **Note:** Workers are started on demand and stopped when the build finishes or the dev server closes. A guide below the threshold, or a rebuild in which almost nothing changed, never starts one and never pays for one.
+
 ## `previewDelay`
 
 Type: `Number`, default: 500
@@ -579,9 +630,11 @@ Debounce time in milliseconds used before rendering the changes from the editor.
 
 ## `propsParser`
 
-Type: `Function`, optional
+Type: `Function` or `String`, optional
 
-Function that allows you to override the mechanism used to parse props from a source file. The default mechanism is using [react-docgen](https://github.com/reactjs/react-docgen) to parse props. The function receives the file path, its source code, and the [resolver](#resolver) and [handlers](#handlers) from the config, and returns a react-docgen documentation object or an array of them (only the first one is used).
+Override the mechanism used to parse props from a source file. The default mechanism is [react-docgen](https://github.com/reactjs/react-docgen). The parser receives the file path, its source code, and the [resolver](#resolver) and [handlers](#handlers) from the config, and returns a react-docgen documentation object or an array of them (only the first one is used).
+
+It can be the function itself:
 
 ```javascript
 const { parse } = require('react-docgen')
@@ -591,6 +644,32 @@ module.exports = {
   }
 }
 ```
+
+or — **recommended** — the path of a module whose default export is that function, resolved from the config file's folder (a package name works too):
+
+```javascript
+// styleguide.config.js
+module.exports = {
+  propsParser: './styleguide.parser.js'
+}
+```
+
+```javascript
+// styleguide.parser.js
+const { parse } = require('react-docgen')
+
+module.exports = function propsParser(filePath, source, resolver, handlers) {
+  return parse(source, { resolver, handlers, filename: filePath })
+}
+```
+
+The two forms call exactly the same parser; the difference is what Styleguidist can say about it. A module has an identity — its resolved path plus its content, or its package's version — so the [parse cache](#cache) can tell one run's parser from another's and skip components that have not changed. A function has no identity across processes, so a function parser turns component-documentation caching off, which is a shame precisely where it costs most: a `react-docgen-typescript` parser is the slowest thing a style guide does. The [cookbook recipe](Cookbook.md#components-re-exported-from-another-package) is written in the module form for that reason.
+
+> **Note:** The module is loaded once per process, so anything expensive it sets up at module scope — a TypeScript program, a compiler host — is set up once, exactly as it would be at the top of your config file.
+
+> **Note:** Only that one file's content is part of the cache key. If your parser module imports helpers of its own, changing a helper does not invalidate the cache: run `styleguidist build --no-cache` once, or delete `node_modules/.vite/vite-styleguidist/`.
+
+> **Note:** Either form always runs on the main thread, never in a [parallel](#parallel) worker. Four workers would build four copies of whatever the parser sets up — for `react-docgen-typescript`, four TypeScript programs of about a gigabyte each. See [decision 0018](decisions/0018-parse-cache-and-parallel-parsing.md).
 
 > **TypeScript: you probably don’t need this option.** The default parser reads TypeScript type annotations, so `.tsx` components are documented with no configuration at all — types, required flags, default values and JSDoc descriptions, including prop types imported from a neighbouring module. It documents the props a component _declares_, so a component whose props extend `React.ButtonHTMLAttributes` gets a table of its own props rather than the ~290 attributes the DOM interface adds. See the [TypeScript example](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) and the [cookbook recipe](Cookbook.md#how-to-document-typescript-components).
 >

@@ -596,7 +596,7 @@ module.exports = {
 >
 > Reach for `propsParser` when a component is resolved through the type system instead of written in the file being parsed — above all one re-exported from another package, which the default parser cannot follow. The cookbook has a verified [react-docgen-typescript recipe](Cookbook.md#components-re-exported-from-another-package) for exactly that case, and [decision 0017](decisions/0017-typescript-props.md) has the measurements behind the split.
 
-> **Note:** the function is called once per component and per build, so whatever it sets up should be set up outside of it. This matters most with `react-docgen-typescript`, whose `parse()` creates a new TypeScript program on every call: the cookbook recipe shares one program instead, which is about ten times faster on a 50-component style guide.
+> **Note:** the function is called once per component and per build, so whatever it sets up should be set up outside of it. This matters most with `react-docgen-typescript`, whose `parse()` creates a new TypeScript program on every call: the cookbook recipe shares one program instead, which builds a 50-component style guide more than five times faster.
 
 ## `require`
 

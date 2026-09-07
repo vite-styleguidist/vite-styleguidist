@@ -1119,15 +1119,30 @@ Two things the default parser cannot do, and what to do about them:
 [react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript) runs the TypeScript compiler over your whole program, so it resolves types across packages. Use it for the components the default parser cannot reach — see [decision 0017](decisions/0017-typescript-props.md) for why the recommendation is scoped this narrowly, and note that its last release is `2.4.0` from June 2025.
 
 ```bash
-npm install --save-dev react-docgen-typescript
+npm install --save-dev react-docgen-typescript react-docgen
 ```
 
 ```javascript
 // styleguide.config.js
+const fs = require('fs')
 const path = require('path')
-const { withCustomConfig } = require('react-docgen-typescript')
+const ts = require('typescript')
+const docgen = require('react-docgen-typescript')
+const reactDocgen = require('react-docgen')
 
-const parser = withCustomConfig('./tsconfig.json', {
+// Read the tsconfig once. Its compiler options configure the parser, and its file list is
+// the root set of the single program below.
+const { config } = ts.readConfigFile(
+  path.join(__dirname, 'tsconfig.json'),
+  ts.sys.readFile
+)
+const { options, fileNames } = ts.parseJsonConfigFileContent(
+  config,
+  ts.sys,
+  __dirname
+)
+
+const parser = docgen.withCompilerOptions(options, {
   savePropValueAsString: true,
   // This parser follows resolved types, so a component whose props extend
   // React.ButtonHTMLAttributes gets ~290 DOM attributes in its table. Drop what
@@ -1141,41 +1156,102 @@ const parser = withCustomConfig('./tsconfig.json', {
     )
 })
 
+// A compiler host that remembers the files it has parsed, keyed by mtime and size.
+// TypeScript's default host re-reads and re-parses every file for every program, so
+// without this the rebuild below would cost as much as a fresh program.
+const host = ts.createCompilerHost(options)
+const readSourceFile = host.getSourceFile.bind(host)
+const sourceFiles = new Map()
+host.getSourceFile = (fileName, ...rest) => {
+  let stamp
+  try {
+    const stat = fs.statSync(fileName)
+    stamp = `${stat.mtimeMs}:${stat.size}`
+  } catch {
+    stamp = 'missing'
+  }
+  const cached = sourceFiles.get(fileName)
+  if (cached && cached.stamp === stamp) {
+    return cached.file
+  }
+  const file = readSourceFile(fileName, ...rest)
+  sourceFiles.set(fileName, { stamp, file })
+  return file
+}
+
+// ONE program for every component, rather than one program per component. This is the
+// whole performance story of this recipe: `parser.parse(filePath)` builds a fresh
+// `ts.Program` on every call, so every component re-reads and re-binds `lib.dom.d.ts`,
+// React's typings and your whole project.
+let roots = fileNames
+let program = ts.createProgram(roots, options, host)
+
+function parseWithSharedProgram(filePath, source) {
+  const existing = program.getSourceFile(filePath)
+  // Rebuild only for a file the program doesn't hold — one your `tsconfig.json` doesn't
+  // list, or one added while the dev server runs — or for one whose text changed on disk,
+  // which is what keeps the props table correct after an edit. The caching host hands the
+  // unchanged files straight back, so the rebuild is cheap.
+  if (!existing || existing.text !== source) {
+    if (!existing) {
+      roots = roots.concat(filePath)
+    }
+    program = ts.createProgram(roots, options, host, program)
+  }
+  const docs = parser.parseWithProgramProvider(
+    filePath,
+    () => program
+  )
+  // It returns an entry for every exported symbol it takes for a component, including
+  // exported enums, and Styleguidist documents the first entry. A file that exports
+  // `enum BadgeTone` before `Badge` would be documented as an empty "BadgeTone", so put
+  // the entry named after the file first.
+  const name = path.basename(filePath, path.extname(filePath))
+  const match = docs.find(doc => doc.displayName === name)
+  return match ? [match] : docs
+}
+
 module.exports = {
-  components: 'src/components/**/[A-Z]*.tsx',
-  propsParser(filePath) {
-    const docs = parser.parse(filePath)
-    // It returns an entry for every exported symbol it takes for a component, including
-    // exported enums, and Styleguidist documents the first entry. A file that exports
-    // `enum BadgeTone` before `Badge` would be documented as an empty “BadgeTone”, so put
-    // the entry named after the file first.
-    const name = path.basename(filePath, path.extname(filePath))
-    const match = docs.find(doc => doc.displayName === name)
-    return match ? [match] : docs
+  propsParser(filePath, source, resolver, handlers) {
+    // react-docgen-typescript documents nothing for plain JavaScript but would still pay
+    // the full TypeScript price for it, so leave those files to react-docgen — the parser
+    // Styleguidist uses by default.
+    if (!/\.tsx?$/.test(filePath)) {
+      return reactDocgen.parse(source, {
+        resolver,
+        handlers,
+        filename: filePath
+      })
+    }
+    return parseWithSharedProgram(filePath, source)
   }
 }
 ```
 
-The trade: a `tsconfig.json` is required, the whole program is type-checked on every parse (building the four components of `examples/typescript` takes 0.6 s with the default parser and 3.6 s with this one), and types are printed as `T | undefined` rather than `T`.
+`react-docgen` is the parser Styleguidist uses by default; the recipe calls it directly for the files that are not TypeScript, which is why it is in that install line. Drop that branch and the import if every component you document is a `.ts`/`.tsx` file.
+
+The trade: a `tsconfig.json` is required, one TypeScript program for your whole project is built at start-up and kept in memory, and types are printed as `T | undefined` rather than `T`. Building the four components of [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) takes 0.6 s and 433 MB of peak memory with the default parser and 1.2 s and 675 MB with this recipe. On a 50-component design system half of whose components are plain JavaScript, the same comparison is 1.0 s and 498 MB against 1.3 s and 617 MB, and the recipe documents exactly the props the default parser does. Handing the parser a program per component instead — `withCustomConfig('./tsconfig.json').parse`, the one-liner most of the internet copies — costs 7.3 s and 912 MB on those same 50 components and leaves the 25 JavaScript ones with an empty props table.
 
 You do not have to choose once for the whole style guide. `propsParser` receives the file path, so you can send one directory through the TypeScript parser and let everything else fall through to the default:
 
 ```javascript
-// `parser` and the entry picking are the ones from the recipe above
-const { parse } = require('react-docgen')
-
+// `parseWithSharedProgram`, `parser`, `program` and the caching host are the ones from
+// the recipe above; only the dispatch changes
 module.exports = {
   propsParser(filePath, source, resolver, handlers) {
     if (filePath.includes('/src/vendor/')) {
-      const docs = parser.parse(filePath)
-      const name = path.basename(filePath, path.extname(filePath))
-      const match = docs.find(doc => doc.displayName === name)
-      return match ? [match] : docs
+      return parseWithSharedProgram(filePath, source)
     }
-    return parse(source, { resolver, handlers, filename: filePath })
+    return reactDocgen.parse(source, {
+      resolver,
+      handlers,
+      filename: filePath
+    })
   }
 }
 ```
+
+Everything outside `src/vendor/` goes to react-docgen here whatever its extension, so the `.tsx` components you wrote yourself keep the default parser’s tables.
 
 ## How to re-use the types in Styleguidist?
 
@@ -1230,7 +1306,7 @@ export default function SectionsRenderer({ children }) {
 
 Styleguidist parses every component once per build and once per dev-server change, so a slow build is almost always a slow `propsParser`.
 
-- **Using `react-docgen-typescript`?** Its `parse()` creates a fresh TypeScript program for every file it is given, which re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project once per component. Share a single program instead — see the [recipe](#components-re-exported-from-another-package). On a 50-component design system this is the difference between a 13.9 s build peaking at 960 MB and a 1.6 s one peaking at 639 MB, and between a 157 ms and a 17 ms refresh after saving a component in the dev server.
+- **Using `react-docgen-typescript`?** Its `parse()` creates a fresh TypeScript program for every file it is given, which re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project once per component. Share a single program instead — see the [recipe](#components-re-exported-from-another-package). On a 50-component design system this is the difference between a 7.3 s build peaking at 912 MB and a 1.3 s one peaking at 617 MB, and between a 157 ms and a 17 ms refresh after saving a component in the dev server.
 - **Mixing `.js` and `.tsx` components?** `react-docgen-typescript` documents nothing for plain JavaScript but still pays the full TypeScript cost for it. Send each file to the parser that understands it, see the same recipe.
 - **Anything expensive in a custom `propsParser`?** Build it once, at the top of `styleguide.config.js`, not inside the function: the function runs once per component.
 - **A very large guide?** [`skipComponentsWithoutExample`](Configuration.md#skipcomponentswithoutexample) keeps undocumented components out of the guide, and out of the parser.

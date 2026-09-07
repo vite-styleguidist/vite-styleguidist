@@ -67,18 +67,33 @@ function canScrollSync(
  * The narrower variant the fence leaves open — listing the headings of the component the
  * reader is currently on, in the default mode — is additive: it would relax this function
  * and pass PageNav a root to collect from, and needs nothing else to change.
+ *
+ * @param sections The sections this page renders, so that the `pagePerSection` branch can
+ *   ask whether the page really is one section rather than trust the flag
  */
 export function hasPageNav(
 	displayMode: string | undefined,
 	config: Rsg.ProcessedStyleguidistConfig,
-	pagePerSection: boolean | undefined
+	pagePerSection: boolean | undefined,
+	sections: Rsg.Section[] = []
 ): boolean {
 	// Same default as the `displayMode` prop of StyleGuide: no mode is the all-in-one page
 	const mode = displayMode || DisplayModes.all;
 	if (!config.pageNav || mode === DisplayModes.notFound) {
 		return false;
 	}
-	return !!pagePerSection || mode !== DisplayModes.all;
+	if (mode !== DisplayModes.all) {
+		return true;
+	}
+	// `pagePerSection` alone is not proof that this page shows one section. getRouteData only
+	// picks a landing section when the first one has a name (getRouteData.ts), so a config
+	// that sets the flag and lists `components` with no named `sections` — the docs' own
+	// `pageNav` snippet plus the glob every project needs — has one unnamed root section,
+	// nothing is filtered, and every component ends up on one page after all. Trusting the
+	// flag there put a list of every heading of every component on exactly the page this
+	// option is documented never to appear on. A page that is really one section renders
+	// exactly that one, and it has a name, because the route is its name.
+	return !!pagePerSection && sections.length === 1 && !!sections[0].name;
 }
 
 export interface StyleGuideProps {
@@ -161,7 +176,9 @@ export default class StyleGuide extends Component<StyleGuideProps, StyleGuideSta
 							/>
 						) : null
 					}
-					pageNav={hasPageNav(displayMode, config, pagePerSection) ? <PageNav /> : undefined}
+					pageNav={
+						hasPageNav(displayMode, config, pagePerSection, sections) ? <PageNav /> : undefined
+					}
 					hasSidebar={hasSidebar(displayMode, config.showSidebar)}
 				>
 					{sections.length ? <Sections sections={sections} depth={1} /> : <NotFound />}

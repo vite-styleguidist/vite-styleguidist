@@ -271,31 +271,45 @@ test('should render the colour-scheme control inside the small-screen header', (
 describe('hasPageNav', () => {
 	const on = { ...config, pageNav: true } as Rsg.ProcessedStyleguidistConfig;
 	const off = { ...config, pageNav: false } as Rsg.ProcessedStyleguidistConfig;
+	/** What a `pagePerSection` route renders: the one named section of the page. */
+	const oneSection = [{ name: 'Documentation', slug: 'documentation' }] as Rsg.Section[];
+	/**
+	 * What a guide with a `components` glob and no named `sections` renders on every route:
+	 * one unnamed root section holding the lot, i.e. the all-in-one page after all.
+	 */
+	const unnamedRoot = [{ components: [{ name: 'Button' }] }] as Rsg.Section[];
 
 	it('should be off unless the option is on', () => {
-		expect(hasPageNav(DisplayModes.component, off, false)).toBe(false);
-		expect(hasPageNav(DisplayModes.all, off, true)).toBe(false);
+		expect(hasPageNav(DisplayModes.component, off, false, oneSection)).toBe(false);
+		expect(hasPageNav(DisplayModes.all, off, true, oneSection)).toBe(false);
 	});
 
 	it('should be off on the default all-in-one page, where the sidebar is the page nav', () => {
-		expect(hasPageNav(DisplayModes.all, on, false)).toBe(false);
-		expect(hasPageNav(undefined, on, false)).toBe(false);
+		expect(hasPageNav(DisplayModes.all, on, false, unnamedRoot)).toBe(false);
+		expect(hasPageNav(undefined, on, false, unnamedRoot)).toBe(false);
 	});
 
 	it('should be on for a pagePerSection page, including its implicit landing page', () => {
-		expect(hasPageNav(DisplayModes.all, on, true)).toBe(true);
-		expect(hasPageNav(DisplayModes.section, on, true)).toBe(true);
+		expect(hasPageNav(DisplayModes.all, on, true, oneSection)).toBe(true);
+		expect(hasPageNav(DisplayModes.section, on, true, oneSection)).toBe(true);
+	});
+
+	it('should be off when pagePerSection has no named section to page by', () => {
+		// getRouteData only picks a landing section when the first one has a name, so this
+		// config filters nothing: every component is on one page and the flag is a no-op
+		expect(hasPageNav(DisplayModes.all, on, true, unnamedRoot)).toBe(false);
+		expect(hasPageNav(undefined, on, true, unnamedRoot)).toBe(false);
 	});
 
 	it('should be on for a single section, a single component and an isolated example', () => {
-		expect(hasPageNav(DisplayModes.section, on, false)).toBe(true);
-		expect(hasPageNav(DisplayModes.component, on, false)).toBe(true);
-		expect(hasPageNav(DisplayModes.example, on, false)).toBe(true);
+		expect(hasPageNav(DisplayModes.section, on, false, oneSection)).toBe(true);
+		expect(hasPageNav(DisplayModes.component, on, false, oneSection)).toBe(true);
+		expect(hasPageNav(DisplayModes.example, on, false, oneSection)).toBe(true);
 	});
 
 	it('should be off when there is no page to describe', () => {
-		expect(hasPageNav(DisplayModes.notFound, on, false)).toBe(false);
-		expect(hasPageNav(DisplayModes.notFound, on, true)).toBe(false);
+		expect(hasPageNav(DisplayModes.notFound, on, false, oneSection)).toBe(false);
+		expect(hasPageNav(DisplayModes.notFound, on, true, oneSection)).toBe(false);
 	});
 });
 

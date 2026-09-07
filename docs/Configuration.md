@@ -383,6 +383,8 @@ Render one section or component per page.
 
 If `true`, each section will be a single page.
 
+The style guide needs named [sections](#sections) to page by: a configuration that only lists [components](#components) has a single unnamed root section, so there is nothing to split and every component stays on one page whatever this option says.
+
 The value may depend on a current environment:
 
 ```javascript

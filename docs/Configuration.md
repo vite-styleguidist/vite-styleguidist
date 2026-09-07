@@ -369,7 +369,7 @@ module.exports = {
 
 The list is built from the headings the page actually renders — every `h2` and `h3` that has an id, in document order — so it works the same for Markdown and MDX documentation and for a custom `Heading` component. A page with fewer than two of them gets no list at all.
 
-Where it appears depends on the width of the window: from 1480 px up it is a rail beside the content column, which sticks below the header as you scroll and highlights the heading you are reading; below that the same list is a collapsible block above the content, closed until you open it. The content column keeps its width either way. The breakpoint is the `mq.large` [theme](#theme) key, and the width of the rail is `pageNavWidth`.
+Where it appears depends on the width of the window: from 1480 px up it is a rail beside the content column, which sticks below the header as you scroll and highlights the heading you are reading; below that the same list is a collapsible block above the content, closed until you open it. The content column keeps its width and its position either way — the space the rail takes is reserved on every page of the style guide, so the text does not move sideways when you open a page that has no list. The breakpoint is the `mq.large` [theme](#theme) key, and the width of the rail is `pageNavWidth`.
 
 **It only appears on pages that show a single component or section**: the [pagePerSection](#pagepersection) pages, the `#/Section` routes and the isolated `#!/Component` view. On the default all-in-one page, where every component of the style guide is on one page, the sidebar is the page navigation — it already follows the scroll, see [scrollSync](#scrollsync) — and a list of every heading of every component would only repeat it.
 

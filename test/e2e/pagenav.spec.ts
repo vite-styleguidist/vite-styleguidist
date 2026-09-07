@@ -279,13 +279,19 @@ test.describe('page navigation', () => {
 		await expect(page.getByRole('heading', { name: 'Second File' })).toBeVisible();
 
 		await expect(page.getByTestId('rsg-pagenav')).toHaveCount(0);
-		// and the content column stays where it is without the option: centred in the space
-		// beside the sidebar (the empty slot collapses, StyleGuideRenderer's `$pageNav:empty`)
+		// …and the content column is exactly where the pages that do have a rail put it: the
+		// rail's grid track stays reserved, so the reading column does not slide sideways as
+		// the reader moves through the guide (StyleGuideRenderer's `$hasPageNav`)
 		const heading = (await page.getByRole('heading', { name: 'Second File' }).boundingBox()) as {
 			x: number;
 		};
-		// sidebarWidth 232 + half of the space left over by the 1056 px column at 1500 px
-		expect(Math.round(heading.x)).toBe(386);
+		await page.goto(`${examplesServer}${PAGE}`);
+		await page.waitForLoadState('networkidle');
+		await expect(page.getByTestId('rsg-pagenav')).toBeVisible();
+		const withRail = (await page.getByRole('heading', { name: 'First File' }).boundingBox()) as {
+			x: number;
+		};
+		expect(Math.round(heading.x)).toBe(Math.round(withRail.x));
 	});
 
 	test('is off by default, in the all-in-one example', async ({ page, examplesServer }) => {

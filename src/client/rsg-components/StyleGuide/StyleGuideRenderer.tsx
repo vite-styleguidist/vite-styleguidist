@@ -80,10 +80,14 @@ const styles = ({
 			// Wide enough for the rail beside the column; the arithmetic is in theme.ts
 			maxWidth: maxWidth + 2 * space[6] + space[3] + pageNavWidth,
 			display: 'grid',
-			// The column keeps its 960 px. The rail's track is `auto`, not a fixed width, so
-			// that a page with nothing to list (PageNav renders nothing, $pageNav collapses)
-			// leaves the column centred exactly where it is without the option.
-			gridTemplateColumns: `minmax(0, ${maxWidth}px) auto`,
+			// The column keeps its 960 px, and the rail's track keeps its width even on a page
+			// with nothing to list (PageNav renders nothing, $pageNav collapses). An `auto`
+			// track collapses with it, and the centred column then slides 96 px sideways on
+			// every navigation between a page that has a rail and one that has not —
+			// measured on the sections example, 7 of 15 consecutive sidebar clicks. The
+			// column is the thing the reader's eye is anchored to; whitespace where a rail
+			// would be costs nothing.
+			gridTemplateColumns: `minmax(0, ${maxWidth}px) ${pageNavWidth + space[3]}px`,
 			justifyContent: 'center',
 			// $content's flex gap would become a grid gap between the two columns, which the
 			// width arithmetic does not include (the rail brings its own gutter)
@@ -110,8 +114,9 @@ const styles = ({
 	// The slot PageNav renders into: above mq.large the sticky rail beside the column, below
 	// it the full-width block above the content (PageNav picks which; see ADR 0016)
 	pageNav: {
-		// PageNav renders nothing on a page with fewer than two headings, and an empty box
-		// would still claim its grid track and the flex gap above the content
+		// PageNav renders nothing on a page with fewer than two headings. Below mq.large the
+		// empty box would still claim the flex gap above the content; above it the grid track
+		// stays reserved on purpose, so the column does not move from page to page.
 		'&:empty': {
 			isolate: false,
 			display: 'none',
@@ -119,8 +124,8 @@ const styles = ({
 		[mq.large]: {
 			gridColumn: 2,
 			gridRow: 1,
-			// The gutter between the column and the rail belongs to the rail, so that an empty
-			// rail takes no width at all (see $hasPageNav)
+			// The gutter between the column and the rail belongs to the rail, which is why the
+			// reserved track is `pageNavWidth + space[3]` wide (see $hasPageNav)
 			width: pageNavWidth + space[3],
 			paddingLeft: space[3],
 			alignSelf: 'start',
@@ -347,9 +352,7 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 	// The small-screen header holds the colour-scheme control itself, so that the tab
 	// order follows the visual order; that is a different element in a different place
 	// in the DOM, which CSS alone cannot do. A `theme.mq.small` override is honoured.
-	const isSmallScreen = useMediaQuery(
-		toMediaQuery(config.theme?.mq?.small || defaultMq.small)
-	);
+	const isSmallScreen = useMediaQuery(toMediaQuery(config.theme?.mq?.small || defaultMq.small));
 	const sidebarRef = useRef<HTMLDivElement>(null);
 	const menuButtonRef = useRef<HTMLButtonElement>(null);
 	const sidebar = useMemo(
@@ -530,7 +533,7 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 								aria-label="Search"
 								onClick={openSearch}
 							>
-									<FiSearch className={classes.buttonIcon} aria-hidden="true" />
+								<FiSearch className={classes.buttonIcon} aria-hidden="true" />
 							</button>
 						)}
 						{isSmallScreen && hasToggle && (

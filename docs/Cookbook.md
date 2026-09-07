@@ -676,7 +676,7 @@ Use `heading.href` rather than building `#id` yourself: on a `pagePerSection` or
 
 The renderer is only rendered when there is something to show — a page with fewer than two headings renders nothing at all — so it never has to handle an empty list.
 
-Replacing `PageNav` instead replaces the whole feature, including where the headings come from; it is rendered with a `title` prop and is expected to render nothing when it has nothing to say (an empty slot collapses, so the content column stays where it is). If you also replace `StyleGuideRenderer`, render its `pageNav` prop where the list belongs, the same way you render `toc`.
+Replacing `PageNav` instead replaces the whole feature, including where the headings come from; it is rendered with a `title` prop and is expected to render nothing when it has nothing to say (an empty slot collapses, and the space the rail would take stays reserved, so the content column keeps its position from page to page). If you also replace `StyleGuideRenderer`, render its `pageNav` prop where the list belongs, the same way you render `toc`.
 
 To keep the components and restyle them, use the [styles](Configuration.md#styles) option with the `PageNav` key and its rule names — `root`, `title`, `list`, `item`, `link`, `isSelected` (the current entry), `isChild` (an `h3` entry), `isCollapsible`, `details` and `summary`:
 

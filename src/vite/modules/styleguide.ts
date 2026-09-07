@@ -21,6 +21,7 @@ export const CLIENT_CONFIG_OPTIONS = [
 	'mdxComponents',
 	'tocMode',
 	'mountPointId',
+	'pageNav',
 	'pagePerSection',
 	'previewDelay',
 	'ribbon',

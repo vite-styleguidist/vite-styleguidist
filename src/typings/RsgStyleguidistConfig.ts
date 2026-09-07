@@ -98,6 +98,15 @@ interface BaseStyleguidistConfig {
 	minimize: boolean;
 	mountPointId: string;
 	moduleAliases: Record<string, string>;
+	/**
+	 * Whether a page that shows a single component or section gets an “on this page” list of
+	 * its own headings (`PageNav`); see docs/decisions/0016-table-of-contents.md.
+	 *
+	 * `false` by default: it adds a visible element and a layout column, so it is opt-in. It
+	 * is a boolean today and may grow an object form (`{ minLevel, maxLevel, title }`) in a
+	 * later minor; the client only ever asks whether the value is truthy.
+	 */
+	pageNav: boolean;
 	pagePerSection: boolean;
 	previewDelay: number;
 	printBuildInstructions(config: SanitizedStyleguidistConfig): void;

@@ -239,6 +239,28 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 		type: 'string',
 		default: 'rsg-root',
 	},
+	pageNav: {
+		// An object is accepted by the schema but rejected by `process()` below, on purpose:
+		// the option is a boolean today and the object form (`{ minLevel, maxLevel, title }`)
+		// is the way it is meant to grow (ADR 0016). Accepting `{}` silently now would let a
+		// config that means something specific do nothing, and *rejecting* it here is what
+		// keeps the future addition non-breaking: nobody can already have one in the wild.
+		type: ['boolean', 'object'],
+		default: false,
+		example: true,
+		process: (value?: boolean | Record<string, unknown>): boolean | undefined => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value !== undefined && typeof value !== 'boolean') {
+				throw new StyleguidistError(
+					`${kleur.bold('pageNav')} config option must be a boolean, got ${JSON.stringify(
+						value
+					)}. Per-page options (levels, title) are not implemented yet.`,
+					'pageNav'
+				);
+			}
+			return value;
+		},
+	},
 	pagePerSection: {
 		type: 'boolean',
 		default: false,

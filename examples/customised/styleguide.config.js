@@ -15,7 +15,10 @@ module.exports = {
 		color: {
 			baseBackground: '#fdfdfc',
 			link: '#274e75',
-			linkHover: '#90a7bf',
+			// Lightened rather than washed out: the previous `#90a7bf` was 2.4:1 on this
+			// background, below the 4.5:1 WCAG AA needs for text. This one is 5.1:1 and still
+			// visibly lighter than `link`, which is what a hover state has to be.
+			linkHover: '#4a6f9c',
 			border: '#e0d2de',
 		},
 		fontFamily: {

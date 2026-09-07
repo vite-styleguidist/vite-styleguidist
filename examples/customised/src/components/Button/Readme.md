@@ -4,10 +4,10 @@ Basic button:
 <Button>Push Me</Button>
 ```
 
-Big pink button:
+Big pink button (this style guide forces the light colour scheme, so one literal pink is enough here — 6.3:1 on the page):
 
 ```jsx
-<Button size="large" color="deeppink">
+<Button size="large" color="#b3125f">
   Click Me
 </Button>
 ```

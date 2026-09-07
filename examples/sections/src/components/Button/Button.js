@@ -6,7 +6,10 @@ import './Button.css';
 /**
  * The only true button.
  */
-export default function Button({ color = '#333', size = 'normal', children }) {
+// No default for `color`: an unset inline colour lets the stylesheet decide, and that
+// stylesheet reads the label colour from the style guide's colour scheme. The literal
+// default this used to carry (`#333`) was unreadable once dark mode arrived.
+export default function Button({ color, size = 'normal', children }) {
 	const styles = {
 		color,
 		fontSize: Button.sizes[size],

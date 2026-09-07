@@ -354,6 +354,27 @@ Type: `string`, default: `rsg-root`
 
 The ID of a DOM element where Styleguidist mounts.
 
+## `pageNav`
+
+Type: `Boolean`, default: `false`
+
+Add an “on this page” list of the current page’s own headings.
+
+```javascript
+module.exports = {
+  pagePerSection: true,
+  pageNav: true
+}
+```
+
+The list is built from the headings the page actually renders — every `h2` and `h3` that has an id, in document order — so it works the same for Markdown and MDX documentation and for a custom `Heading` component. A page with fewer than two of them gets no list at all.
+
+Where it appears depends on the width of the window: from 1480 px up it is a rail beside the content column, which sticks below the header as you scroll and highlights the heading you are reading; below that the same list is a collapsible block above the content, closed until you open it. The content column keeps its width either way. The breakpoint is the `mq.large` [theme](#theme) key, and the width of the rail is `pageNavWidth`.
+
+**It only appears on pages that show a single component or section**: the [pagePerSection](#pagepersection) pages, the `#/Section` routes and the isolated `#!/Component` view. On the default all-in-one page, where every component of the style guide is on one page, the sidebar is the page navigation — it already follows the scroll, see [scrollSync](#scrollsync) — and a list of every heading of every component would only repeat it.
+
+If you replace `StyleGuideRenderer` through [styleguideComponents](#styleguidecomponents), render the `pageNav` prop it receives where you want the list; without that the option does nothing for your style guide. The list itself is `PageNav` / `PageNavRenderer` and can be replaced the same way, see [the Cookbook](Cookbook.md#how-to-change-the-on-this-page-navigation).
+
 ## `pagePerSection`
 
 Type: `Boolean`, default: `false`

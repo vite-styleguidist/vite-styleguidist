@@ -521,6 +521,86 @@ const StyleGuideRenderer = ({
 
 We have [an example style guide](../examples/customised) with custom components.
 
+## How to change the “on this page” navigation?
+
+The list of the current page’s headings that [pageNav](Configuration.md#pagenav) adds is two components, like every other part of the UI: `PageNav` collects the headings and decides what is current, `PageNavRenderer` draws them. Replace either one through [styleguideComponents](Configuration.md#styleguidecomponents).
+
+To keep the behaviour and change only the markup, replace the renderer:
+
+```javascript
+// styleguide.config.js
+const path = require('path')
+module.exports = {
+  pageNav: true,
+  styleguideComponents: {
+    PageNavRenderer: path.join(
+      __dirname,
+      'src/styleguide/PageNavRenderer'
+    )
+  }
+}
+```
+
+```jsx
+// src/styleguide/PageNavRenderer.js
+import React from 'react'
+export default function PageNavRenderer({
+  headings,
+  activeId,
+  title,
+  collapsible
+}) {
+  return (
+    <nav aria-label={title}>
+      <b>{title}</b>
+      <ul>
+        {headings.map(heading => (
+          <li key={heading.id} data-level={heading.level}>
+            <a
+              href={heading.href}
+              aria-current={
+                heading.id === activeId ? 'location' : undefined
+              }
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+```
+
+The props are:
+
+| Prop | Type | What it is |
+| --- | --- | --- |
+| `headings` | array | One entry per heading of the page, in document order. Each has an `id` (the heading’s DOM id), `text`, `level` (2 or 3) and `href`. |
+| `activeId` | string | The `id` of the heading the reader is looking at, or undefined before the page has been scrolled. It changes as the reader scrolls. |
+| `title` | string | The label of the list, `On this page`. |
+| `collapsible` | boolean | `true` when the window is narrower than the `mq.large` breakpoint, where the default renderer draws a closed `details` block instead of a rail. |
+
+Use `heading.href` rather than building `#id` yourself: on a `pagePerSection` or isolated page the fragment of the address is the route, so an in-page link has to keep it and pass the target in the `id` parameter, which is what `href` already does.
+
+The renderer is only rendered when there is something to show — a page with fewer than two headings renders nothing at all — so it never has to handle an empty list.
+
+Replacing `PageNav` instead replaces the whole feature, including where the headings come from; it is rendered with a `title` prop and is expected to render nothing when it has nothing to say (an empty slot collapses, so the content column stays where it is). If you also replace `StyleGuideRenderer`, render its `pageNav` prop where the list belongs, the same way you render `toc`.
+
+To keep the components and restyle them, use the [styles](Configuration.md#styles) option with the `PageNav` key and its rule names — `root`, `title`, `list`, `item`, `link`, `isSelected` (the current entry), `isChild` (an `h3` entry), `isCollapsible`, `details` and `summary`:
+
+```javascript
+module.exports = {
+  styles: {
+    PageNav: {
+      link: {
+        fontSize: 14
+      }
+    }
+  }
+}
+```
+
 ## How to change syntax highlighting colors?
 
 Styleguidist uses [Prism](https://prismjs.com/) to highlight static code blocks (in Markdown and in the “Usage” tab) and [CodeMirror](https://codemirror.net/) in the live code editor. Both are colored by the same palette, the `theme.color.code*` keys: the editor emits Prism’s token class names, so a change to these colors applies to static blocks and to the editor alike. You can change the colors using the [theme](Configuration.md#theme) config option (these values then apply in both light and [dark mode](#how-to-customize-dark-mode); override the `--rsg-color-code-*` custom properties instead to give each scheme its own colors):

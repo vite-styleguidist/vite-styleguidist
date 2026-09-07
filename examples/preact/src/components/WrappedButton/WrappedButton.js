@@ -1,10 +1,16 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
+import './WrappedButton.css';
+
 /**
  * A button wrapped by a Decorator/Enhancer
  */
-const WrappedButton = ({ color = '#333', size = 'normal', children }) => {
+// No default for `color`, so WrappedButton.css decides — and that stylesheet reads the label
+// colour from the style guide's colour scheme. The literal default this used to carry
+// (`#333`) was 2.4:1 on a dark page, because WrappedButton.css was never imported and the
+// button fell back to the browser's own dark button face. Both halves are fixed here.
+const WrappedButton = ({ color, size = 'normal', children }) => {
 	const styles = {
 		color,
 		fontSize: WrappedButton.sizes[size],

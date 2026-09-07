@@ -7,7 +7,8 @@ import './PushButton.css';
  * An example-less button with custom display name.
  * @visibleName Push Button 🎉
  */
-export default function PushButton({ color = '#333', size = 'normal', children }) {
+// No default for `color`, so PushButton.css (which follows the colour scheme) decides.
+export default function PushButton({ color, size = 'normal', children }) {
 	const styles = {
 		color,
 		fontSize: PushButton.sizes[size],

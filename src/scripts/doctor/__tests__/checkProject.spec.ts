@@ -41,6 +41,15 @@ describe('collectComponentPatterns', () => {
 			)
 		).toEqual(['a/*.js', 'b/*.js', 'c/*.js']);
 	});
+
+	it('should count a pattern once when the schema put it in sections too', () => {
+		// What the schema produces for a config with a root `components` and no sections:
+		// the same value in both places (see the `sections` entry of the schema)
+		const components = 'a/*.js';
+		expect(
+			collectComponentPatterns(config({ components, sections: [{ components }] } as any))
+		).toEqual(['a/*.js']);
+	});
 });
 
 describe('collectConfigFiles', () => {
@@ -111,6 +120,25 @@ describe('components', () => {
 			level: 'error',
 			detail: 'Boom',
 		});
+	});
+
+	it('should report a failing components option once, not once per copy of it', () => {
+		const components = () => {
+			throw new Error('Boom');
+		};
+		const findings = checkProject(
+			config({ components, sections: [{ components }] } as any),
+			defaultsApp
+		);
+		expect(byId(findings, 'project.components-failed')).toHaveLength(1);
+	});
+
+	it('should not count the same pattern twice', () => {
+		const findings = checkProject(
+			config({ components: 'components/*.js', sections: [{ components: 'components/*.js' }] }),
+			legacyApp
+		);
+		expect(byId(findings, 'project.components')[0]).toMatchObject({ meta: { patterns: 1 } });
 	});
 });
 

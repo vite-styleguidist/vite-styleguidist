@@ -69,21 +69,33 @@ const PROCESS_ENV_INDEX = /process\.env\[\s*['"]([^'"]+)['"]\s*\]/g;
 // Any string literal naming the old package: an import, a `require()`, a jest mock, an alias
 const OLD_PACKAGE = /['"]react-styleguidist(?:\/[^'"]*)?['"]/;
 
-/** Every `components` value in the config, including the ones nested in sections. */
+/** Every distinct `components` value in the config, including the ones nested in sections. */
 export function collectComponentPatterns(config: Partial<Rsg.SanitizedStyleguidistConfig>) {
 	const patterns: NonNullable<Rsg.SanitizedStyleguidistConfig['components']>[] = [];
+	const seen = new Set<unknown>();
+	// A string pattern is deduped by value, an array or a function by identity — which is
+	// exactly what the schema produces below, the same value in two places
+	const add = (pattern: NonNullable<Rsg.SanitizedStyleguidistConfig['components']>) => {
+		if (seen.has(pattern)) {
+			return;
+		}
+		seen.add(pattern);
+		patterns.push(pattern);
+	};
 	const walk = (sections?: Rsg.ConfigSection[]) => {
 		for (const section of sections || []) {
 			if (section.components) {
-				patterns.push(section.components);
+				add(section.components);
 			}
 			walk(section.sections);
 		}
 	};
 	// `sections` already contains `components` as its first section (see the schema), but a
-	// config that failed validation may not have been normalized, so take both and dedupe later
+	// config that failed validation may not have been normalized, so take both. Deduping is
+	// not cosmetic: a pattern kept twice is resolved twice, so a `components` option that
+	// cannot be resolved is reported twice and “Found N errors” counts one problem as two.
 	if (config.components) {
-		patterns.push(config.components);
+		add(config.components);
 	}
 	walk(config.sections);
 	return patterns;

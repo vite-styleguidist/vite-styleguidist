@@ -209,6 +209,11 @@ const styles = ({
 	logo: {
 		display: 'flex',
 		flexDirection: 'column',
+		// The sidebar is a flex column with `overflow: auto`, and the scrollable list is the
+		// part meant to absorb the overflow ($toc is `flex-shrink: 0`, so it never gives).
+		// Without this the header paid instead: 23 px of overflow at 1500x800 crushed a
+		// two-line title to zero height and painted it through the filter field below.
+		flexShrink: 0,
 		padding: [[20, space[2], space[2]]],
 		borderBottom: [[1, color.border, 'solid']],
 		[mq.small]: {
@@ -280,6 +285,8 @@ const styles = ({
 		display: 'flex',
 		alignItems: 'center',
 		justifyContent: 'space-between',
+		// Exposed to the same squeeze as $logo, and for the same reason
+		flexShrink: 0,
 		gap: space[2],
 		marginTop: 'auto',
 		padding: [[12, space[2]]],

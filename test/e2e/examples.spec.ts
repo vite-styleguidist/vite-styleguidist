@@ -132,9 +132,7 @@ for (const name of EXAMPLES) {
 					page.locator('[data-testid$="-container"], [data-testid^="section-"]').first(),
 					`nothing rendered at ${href}`
 				).toBeVisible();
-				expect
-					.soft(errors.slice(before), `runtime errors at the sidebar link ${href}`)
-					.toEqual([]);
+				expect.soft(errors.slice(before), `runtime errors at the sidebar link ${href}`).toEqual([]);
 
 				for (const next of await tocHrefs()) {
 					if (!visited.has(next)) {
@@ -154,3 +152,36 @@ for (const name of EXAMPLES) {
 		expect(errors, `runtime errors at ${url}`).toEqual([]);
 	});
 }
+
+test('keeps the sidebar header intact when the sidebar has to scroll', async ({
+	page,
+	examplesServer,
+}) => {
+	// A 1920x1080 screen at 150 % zoom, where the sections example's sidebar is ~23 px
+	// taller than the window. The sidebar is a flex column, so before `$logo` and
+	// `$sidebarFooter` were pinned at `flex-shrink: 0` the whole overflow was taken out of
+	// the header: the title was crushed to zero height and its second line painted through
+	// the filter field below it.
+	await page.setViewportSize({ width: 1280, height: 720 });
+	await page.goto(`${examplesServer}/sections/styleguide/`);
+	await page.waitForLoadState('networkidle');
+
+	const measured = await page.evaluate(() => {
+		const sidebar = document.querySelector('[data-testid="sidebar"]') as HTMLElement;
+		const header = sidebar.querySelector('header') as HTMLElement;
+		const title = header.querySelector('h1') as HTMLElement;
+		return {
+			overflows: sidebar.scrollHeight > sidebar.clientHeight,
+			headerHeight: header.clientHeight,
+			headerContent: header.scrollHeight,
+			titleHeight: title.getBoundingClientRect().height,
+			titleInk: title.scrollHeight,
+		};
+	});
+
+	// The premise: this viewport really does overflow the sidebar
+	expect(measured.overflows).toBe(true);
+	// …and the header still renders all of its content, title included
+	expect(measured.headerHeight).toBeGreaterThanOrEqual(measured.headerContent);
+	expect(measured.titleHeight).toBeGreaterThanOrEqual(measured.titleInk);
+});

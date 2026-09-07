@@ -44,4 +44,17 @@ describe('filterComponentExamples with an mdx page', () => {
 
 		expect(result.props?.examples).toEqual([{ type: 'code', content: 'b' }]);
 	});
+
+	// `lazyDocs` (ADR 0019): every index is out of range for a component that has no
+	// examples *yet*, and “example not found” is not what it should render
+	it('should leave a component whose documentation is not loaded alone', () => {
+		const lazy = deepfreeze({
+			nameFromPath: 'Button',
+			docsLoaded: false,
+			loadDocs: () => Promise.resolve({ props: {} }),
+			props: { examples: [] as Rsg.Example[] },
+		});
+
+		expect(filterComponentExamples(lazy as any, 1)).toBe(lazy);
+	});
 });

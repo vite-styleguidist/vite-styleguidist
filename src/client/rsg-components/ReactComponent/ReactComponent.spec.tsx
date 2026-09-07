@@ -338,6 +338,28 @@ describe('on-demand documentation', () => {
 		expect(await findByText(/add examples to this component/i)).toBeInTheDocument();
 	});
 
+	// React 19 remounts every component under StrictMode (mount, unmount, mount again), which
+	// is the same shape as the double-invoked effects of a function component: the observer
+	// has to be disconnected and set up again, and nothing may be loaded twice.
+	it('should load once under StrictMode, which mounts everything twice', async () => {
+		const component = lazyComponent();
+		const { findByText } = render(
+			<React.StrictMode>
+				<Provider value={{ ...context, displayMode: DisplayModes.component }}>
+					<ReactComponent
+						component={component}
+						depth={3}
+						exampleMode="collapse"
+						usageMode="collapse"
+					/>
+				</Provider>
+			</React.StrictMode>
+		);
+
+		expect(component.loadDocs).toHaveBeenCalledTimes(1);
+		expect(await findByText('Bar')).toBeInTheDocument();
+	});
+
 	it('should render a component whose documentation is in the tree without loading anything', () => {
 		const { getByText } = renderComponent({ ...component, docsLoaded: true } as Rsg.Component);
 		expect(observed).toHaveLength(0);

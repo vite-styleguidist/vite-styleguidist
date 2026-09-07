@@ -122,6 +122,15 @@ test.describe('on-demand documentation', () => {
 		expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 	});
 
+	test('renders the one example an isolated example route shows', async ({ page }) => {
+		// The route picks an example out of a list that is empty until the documentation is
+		// loaded, so the page has to be routed again once it is
+		await page.goto(`/#!/${FIRST}/1`);
+
+		await expect(page.getByTestId(`${FIRST}-examples`)).toBeVisible();
+		await expect(page.locator(`[data-testid^="${FIRST}-example-"]`)).toHaveCount(1);
+	});
+
 	test('loads only the component the isolated view shows', async ({ page }) => {
 		const requested = recordDocsRequests(page);
 

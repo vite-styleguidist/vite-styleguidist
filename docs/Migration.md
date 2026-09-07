@@ -6,6 +6,58 @@ This guide covers upgrading from `react-styleguidist` 13.x (last release 13.1.4)
 
 Styleguidist no longer uses webpack: it compiles and serves your components with [Vite](https://vite.dev/), which ships with Styleguidist. Most of the configuration users had to write for webpack (loaders, Babel presets, `webpackConfig`) is simply gone. This guide covers everything you may need to change to upgrade a style guide from the webpack-based versions.
 
+## Start with the doctor
+
+Run `npx vite-styleguidist doctor` in your project first. It reads your style guide config, looks at what is installed and scans your components, then prints everything that has to change — all of it in one run, instead of one error per build:
+
+```bash
+npx vite-styleguidist doctor
+```
+
+```text
+Vite Styleguidist doctor 1.0.0
+
+Config: /home/me/acme-ui/styleguide.config.js
+
+Errors (3)
+
+  1. Unknown config option "styleguidComponents"
+     Fix:   Did you mean "styleguideComponents"?
+     Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/configuration/#styleguidecomponents
+  2. webpackConfig config option was removed
+     Fix:   Styleguidist now uses Vite instead of webpack. Use the "viteConfig" option instead
+     Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/vite/
+  3. CommonJS syntax in 1 theme or styles file
+     These files are bundled for the browser and must be ES modules.
+     Files: styleguide.theme.js
+     Fix:   Replace module.exports with export default, and require() with import.
+     Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/migration/#theme-and-styles-files
+
+Warnings (2)
+
+  1. showCode config option is deprecated
+     Fix:   Use exampleMode option instead
+     Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/configuration/#showcode
+  2. process.env variables that are not replaced: API_URL
+     Only NODE_ENV and STYLEGUIDIST_ENV are replaced in your components’ code.
+     Files: src/components/Chart.js
+     Fix:   Add a define entry to viteConfig, or read import.meta.env instead.
+     Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/migration/#environment-variables
+
+Info (7)
+
+  1. Node.js v24.4.0 (supported: ^22.12.0 || >=24.0.0)
+  ...
+
+Found 3 errors and 2 warnings.
+```
+
+Every line points at the section of this guide that explains the change, so you can read only the parts that apply to you. The command exits with `1` when it found an error and `0` otherwise, and `--json` prints the same report for a script; see [the doctor command](CLI.md#the-doctor-command).
+
+It needs nothing installed: `npx` downloads the package for the run. Once `vite-styleguidist` is a dependency of your project, `npx styleguidist doctor` runs the local copy.
+
+Use the longer `vite-styleguidist` name until `react-styleguidist` is uninstalled, though: both packages install a `styleguidist` binary, so while they sit side by side, `npx styleguidist` (and every `package.json` script that calls it) runs whichever of the two npm linked last. The doctor reports it as a warning when that binary is the old one.
+
 ## Requirements
 
 - **Node.js** 22.12 or newer (Node 23 is not supported; 24 and later are), see [Compatibility](Compatibility.md).
@@ -301,6 +353,7 @@ See [Node.js API](API.md).
 
 ## Testing your migration
 
-1. Run `npx styleguidist server --verbose`: the log shows which Vite config file was loaded and the resolved Vite config.
-2. Check the browser console: modules Vite can’t resolve (aliases, CommonJS-only code) show up there.
-3. Run `npx styleguidist build` and serve the `styleguide` folder over HTTP to check the static version.
+1. Run `npx styleguidist doctor` again: it should report no errors. Warnings are things that still work but are on their way out (deprecated options), or that the doctor cannot be sure about (a file that names the old package in a comment).
+2. Run `npx styleguidist server --verbose`: the log shows which Vite config file was loaded and the resolved Vite config.
+3. Check the browser console: modules Vite can’t resolve (aliases, CommonJS-only code) show up there.
+4. Run `npx styleguidist build` and serve the `styleguide` folder over HTTP to check the static version.

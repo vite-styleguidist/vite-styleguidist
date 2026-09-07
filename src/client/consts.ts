@@ -9,6 +9,16 @@ import type { ScrollSync } from '../typings/RsgStyleguidistConfig.js';
  */
 export const CONTENT_ID = 'rsg-content';
 
+/**
+ * The label of the “on this page” list, visible and as the `aria-label` of its `<nav>`.
+ *
+ * It lives here rather than in PageNav for the same reason CONTENT_ID does: StyleGuide has
+ * to pass it as the `title` prop, and PageNav is a component users replace — a replacement
+ * that reads the prop the Cookbook documents would otherwise get `undefined` and render an
+ * unnamed navigation landmark.
+ */
+export const PAGE_NAV_TITLE = 'On this page';
+
 export const DisplayModes = Object.freeze({
 	// Show all sections and components (default)
 	all: 'all',

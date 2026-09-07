@@ -5,10 +5,12 @@ import useMediaQuery, { toMediaQuery } from '../StyleGuide/useMediaQuery.js';
 import useScrollSpy from '../../utils/useScrollSpy.js';
 import getUrl from '../../utils/getUrl.js';
 import { mq as defaultMq } from '../../styles/theme.js';
-import { CONTENT_ID } from '../../consts.js';
+import { CONTENT_ID, PAGE_NAV_TITLE } from '../../consts.js';
 
-/** The label of the list, visible and as the `aria-label` of its `<nav>`. */
-export const PAGE_NAV_TITLE = 'On this page';
+// Re-exported where it has always been importable from; it is defined in consts.js because
+// StyleGuide passes it as the `title` prop and must not depend on this module, which a
+// `styleguideComponents.PageNav` override replaces
+export { PAGE_NAV_TITLE };
 
 /**
  * A list of one entry is not a table of contents, it is a repetition of the page title, so

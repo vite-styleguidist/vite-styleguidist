@@ -8,7 +8,7 @@ import Error from 'rsg-components/Error';
 import NotFound from 'rsg-components/NotFound';
 import Context from 'rsg-components/Context';
 import { HOMEPAGE } from '../../../scripts/consts.js';
-import { DisplayModes } from '../../consts.js';
+import { DisplayModes, PAGE_NAV_TITLE } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
 /**
@@ -177,7 +177,13 @@ export default class StyleGuide extends Component<StyleGuideProps, StyleGuideSta
 						) : null
 					}
 					pageNav={
-						hasPageNav(displayMode, config, pagePerSection, sections) ? <PageNav /> : undefined
+						hasPageNav(displayMode, config, pagePerSection, sections) ? (
+							// Passed rather than left to PageNav's own default parameter: the Cookbook
+							// documents a replaced PageNav as being rendered with a `title`, and a
+							// replacement written against that contract used to get `undefined` and
+							// render a navigation landmark with no accessible name
+							<PageNav title={PAGE_NAV_TITLE} />
+						) : undefined
 					}
 					hasSidebar={hasSidebar(displayMode, config.showSidebar)}
 				>

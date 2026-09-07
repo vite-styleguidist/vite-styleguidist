@@ -2,7 +2,7 @@ import React from 'react';
 import { render, within, fireEvent } from '@testing-library/react';
 import StyleGuide, { hasPageNav, StyleGuideProps } from './StyleGuide.js';
 import slots from '../slots/index.js';
-import { DisplayModes } from '../../consts.js';
+import { DisplayModes, PAGE_NAV_TITLE } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
 /* eslint-disable no-console */
@@ -347,4 +347,38 @@ test('should not mount the page navigation on the all-in-one page', () => {
 	expect(queryByTestId('rsg-pagenav')).toBeNull();
 	// and the layout is the one every style guide without the option has
 	expect(document.querySelector('#rsg-content > section')).not.toBeNull();
+});
+
+/**
+ * The Cookbook says a replaced `PageNav` "is rendered with a `title` prop". It was not:
+ * only the built-in component's own default parameter supplied one, so a replacement
+ * written against the documented contract rendered `<nav aria-label={undefined}>`.
+ */
+test('should render the page navigation with the documented title prop', async () => {
+	const props: Record<string, unknown>[] = [];
+	vi.resetModules();
+	vi.doMock('rsg-components/PageNav', () => ({
+		default: (received: Record<string, unknown>) => {
+			props.push(received);
+			return <nav data-testid="custom-pagenav" aria-label={received.title as string} />;
+		},
+	}));
+	try {
+		const { default: StyleGuideWithCustomPageNav } = await import('./StyleGuide.js');
+		const { getByTestId } = render(
+			<StyleGuideWithCustomPageNav
+				{...defaultProps}
+				config={{ ...config, pageNav: true } as Rsg.ProcessedStyleguidistConfig}
+				sections={sections}
+				allSections={sections}
+				displayMode={DisplayModes.component}
+			/>
+		);
+
+		expect(props[0]).toEqual({ title: PAGE_NAV_TITLE });
+		expect(getByTestId('custom-pagenav')).toHaveAttribute('aria-label', 'On this page');
+	} finally {
+		vi.doUnmock('rsg-components/PageNav');
+		vi.resetModules();
+	}
 });

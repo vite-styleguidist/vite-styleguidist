@@ -150,6 +150,41 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 				? path.resolve(dirname(import.meta.url), '../../../templates/DefaultExample.md')
 				: val,
 	},
+	// Named after Vite’s own `envPrefix` because it selects variables the same way (a list
+	// of name prefixes) and because that is the word people already know. It is a separate
+	// option, not a copy: Vite’s governs `import.meta.env`, this one governs the
+	// `process.env.NAME` replacements, which is what a style guide migrating from webpack
+	// (and from `REACT_APP_`) actually has in its components. See getEnvDefine() in
+	// src/scripts/make-vite-config.ts.
+	envPrefix: {
+		type: ['string', 'array'],
+		default: [],
+		example: ['REACT_APP_'],
+		process: (value?: unknown): unknown => {
+			// Runs before the default is applied, so undefined must pass through; anything that
+			// is neither a string nor an array is left alone for the schema’s own type error.
+			if (value === undefined || (!Array.isArray(value) && typeof value !== 'string')) {
+				return value;
+			}
+			const prefixes = typeof value === 'string' ? [value] : value;
+			prefixes.forEach((prefix) => {
+				// An empty (or blank) prefix matches every variable name, which would inline the
+				// whole environment of the build machine — tokens included — into a public bundle.
+				// Vite rejects it in its own `envPrefix` for the same reason.
+				if (typeof prefix !== 'string' || prefix.trim() === '') {
+					throw new StyleguidistError(
+						`${kleur.bold(
+							'envPrefix'
+						)} config option must contain non-empty strings, got ${JSON.stringify(
+							prefix
+						)}. An empty prefix would expose every environment variable of the machine that builds the style guide.`,
+						'envPrefix'
+					);
+				}
+			});
+			return prefixes;
+		},
+	},
 	exampleMode: {
 		type: 'string',
 		process: (value: string, config: Rsg.StyleguidistConfig): string => {

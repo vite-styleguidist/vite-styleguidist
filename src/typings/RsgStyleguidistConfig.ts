@@ -68,6 +68,15 @@ interface BaseStyleguidistConfig {
 	/** Last-resort escape hatch: mutate the final Vite config. */
 	dangerouslyUpdateViteConfig: (config: UserConfig, env: StyleguidistEnv) => UserConfig;
 	defaultExample: string | false;
+	/**
+	 * Name prefixes of the environment variables exposed to the examples and components as
+	 * `process.env.NAME` (`['REACT_APP_']`). Empty by default: nothing is exposed.
+	 *
+	 * Sanitized to an array; a single prefix may be written as a string. See
+	 * `getEnvDefine()` in src/scripts/make-vite-config.ts for what is read and
+	 * docs/Configuration.md for the security note (the values end up in a public bundle).
+	 */
+	envPrefix: string[];
 	exampleMode: ExpandMode;
 	editorConfig: {
 		theme: string;
@@ -182,7 +191,9 @@ export interface SanitizedStyleguidistConfig extends BaseStyleguidistConfig {
  * up only being a string after sanitizing
  */
 export interface StyleguidistConfig extends RecursivePartial<
-	Omit<SanitizedStyleguidistConfig, 'defaultExample'>
+	Omit<SanitizedStyleguidistConfig, 'defaultExample' | 'envPrefix'>
 > {
 	defaultExample?: string | boolean;
+	/** One prefix or a list of them; a single string is turned into a list when the config is read. */
+	envPrefix?: string | string[];
 }

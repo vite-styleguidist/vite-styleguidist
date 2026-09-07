@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { loadConfigFromFile, searchForWorkspaceRoot } from 'vite';
+import { loadConfigFromFile, loadEnv, searchForWorkspaceRoot } from 'vite';
 import type { Alias, InlineConfig, PluginOption, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import escapeRegExp from 'lodash/escapeRegExp.js';
@@ -122,6 +122,81 @@ export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
 }
 
 /**
+ * Environment variables Styleguidist and Vite define themselves: `NODE_ENV` is Vite’s
+ * (it is what tells React which build to use) and `STYLEGUIDIST_ENV` is set below. A
+ * prefix wide enough to match one of them must not be able to overwrite it.
+ */
+const RESERVED_ENV_NAMES = ['NODE_ENV', 'STYLEGUIDIST_ENV'];
+
+/**
+ * A variable name that can be used in a `define` key: `process.env.<name>` has to stay a
+ * valid member expression, and the process environment can hold names that aren’t
+ * (`npm_config_//registry.npmjs.org/:_authToken`, anything `export`ed by a shell trick).
+ */
+const ENV_NAME_REGEXP = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+/**
+ * `define` entries implementing the `envPrefix` option: the environment variables whose
+ * name starts with one of the prefixes, as `process.env.NAME` replacements.
+ *
+ * Opt-in and empty by default. Two habits meet here: components written for webpack (and
+ * for Create React App) read `process.env.REACT_APP_*`, which Vite doesn’t define, while
+ * Vite’s own `envPrefix` only governs `import.meta.env`. This option covers the first
+ * without touching the second — set `viteConfig.envPrefix` as well if the same variables
+ * should also appear on `import.meta.env`.
+ *
+ * Values come from `loadEnv()`, Vite’s own loader, so a project’s `.env`, `.env.local`,
+ * `.env.<mode>` and `.env.<mode>.local` mean here exactly what they mean in a Vite app,
+ * and the real process environment (`REACT_APP_TITLE=… styleguidist build`) wins over
+ * them, as it does there.
+ *
+ * Security: every value ends up inlined, in clear, in a bundle that is usually deployed
+ * publicly. That is why the option exists at all instead of exposing the environment by
+ * default, why an empty prefix is refused (see the schema) and why the names are printed.
+ *
+ * @param envDir Folder the `.env` files are read from, `viteConfig.envDir` or the config file’s.
+ */
+export function getEnvDefine(
+	config: Rsg.SanitizedStyleguidistConfig,
+	env: Rsg.StyleguidistEnv,
+	envDir: string = config.configDir
+): Record<string, string> {
+	const prefixes = config.envPrefix || [];
+	if (prefixes.length === 0) {
+		return {};
+	}
+
+	const values = loadEnv(env, envDir, prefixes);
+	const define: Record<string, string> = {};
+	const skipped: string[] = [];
+	Object.keys(values).forEach((name) => {
+		if (RESERVED_ENV_NAMES.includes(name) || !ENV_NAME_REGEXP.test(name)) {
+			skipped.push(name);
+			return;
+		}
+		define[`process.env.${name}`] = JSON.stringify(values[name]);
+	});
+
+	const names = Object.keys(define).map((key) => key.replace('process.env.', ''));
+	if (names.length > 0) {
+		// Names only, never values: this line is printed on every start and build, and the
+		// point of it is that nobody is surprised by what they are shipping to the browser.
+		logger.info(
+			`Inlining ${names.length} environment ${
+				names.length === 1 ? 'variable' : 'variables'
+			} into the style guide (envPrefix): ${names.join(', ')}`
+		);
+	}
+	if (skipped.length > 0) {
+		logger.debug(
+			`Environment variables skipped (reserved or not an identifier): ${skipped.join(', ')}`
+		);
+	}
+
+	return define;
+}
+
+/**
  * Where a `styleguideComponents` value points. It is written like an import: an absolute
  * path, a package name — or a path relative to the config file, which is the one form a
  * Vite alias cannot express. An alias is a plain rewrite, so `./styleguide/Logo` would end
@@ -210,6 +285,13 @@ export default async function makeViteConfig(
 		}
 	}
 
+	// Vite reads `.env` files from `envDir`, which defaults to the project root — here the
+	// folder of the style guide config. A project that moved them says so in its Vite
+	// config, and `envPrefix` has to look in the same place.
+	const envDir = userConfig?.envDir
+		? path.resolve(config.configDir, userConfig.envDir)
+		: config.configDir;
+
 	const clientEntry = findClientEntry();
 	const componentFiles = getComponentFilesFromSections(
 		config.sections,
@@ -263,6 +345,9 @@ export default async function makeViteConfig(
 			dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
 		},
 		define: {
+			// The user’s variables first, so the two Styleguidist owns always win (see
+			// RESERVED_ENV_NAMES, which already keeps them out of the object)
+			...getEnvDefine(config, env, envDir),
 			'process.env.STYLEGUIDIST_ENV': JSON.stringify(env),
 		},
 		server: {

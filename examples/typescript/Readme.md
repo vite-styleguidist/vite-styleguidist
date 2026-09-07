@@ -29,46 +29,18 @@ Known limits, all of them measured in [decision 0017](../../docs/decisions/0017-
 
 ### 2. react-docgen-typescript, for components you re-export
 
-[react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript) runs the TypeScript compiler over your whole program, so it resolves types across packages. Install it (it is not a dependency of Vite Styleguidist) and add a `propsParser`:
+[react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript) runs the TypeScript compiler over your whole program, so it resolves types across packages — the one thing road 1 cannot do. It is not a dependency of Vite Styleguidist. Install it, plus `react-docgen` for the files that are not TypeScript:
 
 ```bash
-npm install --save-dev react-docgen-typescript
+npm install --save-dev react-docgen-typescript react-docgen
 ```
 
-```javascript
-// styleguide.config.js
-const path = require('path')
-const { withCustomConfig } = require('react-docgen-typescript')
+Then copy the [cookbook recipe](../../docs/Cookbook.md#components-re-exported-from-another-package) into `styleguide.config.js`. Copy that one rather than the parser’s own minimal example, because it carries three things this example proves you need:
 
-const parser = withCustomConfig('./tsconfig.json', {
-  savePropValueAsString: true,
-  // This parser follows the resolved types, so a component whose props extend
-  // React.ButtonHTMLAttributes gets ~290 DOM attributes. Drop what @types/react
-  // contributes and nothing else: the widely copied
-  // `!prop.parent.fileName.includes('node_modules')` filter ALSO drops the props of
-  // the third-party components you installed this parser to document.
-  propFilter: prop =>
-    !prop.parent ||
-    !/node_modules[\\/]@types[\\/]react[\\/]/.test(
-      prop.parent.fileName
-    )
-})
+- it hands the parser **one** TypeScript program for the whole style guide. `parse()` builds a fresh `ts.Program` on every call, and each one re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project — a program per component is what makes this parser slow;
+- it drops only the ~290 DOM attributes `@types/react` contributes, not every prop declared under `node_modules`. The widely copied `!prop.parent.fileName.includes('node_modules')` filter would strip every prop of the third-party components you installed the parser for;
+- it documents the entry named after the file. `Badge.tsx` exports `BadgeTone` before `Badge`, and without that step the page comes out as an empty “BadgeTone”.
 
-module.exports = {
-  components: 'src/components/**/[A-Z]*.tsx',
-  propsParser(filePath) {
-    const docs = parser.parse(filePath)
-    // It returns an entry for every exported symbol it takes for a component, including
-    // exported enums, and Styleguidist documents the first one. Badge.tsx exports
-    // `BadgeTone` before `Badge`, so without this the page would be an empty
-    // “BadgeTone”. Put the entry named after the file first.
-    const name = path.basename(filePath, path.extname(filePath))
-    const match = docs.find(doc => doc.displayName === name)
-    return match ? [match] : docs
-  }
-}
-```
-
-The trade: a `tsconfig.json` is required, the whole program is type-checked on every parse (slower on a large project), types are printed as `T | undefined` rather than `T`, and the package’s last release is `2.4.0` from June 2025.
+The trade, measured on these four components: 0.6 s and 433 MB of peak memory with the default parser, 1.2 s and 675 MB with the recipe. Types are printed as `T | undefined` rather than `T`, a `tsconfig.json` is required, and the package’s last release is `2.4.0` from June 2025.
 
 You do not have to choose once for the whole style guide: `propsParser` receives the file path, so you can call the TypeScript parser for the directory that re-exports a component library and let everything else fall through to the default.

@@ -592,6 +592,22 @@ describe('collecting every problem', () => {
 		).toThrow('food config option was removed. Don’t use!');
 	});
 
+	it('should not add a type error to a removed option', () => {
+		// Every removed option in the real schema has a `type` (webpackConfig is object or
+		// function), so a value of the wrong type used to produce a second problem asking the
+		// user to fix an option the first one just said was gone
+		expect(() =>
+			sanitizeConfig({ food: 42 }, { food: { type: 'string', removed: 'Don’t use!' } }, '')
+		).toThrow('food config option was removed. Don’t use!');
+	});
+
+	it('should still check the type of a deprecated option', () => {
+		// Deprecated options keep working, so their value still has to be valid
+		expect(() =>
+			sanitizeConfig({ food: 42 }, { food: { type: 'string', deprecated: 'Use drink.' } }, '')
+		).toThrow('food config option should be string, received number.');
+	});
+
 	it('should keep the message of a single unknown option unchanged', () => {
 		expect(() => sanitizeConfig<{ drink?: any }>({ dring: 42 } as any, { drink: {} }, '')).toThrow(
 			`Unknown config option dring was found, the value is:\n${stringify(

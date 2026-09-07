@@ -276,6 +276,14 @@ export function collectConfigProblems<T extends Record<string, any>>(
 				replacement: props.removed,
 				message: `${kleur.bold(key)} config option was removed. ${props.removed}`,
 			});
+			// Nothing below is worth saying about an option that is gone: the value has no valid
+			// shape left to check, and a second problem telling the user to fix the type of
+			// `webpackConfig` reads as a contradiction of the line that just said it was removed.
+			// (The original implementation threw here, which had the same effect.) The deprecated
+			// branch above deliberately falls through: those options still work, so their value
+			// still has to be checked.
+			safeConfig[keyAny] = value;
+			return;
 		}
 
 		if (value !== undefined && props.type) {

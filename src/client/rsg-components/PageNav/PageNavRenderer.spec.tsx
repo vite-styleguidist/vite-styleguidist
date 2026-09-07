@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import PageNavRenderer, { styles } from './PageNavRenderer.js';
+import createStyleSheet from '../../styles/createStyleSheet.js';
 import type { PageNavHeading } from './PageNav.js';
 import * as theme from '../../styles/theme.js';
 import type * as Rsg from '../../../typings/index.js';
@@ -89,5 +90,21 @@ describe('PageNavRenderer', () => {
 		expect(link.color).toBe(theme.color.light);
 		expect(link.color).toMatch(/^var\(--rsg-color-light,/);
 		expect(link['$isSelected > &::before'].background).toBe(theme.color.link);
+	});
+
+	// The other half of that contract: the key a user writes in the `styles` option is the
+	// renderer's name without `Renderer` (rsg-components/Styled), so it has to be `PageNav`
+	it('should be addressed as PageNav by the styles option', () => {
+		expect((PageNavRenderer as unknown as { displayName: string }).displayName).toBe(
+			'Styled(PageNav)'
+		);
+		const sheet = createStyleSheet(
+			styles,
+			{ styles: { PageNav: { link: { fontSize: 99 } } } } as any,
+			'PageNav',
+			// Its own revision, so this is a sheet built for this config rather than a cached one
+			'pagenav-styles-override'
+		);
+		expect(sheet.toString()).toContain('font-size: 99px');
 	});
 });

@@ -1226,6 +1226,15 @@ export default function SectionsRenderer({ children }) {
 }
 ```
 
+## How do I make my style guide build faster?
+
+Styleguidist parses every component once per build and once per dev-server change, so a slow build is almost always a slow `propsParser`.
+
+- **Using `react-docgen-typescript`?** Its `parse()` creates a fresh TypeScript program for every file it is given, which re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project once per component. Share a single program instead — see the [recipe](#components-re-exported-from-another-package). On a 50-component design system this is the difference between a 13.9 s build peaking at 960 MB and a 1.6 s one peaking at 639 MB, and between a 157 ms and a 17 ms refresh after saving a component in the dev server.
+- **Mixing `.js` and `.tsx` components?** `react-docgen-typescript` documents nothing for plain JavaScript but still pays the full TypeScript cost for it. Send each file to the parser that understands it, see the same recipe.
+- **Anything expensive in a custom `propsParser`?** Build it once, at the top of `styleguide.config.js`, not inside the function: the function runs once per component.
+- **A very large guide?** [`skipComponentsWithoutExample`](Configuration.md#skipcomponentswithoutexample) keeps undocumented components out of the guide, and out of the parser.
+
 ## How to test my components?
 
 Styleguidist documents and renders your components; it doesn’t run tests. But the two go together well: the same isolated, well-documented components are the easiest ones to test, and the examples you write in Markdown are a good list of the cases a test suite should cover. This section shows one setup that fits a Vite-era project: [Vitest](https://vitest.dev/) as the test runner and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to render components the way a user sees them. Styleguidist itself is tested this way, see the [developer guide](Development.md#testing).

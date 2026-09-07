@@ -185,6 +185,29 @@ test.describe('page navigation', () => {
 		).toBe(true);
 	});
 
+	test('scrolls to the heading of a `?id=` link opened cold', async ({ page, examplesServer }) => {
+		// The URL a reader copies out of the address bar after clicking an entry. It reaches a
+		// fresh page with no `hashchange` of its own, so src/client/index.ts has to scroll once
+		// after the first render, or the shared link opens at the top of the page.
+		await page.setViewportSize(WIDE);
+		await page.goto(`${examplesServer}${PAGE}?id=details`);
+		await page.waitForLoadState('networkidle');
+
+		await expect
+			.poll(() =>
+				page.evaluate(() =>
+					Math.round(
+						(document.getElementById('details') as HTMLElement).getBoundingClientRect().top
+					)
+				)
+			)
+			.toBeLessThan(8);
+		// …and the entry the link names is the current one, not the last one
+		await expect(
+			page.locator('[data-testid="rsg-pagenav-link"][aria-current="location"]')
+		).toHaveText('Details');
+	});
+
 	test('clears the sticky header when an entry is clicked on a phone', async ({
 		page,
 		examplesServer,

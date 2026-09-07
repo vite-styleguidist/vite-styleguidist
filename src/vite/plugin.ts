@@ -143,6 +143,11 @@ export default function styleguidistPlugin({
 }: StyleguidistPluginOptions): Plugin {
 	// Directories where new/removed files should trigger a rescan of components
 	let contextDirs: string[] = [];
+	// Absolute paths of every component of the guide, as of the last time the styleguide
+	// module was generated. The create/delete branch of hotUpdate looks for the component an
+	// examples file belongs to here, instead of walking the whole module graph (which also
+	// holds every dependency of every example).
+	let componentFiles: string[] = [];
 	let server: ViteDevServer | undefined;
 	// The section tree the styleguide module was generated from, reused by the
 	// machine-readable docs in builds (see generateBundle).
@@ -206,6 +211,7 @@ export default function styleguidistPlugin({
 				const styleguide = generateStyleguideModule(config);
 				styleguide.watchFiles.forEach((file) => this.addWatchFile(file));
 				contextDirs = styleguide.contextDirs;
+				componentFiles = styleguide.componentFiles;
 				sections = styleguide.sections;
 				watchContextDirs();
 				return styleguide.code;
@@ -341,13 +347,12 @@ export default function styleguidistPlugin({
 				// An examples file appeared or disappeared: the docs module of its
 				// component references it, so regenerate the docs of affected components
 				if (file.endsWith('.md') || file.endsWith('.mdx')) {
-					for (const id of graph.idToModuleMap.keys()) {
-						if (isPropsId(id)) {
-							const componentPath = parsePropsId(id);
-							const examplesFile = config.getExampleFilename(componentPath);
-							if (examplesFile && toPosix(examplesFile) === toPosix(file)) {
-								invalidate(id);
-							}
+					// Only components can own an examples file, and invalidate() ignores an id the
+					// graph does not hold — so the component list answers this without the graph
+					for (const componentPath of componentFiles) {
+						const examplesFile = config.getExampleFilename(componentPath);
+						if (examplesFile && toPosix(examplesFile) === toPosix(file)) {
+							invalidate(NULL + propsId(componentPath));
 						}
 					}
 				}

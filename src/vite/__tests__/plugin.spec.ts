@@ -489,7 +489,10 @@ describe('hotUpdate', () => {
 	it('should regenerate the docs of a component when its examples file appears', () => {
 		const propsModule = NULL + propsId(button);
 		const graph = createGraph([propsModule, NULL + propsId(component('Price/Price.js'))]);
-		const result = hotUpdate(createPlugin(), graph, { file: readme, type: 'create' });
+		const plugin = createPlugin();
+		// The plugin learns the components of the guide when generating the styleguide module
+		(hook(plugin.load) as any).call(context(), RESOLVED_STYLEGUIDE_ID, {});
+		const result = hotUpdate(plugin, graph, { file: readme, type: 'create' });
 		expect(graph.invalidateModule).toHaveBeenCalledTimes(1);
 		expect(graph.invalidateModule).toHaveBeenCalledWith({ id: propsModule }, new Set(), 42, true);
 		expect(result).toEqual([{ id: propsModule }]);
@@ -500,7 +503,9 @@ describe('hotUpdate', () => {
 		const graph = createGraph([propsModule]);
 		const getExampleFilename = (file: string) =>
 			file === button ? component('Button/Readme.mdx') : false;
-		const result = hotUpdate(createPlugin({ getExampleFilename }), graph, {
+		const plugin = createPlugin({ getExampleFilename });
+		(hook(plugin.load) as any).call(context(), RESOLVED_STYLEGUIDE_ID, {});
+		const result = hotUpdate(plugin, graph, {
 			file: component('Button/Readme.mdx'),
 			type: 'create',
 		});
@@ -511,7 +516,9 @@ describe('hotUpdate', () => {
 	it('should return only the regenerated modules when a file is deleted', () => {
 		const propsModule = NULL + propsId(button);
 		const graph = createGraph([propsModule]);
-		const result = hotUpdate(createPlugin(), graph, {
+		const plugin = createPlugin();
+		(hook(plugin.load) as any).call(context(), RESOLVED_STYLEGUIDE_ID, {});
+		const result = hotUpdate(plugin, graph, {
 			file: readme,
 			type: 'delete',
 			modules: [{ id: readme }],

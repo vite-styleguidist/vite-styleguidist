@@ -335,7 +335,12 @@ describe('makeViteConfig', () => {
 		const result = await makeViteConfig(loadConfig('defaults'), 'development');
 		const names = pluginNames(result.plugins);
 		expect(names).toContain('vite:react-babel');
-		expect(names.slice(-3)).toEqual(['rsg:absolute-paths', 'rsg:jsx-in-js', 'rsg:styleguidist']);
+		expect(names.slice(-4)).toEqual([
+			'rsg:absolute-paths',
+			'rsg:jsx-in-js',
+			'rsg:deep-imports',
+			'rsg:styleguidist',
+		]);
 	});
 
 	it('should point the dependency scanner at the client entry and the components', async () => {

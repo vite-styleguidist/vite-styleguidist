@@ -16,6 +16,7 @@ import mergeViteConfig, { hasReactPlugin } from '../vite/mergeViteConfig.js';
 import styleguidistPlugin from '../vite/plugin.js';
 import jsxInJs from '../vite/jsxInJs.js';
 import absolutePaths from '../vite/absolutePaths.js';
+import deepImports, { isLegacyPackageInstalled } from '../vite/deepImports.js';
 import { ENTRY_ID, toPosix } from '../vite/ids.js';
 import type * as Rsg from '../typings/index.js';
 
@@ -231,6 +232,13 @@ export default async function makeViteConfig(
 	plugins.push(
 		absolutePaths(),
 		jsxInJs(),
+		// Deep imports of Styleguidist’s own files, including the ones still written with the
+		// old package name (see src/vite/deepImports.ts); a real react-styleguidist
+		// dependency is left alone, whatever it contains
+		deepImports({
+			packageDir: PACKAGE_DIR,
+			aliasLegacyPackage: !isLegacyPackageInstalled(config.configDir),
+		}),
 		styleguidistPlugin({ config, env, clientEntry: toPosix(clientEntry) })
 	);
 

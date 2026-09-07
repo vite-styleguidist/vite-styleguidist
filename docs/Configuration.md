@@ -346,6 +346,24 @@ Array of [glob pattern](https://github.com/isaacs/node-glob#glob-primer) that sh
 
 > **Caution:** You should pass glob patterns, for example, use `**/components/Button.js` instead of `components/Button.js`.
 
+## `lazyDocs`
+
+Type: `Boolean`, default: `true`
+
+Load each component’s documentation when the page needs it, instead of putting all of it in the first script the browser downloads.
+
+```javascript
+module.exports = {
+  lazyDocs: false
+}
+```
+
+With this on — it is on by default — the style guide’s entry script carries the section tree: every component’s name, slug, path line and anchor, which is what the sidebar, the routes, the headings and the deep links are drawn from. The documentation itself — the props table, the JSDoc description, the examples, and the component’s own module — is imported per component, when that component is what the page shows (an isolated `#!/Button` view, a [pagePerSection](#pagepersection) page, the target of a deep link) or when it comes near the viewport on the all-in-one page. On a style guide of 350 components this takes the entry chunk from 4.7 MB to 1.2 MB and the number of modules the dev server serves before the first render from 1130 to 67.
+
+A component whose documentation has not arrived yet renders its container and its heading, and nothing else — no props table, no examples, and not the “add examples to this component” hint either.
+
+Turn it off to put every component’s documentation back into the entry chunk, which is how style guides were built before this option existed. Two reasons to: a deployment that would rather serve one big file than many small ones, and a replaced `ReactComponent` (see [styleguideComponents](#styleguidecomponents)) that cannot cope with a component whose documentation is not there yet — see [the Cookbook](Cookbook.md#how-to-work-with-on-demand-documentation) for what a replaced component sees and how to group the chunks differently.
+
 ## `logger`
 
 Type: `Object`, by default will use `console.*` in CLI or nothing in Node.js API

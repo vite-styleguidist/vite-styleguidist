@@ -24,6 +24,7 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0016](0016-table-of-contents.md) | “On this page” navigation (`pageNav`) | accepted |
 | [0017](0017-typescript-props.md) | Props parser for TypeScript components | accepted |
 | [0018](0018-parse-cache-and-parallel-parsing.md) | Parse cache, parallel parsing and a parser with an identity | accepted |
+| [0019](0019-on-demand-documentation.md) | On-demand component documentation | accepted |
 
 ## Convention
 

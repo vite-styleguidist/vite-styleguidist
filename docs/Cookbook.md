@@ -1376,6 +1376,47 @@ The dev server benefits from the same two options. On the same 350-component gui
 
 > **Memory, not just time.** Workers are the one thing here that costs more than it saves if you let them: each is a separate JavaScript heap, and four of them add about 500 MB to a build’s peak. On a memory-capped CI runner, `parallel: false` with the cache on is a perfectly good trade — it is the 940 ms row above at 770 MB.
 
+## How to work with on-demand documentation?
+
+By default ([`lazyDocs`](Configuration.md#lazydocs)) a component’s documentation is not in the script the browser downloads first: the style guide imports it when the component is the page (an isolated view, a [pagePerSection](Configuration.md#pagepersection) page, the target of a deep link) or when it comes near the viewport. Two things follow for a style guide that replaces Styleguidist’s own components.
+
+**What a replaced `ReactComponent` sees.** Its props are unchanged — `component`, `depth`, `exampleMode`, `usageMode` — and so is the shape of `component`: `name`, `visibleName`, `slug`, `href`, `filepath`, `pathLine`, `metadata` and `props` are all there from the first render. What changes is that until the documentation arrives, `props` is an empty placeholder: no `description`, an empty `props` array, an empty `methods` array, an empty `examples` array. A component written against those fields renders an empty component and then re-renders with the real one; `component.docsLoaded` is `false` while that is the case, which is how Styleguidist’s own renderer knows not to show its “add examples to this component” hint yet. `component.hasExamples` says whether there will be examples, and is known from the start.
+
+Two things are worth keeping in a replacement, because the rest of the style guide relies on them: the anchor (`id` equal to `component.slug`, which is what the deep links, the scroll spy and the viewport rule look for) and the heading. A replacement that renders neither still works — a component whose anchor cannot be found loads its documentation right away instead of waiting for the viewport — but the whole guide then loads at once, which is what the option exists to avoid.
+
+**How many chunks.** Each component’s documentation and its own module are two dynamic imports, so a build of 350 components emits about 700 scripts, and the browser fetches two per component it shows. If you would rather have fewer, bigger files, group them yourself:
+
+```javascript
+module.exports = {
+  dangerouslyUpdateViteConfig: viteConfig => {
+    viteConfig.build.rolldownOptions = {
+      ...viteConfig.build.rolldownOptions,
+      output: {
+        ...viteConfig.build.rolldownOptions?.output,
+        advancedChunks: {
+          groups: [
+            {
+              // One chunk per component folder instead of two
+              name: id => {
+                const match = /src\/components\/([^/]+)\//.exec(
+                  id.replace(/^\0/, '')
+                )
+                return match ? `docs-${match[1]}` : null
+              }
+            }
+          ]
+        }
+      }
+    }
+    return viteConfig
+  }
+}
+```
+
+Widen the pattern to a section (`src/components/([^/]+)/` matching the section folder rather than the component one) and the same style guide emits one chunk per section instead. Grouping is a trade: on a 350-component guide, one chunk per component halves the number of files (702 to 353) and leaves the first paint alone; one chunk per section takes it to 13 files, but a group is all-or-nothing, so a single component that the first page needs pulls its whole section in — the first paint went from 1.2 MB to 1.9 MB in that measurement.
+
+**Turning it off.** [`lazyDocs: false`](Configuration.md#lazydocs) puts everything back in the entry chunk.
+
 ## How to test my components?
 
 Styleguidist documents and renders your components; it doesn’t run tests. But the two go together well: the same isolated, well-documented components are the easiest ones to test, and the examples you write in Markdown are a good list of the cases a test suite should cover. This section shows one setup that fits a Vite-era project: [Vitest](https://vitest.dev/) as the test runner and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) to render components the way a user sees them. Styleguidist itself is tested this way, see the [developer guide](Development.md#testing).

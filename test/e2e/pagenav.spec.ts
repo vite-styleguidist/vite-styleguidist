@@ -185,6 +185,36 @@ test.describe('page navigation', () => {
 		).toBe(true);
 	});
 
+	test('scrolls back to the heading when the same entry is clicked again', async ({
+		page,
+		examplesServer,
+	}) => {
+		// A second click on the entry the reader is already on produces an identical address,
+		// so the browser fires no `hashchange` — and the fragment is a route, so its own
+		// fragment scrolling has nothing to do either. On the sticky rail, where the entry
+		// stays in view while the reader reads, this is the most natural interaction there is.
+		await page.setViewportSize(WIDE);
+		await page.goto(`${examplesServer}${PAGE}`);
+		await page.waitForLoadState('networkidle');
+
+		const entry = page.getByTestId('rsg-pagenav-link').filter({ hasText: 'Heading 3' });
+		await entry.click();
+		await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(0);
+
+		await page.evaluate(() => window.scrollTo(0, 0));
+		await entry.click();
+
+		await expect
+			.poll(() =>
+				page.evaluate(() =>
+					Math.round(
+						(document.getElementById('heading-3') as HTMLElement).getBoundingClientRect().top
+					)
+				)
+			)
+			.toBeLessThan(8);
+	});
+
 	test('scrolls to the heading of a `?id=` link opened cold', async ({ page, examplesServer }) => {
 		// The URL a reader copies out of the address bar after clicking an entry. It reaches a
 		// fresh page with no `hashchange` of its own, so src/client/index.ts has to scroll once

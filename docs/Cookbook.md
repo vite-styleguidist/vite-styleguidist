@@ -636,7 +636,8 @@ export default function PageNavRenderer({
   headings,
   activeId,
   title,
-  collapsible
+  collapsible,
+  onHeadingClick
 }) {
   return (
     <nav aria-label={title}>
@@ -646,6 +647,7 @@ export default function PageNavRenderer({
           <li key={heading.id} data-level={heading.level}>
             <a
               href={heading.href}
+              onClick={onHeadingClick}
               aria-current={
                 heading.id === activeId ? 'location' : undefined
               }
@@ -668,6 +670,7 @@ The props are:
 | `activeId` | string | The `id` of the heading the reader is looking at, or undefined before the page has been scrolled. It changes as the reader scrolls. |
 | `title` | string | The label of the list, `On this page`. |
 | `collapsible` | boolean | `true` when the window is narrower than the `mq.large` breakpoint, where the default renderer draws a closed `details` block instead of a rail. |
+| `onHeadingClick` | function | Put it on each entry’s link as its `onClick`. It is what makes a second click on the entry the reader is already on scroll back to that heading: such a click cannot change the address, so the browser fires no `hashchange`, and nothing else scrolls these links. A renderer that leaves it out loses only that. |
 
 Use `heading.href` rather than building `#id` yourself: on a `pagePerSection` or isolated page the fragment of the address is the route, so an in-page link has to keep it and pass the target in the `id` parameter, which is what `href` already does.
 

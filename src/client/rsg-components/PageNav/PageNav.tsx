@@ -187,6 +187,46 @@ function usePageHeadings(routeKey: string): CollectedHeading[] {
 	return headings;
 }
 
+/**
+ * Makes a second click on the entry the reader is already on scroll back to its heading.
+ *
+ * On a routed page an entry links to `#/Route?id=heading` (see {@link getHeadingHref}), and
+ * the browser only fires `hashchange` when the fragment actually changes. A repeat click
+ * therefore produced no event at all: src/client/index.ts scrolls from that listener, and
+ * the fragment matches no element id, so the browser’s own fragment scrolling had nothing to
+ * do either — the reader clicked a link and nothing moved. On the sticky rail, where the
+ * entry stays in view while they read, that is the most natural interaction there is.
+ *
+ * Re-dispatching `hashchange` when the address is already the target hands the click to
+ * exactly the same code as the first click: index.ts scrolls to the `?id=` element
+ * subtracting `--rsg-sticky-offset`, and useScrollSpy pins the highlight on the clicked
+ * entry. ADR 0015 warns against synthetic `hashchange` events, but about the *scroll-driven*
+ * URL writes of `scrollSync: 'hash'`, where the scroll it triggers fights the reader; here
+ * scrolling is what the reader asked for.
+ */
+export function handleHeadingClick(event: React.MouseEvent<HTMLAnchorElement>): void {
+	// Anything but a plain primary click is the reader asking for a new tab, a new window or
+	// a download, and a handler that has already been dealt with is not ours to second-guess
+	if (
+		event.defaultPrevented ||
+		event.button !== 0 ||
+		event.metaKey ||
+		event.ctrlKey ||
+		event.shiftKey ||
+		event.altKey ||
+		typeof window === 'undefined'
+	) {
+		return;
+	}
+	// A click that does change the address fires `hashchange` on its own. `href` on the
+	// element is the browser’s own resolved and normalised URL, so this comparison needs to
+	// know nothing about how the link was built.
+	if (event.currentTarget.href !== window.location.href) {
+		return;
+	}
+	window.dispatchEvent(new Event('hashchange'));
+}
+
 export interface PageNavProps {
 	/** Label of the list; also the accessible name of its `<nav>`. */
 	title?: string;
@@ -232,7 +272,13 @@ const PageNav: React.FunctionComponent<PageNavProps> = ({ title = PAGE_NAV_TITLE
 	}
 
 	return (
-		<PageNavRenderer headings={headings} activeId={activeId} title={title} collapsible={!isLarge} />
+		<PageNavRenderer
+			headings={headings}
+			activeId={activeId}
+			title={title}
+			collapsible={!isLarge}
+			onHeadingClick={handleHeadingClick}
+		/>
 	);
 };
 

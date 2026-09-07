@@ -177,6 +177,13 @@ export interface PageNavRendererProps extends JssInjectedProps {
 	title: string;
 	/** Whether to render the collapsible block instead of the rail (below `theme.mq.large`). */
 	collapsible?: boolean;
+	/**
+	 * Click handler for each entry’s link. PageNav supplies one that makes a repeat click on
+	 * the entry the reader is already on scroll back to its heading — a click that does not
+	 * change the address fires no `hashchange`, and nothing else scrolls these links. A
+	 * renderer that leaves it out simply loses that.
+	 */
+	onHeadingClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 export const PageNavRenderer: React.FunctionComponent<PageNavRendererProps> = ({
@@ -185,6 +192,7 @@ export const PageNavRenderer: React.FunctionComponent<PageNavRendererProps> = ({
 	activeId,
 	title,
 	collapsible,
+	onHeadingClick,
 }) => {
 	const list = (
 		<ul className={classes.list}>
@@ -204,6 +212,7 @@ export const PageNavRenderer: React.FunctionComponent<PageNavRendererProps> = ({
 							// “location”, not “true”: the entry points at a place in the current page,
 							// which is what this value means (the sidebar's `true` marks the current page)
 							aria-current={selected ? 'location' : undefined}
+							onClick={onHeadingClick}
 							data-testid="rsg-pagenav-link"
 						>
 							{heading.text}
@@ -254,6 +263,7 @@ PageNavRenderer.propTypes = {
 	activeId: PropTypes.string,
 	title: PropTypes.string.isRequired,
 	collapsible: PropTypes.bool,
+	onHeadingClick: PropTypes.func,
 };
 
 export default Styled<PageNavRendererProps>(styles)(PageNavRenderer);

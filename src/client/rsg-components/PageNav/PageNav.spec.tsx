@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import PageNav, { collectHeadings, getHeadingHref, MIN_HEADINGS } from './PageNav.js';
+import PageNav, {
+	collectHeadings,
+	getHeadingHref,
+	handleHeadingClick,
+	MIN_HEADINGS,
+} from './PageNav.js';
 import { CONTENT_ID } from '../../consts.js';
 
 /**
@@ -244,10 +249,59 @@ describe('PageNav', () => {
 				activeId: 'usage',
 				title: 'On this page',
 				collapsible: true,
+				onHeadingClick: expect.any(Function),
 			});
 		} finally {
 			vi.doUnmock('rsg-components/PageNav/PageNavRenderer');
 			vi.resetModules();
 		}
+	});
+});
+
+describe('handleHeadingClick', () => {
+	/** A click on a link whose resolved `href` is `href`, with `window.location.href` at `at`. */
+	const click = (href: string, at: string, overrides: Partial<React.MouseEvent> = {}) => {
+		const fired: string[] = [];
+		const listener = () => fired.push('hashchange');
+		window.addEventListener('hashchange', listener);
+		window.history.replaceState(null, '', at);
+		const link = document.createElement('a');
+		link.href = href;
+		try {
+			handleHeadingClick({
+				button: 0,
+				defaultPrevented: false,
+				metaKey: false,
+				ctrlKey: false,
+				shiftKey: false,
+				altKey: false,
+				...overrides,
+				currentTarget: link,
+			} as unknown as React.MouseEvent<HTMLAnchorElement>);
+		} finally {
+			window.removeEventListener('hashchange', listener);
+		}
+		return fired.length;
+	};
+
+	it('should re-dispatch hashchange when the click cannot change the address', () => {
+		// The repeat click: the entry the reader is already on. Nothing else scrolls these
+		// links, so without the event the click does nothing at all.
+		expect(click('/#/Files/One?id=usage', '/#/Files/One?id=usage')).toBe(1);
+	});
+
+	it('should leave a click that does change the address to the browser', () => {
+		// The browser fires `hashchange` itself there, and a second one would scroll twice
+		expect(click('/#/Files/One?id=props', '/#/Files/One?id=usage')).toBe(0);
+	});
+
+	it('should keep out of the way of open-in-a-new-tab and of a handled click', () => {
+		const same = '/#/Files/One?id=usage';
+		expect(click(same, same, { metaKey: true })).toBe(0);
+		expect(click(same, same, { ctrlKey: true })).toBe(0);
+		expect(click(same, same, { shiftKey: true })).toBe(0);
+		expect(click(same, same, { altKey: true })).toBe(0);
+		expect(click(same, same, { button: 1 })).toBe(0);
+		expect(click(same, same, { defaultPrevented: true })).toBe(0);
 	});
 });

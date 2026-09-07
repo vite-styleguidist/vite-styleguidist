@@ -3,6 +3,7 @@ import { loadConfig } from './config.js';
 import checkConfig from './doctor/checkConfig.js';
 import checkEnvironment, { readOwnPackageJson } from './doctor/checkEnvironment.js';
 import checkProject from './doctor/checkProject.js';
+import checkPerformance, { componentCountOf } from './doctor/checkPerformance.js';
 import formatReport, { buildReport } from './doctor/report.js';
 import * as consts from './consts.js';
 import type { DoctorFinding, DoctorReport } from './doctor/types.js';
@@ -47,7 +48,14 @@ export default function doctor(options: DoctorOptions = {}): DoctorReport {
 
 	findings.push(...checkConfig(loaded.problems));
 	findings.push(...checkEnvironment(configDir));
-	findings.push(...checkProject(loaded.config, configDir, { maxFiles: options.maxFiles }));
+
+	const projectFindings = checkProject(loaded.config, configDir, { maxFiles: options.maxFiles });
+	findings.push(...projectFindings);
+	// The `parallel: 'auto'` line needs the number of components, which checkProject has just
+	// resolved — reading it back is cheaper than running every component glob a second time
+	findings.push(
+		...checkPerformance(loaded.config, configDir, componentCountOf(projectFindings))
+	);
 
 	return buildReport(findings, {
 		configFile,

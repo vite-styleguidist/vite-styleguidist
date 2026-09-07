@@ -15,6 +15,7 @@ import {
 	examplesId,
 	mdxId,
 } from '../ids.js';
+import { CACHE_DIR_NAME, CACHE_FILE_NAME } from '../persistentCache.js';
 import type * as Rsg from '../../typings/index.js';
 
 const testDir = path.resolve(import.meta.dirname, '../../../test');
@@ -614,10 +615,12 @@ describe('closeBundle', () => {
 		return { dir, assets, styleguideDir };
 	};
 
-	it('should copy assetsDir folders into the style guide folder', () => {
+	// `closeBundle` is async since it also tears down the parse pool (see parsePool.ts), so
+	// the copy it does afterwards has to be awaited before the folder is inspected
+	it('should copy assetsDir folders into the style guide folder', async () => {
 		const { dir, assets, styleguideDir } = setup();
 		try {
-			(
+			await (
 				hook(createPlugin({ assetsDir: assets, styleguideDir }, 'production').closeBundle) as any
 			).call({});
 			expect(fs.readFileSync(path.join(styleguideDir, 'images', 'logo.png'), 'utf8')).toBe('PNG');
@@ -627,13 +630,13 @@ describe('closeBundle', () => {
 		}
 	});
 
-	it('should never overwrite the generated style guide files', () => {
+	it('should never overwrite the generated style guide files', async () => {
 		const { dir, assets, styleguideDir } = setup();
 		fs.writeFileSync(path.join(assets, 'index.html'), 'THE USER APP');
 		fs.mkdirSync(styleguideDir, { recursive: true });
 		fs.writeFileSync(path.join(styleguideDir, 'index.html'), 'THE STYLE GUIDE');
 		try {
-			(
+			await (
 				hook(createPlugin({ assetsDir: assets, styleguideDir }, 'production').closeBundle) as any
 			).call({});
 			expect(fs.readFileSync(path.join(styleguideDir, 'index.html'), 'utf8')).toBe(
@@ -645,15 +648,141 @@ describe('closeBundle', () => {
 		}
 	});
 
-	it('should copy nothing when the dev server shuts down', () => {
+	it('should copy nothing when the dev server shuts down', async () => {
 		const { dir, assets, styleguideDir } = setup();
 		try {
-			(
+			await (
 				hook(createPlugin({ assetsDir: assets, styleguideDir }, 'development').closeBundle) as any
 			).call({});
 			expect(fs.existsSync(styleguideDir)).toBe(false);
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+/**
+ * The `cache` option wired into `load` (see ./persistentCache.ts). The plugin only opens the
+ * cache in `configResolved`, because Vite is the one that knows where its `cacheDir` is.
+ */
+describe('the parse cache', () => {
+	const cacheFile = (dir: string) =>
+		path.join(dir, CACHE_DIR_NAME, CACHE_FILE_NAME);
+
+	/** A plugin with its cache pointed at a fresh directory, ready to load modules. */
+	const withCache = (dir: string, overrides: Partial<Rsg.SanitizedStyleguidistConfig> = {}) => {
+		const plugin = createPlugin(overrides);
+		(hook(plugin.configResolved) as any).call({}, { cacheDir: dir });
+		return plugin;
+	};
+
+	const loadProps = (plugin: Plugin, file: string) =>
+		(hook(plugin.load) as any).call(context(), NULL + propsId(file));
+
+	let dir: string;
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-plugin-cache-'));
+	});
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('should write what it parsed and serve it to the next run', async () => {
+		const file = component('Button/Button.js');
+		const first = withCache(dir);
+		const parsed = await loadProps(first, file);
+		await (hook(first.buildEnd) as any).call({});
+		expect(fs.existsSync(cacheFile(dir))).toBe(true);
+
+		// Prove the second run reads the file instead of parsing again: the stored module
+		// source is replaced with a sentinel no parser could produce
+		const stored = JSON.parse(fs.readFileSync(cacheFile(dir), 'utf8'));
+		const [key] = Object.keys(stored.docs);
+		stored.docs[key].code = 'export default "FROM THE CACHE";';
+		fs.writeFileSync(cacheFile(dir), JSON.stringify(stored));
+
+		const second = withCache(dir);
+		expect(await loadProps(second, file)).toBe('export default "FROM THE CACHE";');
+		expect(parsed).toContain('displayName');
+	});
+
+	it('should re-parse a component whose content changed', async () => {
+		const source = fs.readFileSync(component('Button/Button.js'), 'utf8');
+		const file = path.join(dir, 'Changing.js');
+		fs.writeFileSync(file, source);
+
+		const first = withCache(dir);
+		await loadProps(first, file);
+		await (hook(first.buildEnd) as any).call({});
+
+		fs.writeFileSync(file, source.replace('The only true button.', 'EDITED DESCRIPTION'));
+		const second = withCache(dir);
+		expect(await loadProps(second, file)).toContain('EDITED DESCRIPTION');
+	});
+
+	it('should write nothing when the option is off', async () => {
+		const plugin = createPlugin({ cache: false });
+		(hook(plugin.configResolved) as any).call({}, { cacheDir: dir });
+		await loadProps(plugin, component('Button/Button.js'));
+		await (hook(plugin.buildEnd) as any).call({});
+		expect(fs.existsSync(cacheFile(dir))).toBe(false);
+	});
+
+	it('should cache examples modules too', async () => {
+		const file = component('Button/Readme.md');
+		const id = NULL + examplesId({ file, displayName: 'Button' });
+		const first = withCache(dir);
+		await (hook(first.load) as any).call(context(), id);
+		await (hook(first.buildEnd) as any).call({});
+
+		const stored = JSON.parse(fs.readFileSync(cacheFile(dir), 'utf8'));
+		expect(Object.keys(stored.examples)).toHaveLength(1);
+		const [key] = Object.keys(stored.examples);
+		stored.examples[key].code = 'export default "EXAMPLES FROM THE CACHE";';
+		fs.writeFileSync(cacheFile(dir), JSON.stringify(stored));
+
+		const second = withCache(dir);
+		expect(await (hook(second.load) as any).call(context(), id)).toBe(
+			'export default "EXAMPLES FROM THE CACHE";'
+		);
+	});
+});
+
+describe('buildStart', () => {
+	it('should load a module-path propsParser before anything is parsed', () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-plugin-parser-'));
+		try {
+			const parser = path.join(dir, 'parser.cjs');
+			fs.writeFileSync(parser, 'throw new Error("the parser exploded");');
+			const plugin = createPlugin({ propsParser: parser as never });
+			// Named after the option, not after whatever the module threw deep in a load hook
+			expect(() => (hook(plugin.buildStart) as any).call({})).toThrow(/propsParser/);
+			expect(() => (hook(plugin.buildStart) as any).call({})).toThrow(/the parser exploded/);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should do nothing for the default parser', () => {
+		expect(() => (hook(createPlugin().buildStart) as any).call({})).not.toThrow();
+	});
+});
+
+/**
+ * The worker pool end to end through the plugin: the modules it produces must be the ones a
+ * main-thread run produces, and `closeBundle` has to terminate the workers (an undead worker
+ * keeps the whole process alive, so `styleguidist build` would never exit).
+ */
+describe('parallel parsing', () => {
+	it('should produce the same modules as the main thread, and shut its workers down', async () => {
+		const file = component('Button/Button.js');
+		const parallel = createPlugin({ parallel: 2 });
+		const single = createPlugin({ parallel: false });
+		// The styleguide module is what tells the plugin how many components there are
+		await (hook(parallel.load) as any).call(context(), RESOLVED_STYLEGUIDE_ID);
+		const fromWorkers = await (hook(parallel.load) as any).call(context(), NULL + propsId(file));
+		const fromMainThread = await (hook(single.load) as any).call(context(), NULL + propsId(file));
+		expect(fromWorkers).toBe(fromMainThread);
+		await expect((hook(parallel.closeBundle) as any).call({})).resolves.toBeUndefined();
 	});
 });

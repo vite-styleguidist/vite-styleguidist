@@ -16,8 +16,18 @@ import {
 	renderMachineReadableFile,
 	renderMachineReadableFiles,
 } from './machineReadable.js';
-import { createParseCache, setCachedDocs, setCachedExamples } from './parseCache.js';
+import {
+	createParseCache,
+	exampleDocletFile,
+	setCachedDocs,
+	setCachedExamples,
+} from './parseCache.js';
 import type { ParseCache } from './parseCache.js';
+import { cacheSummary, createPersistentCache } from './persistentCache.js';
+import type { PersistentCache } from './persistentCache.js';
+import { createParsePool, poolEligibility, resolveParallel } from './parsePool.js';
+import type { ParsePool } from './parsePool.js';
+import { getPropsParser } from '../loaders/utils/propsParser.js';
 import {
 	ENTRY_ID,
 	STYLEGUIDE_ID,
@@ -156,6 +166,74 @@ export default function styleguidistPlugin({
 	// machine-readable docs never re-parse a file the virtual modules already parsed.
 	const parseCache = createParseCache();
 
+	// What previous runs parsed (the `cache` option, see ./persistentCache.ts). Opened in
+	// configResolved, because only Vite knows where its cacheDir ended up.
+	let persistent: PersistentCache | undefined;
+
+	// The worker pool (the `parallel` option, see ./parsePool.ts) and what it is allowed to
+	// take. Eligibility is decided once: the config cannot change under a running build, and
+	// a dev server that reloads its config restarts with a new plugin instance.
+	const eligible = poolEligibility(config);
+	let pool: ParsePool | undefined;
+	let poolDecided = false;
+	// True once the styleguide module has been generated, i.e. once `componentFiles` really
+	// is the list of components. Every props and examples module is imported *by* that
+	// module, so this is always true by the time the pool is first wanted.
+	let styleguideLoaded = false;
+
+	/**
+	 * Start the pool on the first parse the cache could not answer, or answer that there
+	 * will not be one. On a warm build every module is a cache hit and the workers would be
+	 * pure overhead, which is why this is not done at buildStart.
+	 */
+	const ensurePool = (): ParsePool | undefined => {
+		if (pool || poolDecided) {
+			return pool;
+		}
+		if (!eligible.props && !eligible.examples) {
+			poolDecided = true;
+			logger.debug(
+				`Parsing on the main thread: ${eligible.reason.join(', ')} ${
+					eligible.reason.length === 1 ? 'is' : 'are'
+				} set, and a worker cannot be given a function`
+			);
+			return undefined;
+		}
+		if (!styleguideLoaded) {
+			// Nothing to size `parallel: 'auto'` against yet; ask again on the next parse
+			return undefined;
+		}
+		poolDecided = true;
+		const decision = resolveParallel(config.parallel, componentFiles.length);
+		if (decision.workers === 0) {
+			logger.debug(`Parsing on the main thread (${decision.reason})`);
+			return undefined;
+		}
+		pool = createParsePool(config, decision.workers);
+		logger.debug(
+			`Parse pool: ${decision.workers} workers (${decision.reason}), props=${eligible.props} examples=${eligible.examples}` +
+				(eligible.reason.length > 0 ? `, main thread for: ${eligible.reason.join(', ')}` : '')
+		);
+		return pool;
+	};
+
+	/** Terminate the workers. Idempotent, and the reason the process can exit. */
+	const closePool = async () => {
+		poolDecided = true;
+		const closing = pool;
+		pool = undefined;
+		await closing?.close();
+	};
+
+	/** Write the cache and, in verbose mode, say what it was worth. */
+	const finishCache = () => {
+		if (!persistent) {
+			return;
+		}
+		persistent.flush();
+		logger.debug(cacheSummary(persistent));
+	};
+
 	const watchContextDirs = () => {
 		if (server) {
 			// Directories outside of Vite’s root aren’t watched by default
@@ -165,6 +243,27 @@ export default function styleguidistPlugin({
 
 	return {
 		name: 'rsg:styleguidist',
+
+		configResolved(resolvedConfig) {
+			if (config.cache && !persistent) {
+				// Vite's own cacheDir, so `viteConfig.cacheDir`, `--force` and a wiped
+				// node_modules all mean here what they mean everywhere else
+				persistent = createPersistentCache(config, resolvedConfig.cacheDir);
+			}
+		},
+
+		buildStart() {
+			// A `propsParser` module path is loaded here, not at the first component, so that
+			// a path nobody can resolve — or a module that throws while it builds its
+			// TypeScript program — fails before anything is parsed, with the option named.
+			getPropsParser(config);
+		},
+
+		async buildEnd() {
+			// Every module of this run has been loaded; what it parsed is worth keeping even
+			// if generateBundle goes on to fail
+			persistent?.flush();
+		},
 
 		async resolveId(id, importer) {
 			if (id === ENTRY_ID) {
@@ -213,6 +312,8 @@ export default function styleguidistPlugin({
 				contextDirs = styleguide.contextDirs;
 				componentFiles = styleguide.componentFiles;
 				sections = styleguide.sections;
+				// `parallel: 'auto'` is sized on this list, see ensurePool()
+				styleguideLoaded = true;
 				watchContextDirs();
 				return styleguide.code;
 			}
@@ -225,8 +326,43 @@ export default function styleguidistPlugin({
 				const file = parsePropsId(id);
 				// Re-run react-docgen when the component changes
 				this.addWatchFile(file);
-				const { code, docs } = generatePropsModule(config, file, fs.readFileSync(file, 'utf8'));
+				const source = fs.readFileSync(file, 'utf8');
+
+				// A previous run may have parsed exactly this source under exactly this config
+				// (see ./persistentCache.ts). The examples file is part of the key because
+				// getExamples() branches on it, and its existence with it: a Readme.md that has
+				// appeared since changes the module without changing the component.
+				const examplesFile = persistent ? config.getExampleFilename(file) : false;
+				const docsKey = {
+					file,
+					source,
+					examplesFile,
+					examplesFileExists: !!examplesFile && fs.existsSync(examplesFile),
+				};
+				const cached = persistent?.getDocs(docsKey);
+				if (cached) {
+					setCachedDocs(parseCache, config, file, cached.docs);
+					return cached.code;
+				}
+
+				// react-docgen off the main thread. Awaiting here is what lets rolldown start
+				// the next load instead of blocking behind this parse.
+				const worker = eligible.props ? ensurePool() : undefined;
+				const { code, docs } =
+					worker && worker.alive
+						? await worker.props(file, source)
+						: generatePropsModule(config, file, source);
 				setCachedDocs(parseCache, config, file, docs);
+				if (persistent) {
+					const docletFile = exampleDocletFile(file, docs);
+					persistent.setDocs(docsKey, {
+						docs,
+						code,
+						exampleFile: docletFile,
+						exampleFileExists: docletFile !== null && fs.existsSync(docletFile),
+					});
+					persistent.scheduleFlush();
+				}
 				return code;
 			}
 
@@ -234,12 +370,23 @@ export default function styleguidistPlugin({
 				const options = parseExamplesId(id);
 				// Re-parse the examples when the Markdown file changes
 				this.addWatchFile(options.file);
-				const { code, chunks } = generateExamplesModule(
-					config,
-					options,
-					fs.readFileSync(options.file, 'utf8')
-				);
-				setCachedExamples(parseCache, unresolveId(id), options.file, chunks);
+				const source = fs.readFileSync(options.file, 'utf8');
+				const moduleId = unresolveId(id);
+
+				const cached = persistent?.getExamples(moduleId, source);
+				if (cached) {
+					setCachedExamples(parseCache, moduleId, options.file, cached.chunks);
+					return cached.code;
+				}
+
+				const worker = eligible.examples ? ensurePool() : undefined;
+				const { code, chunks } =
+					worker && worker.alive
+						? await worker.examples(moduleId, options, source)
+						: generateExamplesModule(config, options, source);
+				setCachedExamples(parseCache, moduleId, options.file, chunks);
+				persistent?.setExamples(moduleId, source, { code, chunks });
+				persistent?.scheduleFlush();
 				return code;
 			}
 
@@ -248,13 +395,30 @@ export default function styleguidistPlugin({
 				// Same as above: the file is not in the module graph, so watch it explicitly
 				// and the importing chain (props/styleguide → client) propagates the update
 				this.addWatchFile(options.file);
-				const { code, chunks } = await generateMdxModule(
-					config,
-					options,
-					fs.readFileSync(options.file, 'utf8'),
-					{ isProduction: env === 'production' }
-				);
-				setCachedExamples(parseCache, unresolveId(id), options.file, chunks);
+				const source = fs.readFileSync(options.file, 'utf8');
+				const moduleId = unresolveId(id);
+
+				// MDX is cached like Markdown, but never parsed in a worker: compiling a page is
+				// asynchronous and pulls in the project's own @mdx-js/mdx and remark plugins,
+				// which a reconstructed worker config cannot promise to reproduce.
+				//
+				// It is also the one generator whose output depends on the environment (MDX
+				// compiles to the development or the production JSX runtime), and the cache is
+				// deliberately shared between `server` and `build` — so the environment is part
+				// of the key here, and only here.
+				const cacheId = `${moduleId}&env=${env}`;
+				const cached = persistent?.getExamples(cacheId, source);
+				if (cached) {
+					setCachedExamples(parseCache, moduleId, options.file, cached.chunks);
+					return cached.code;
+				}
+
+				const { code, chunks } = await generateMdxModule(config, options, source, {
+					isProduction: env === 'production',
+				});
+				setCachedExamples(parseCache, moduleId, options.file, chunks);
+				persistent?.setExamples(cacheId, source, { code, chunks });
+				persistent?.scheduleFlush();
 				return code;
 			}
 
@@ -264,6 +428,15 @@ export default function styleguidistPlugin({
 		configureServer(devServer) {
 			server = devServer;
 			watchContextDirs();
+
+			// A dev server outlives every request, so its pool is torn down with the server.
+			// Vite also calls closeBundle on a clean `server.close()`, but a server whose HTTP
+			// socket is closed from the outside does not always get there, and a live worker
+			// keeps the process alive.
+			devServer.httpServer?.on('close', () => {
+				void closePool();
+				finishCache();
+			});
 
 			// User defined customizations (custom endpoints, etc.)
 			if (config.configureServer) {
@@ -412,7 +585,13 @@ export default function styleguidistPlugin({
 			}
 		},
 
-		closeBundle() {
+		async closeBundle() {
+			// Nothing after this point parses anything, and a live worker would keep the
+			// process alive. Vite calls this hook when a dev server closes too, which is what
+			// makes `styleguidist server` exit.
+			await closePool();
+			finishCache();
+
 			// `closeBundle` also fires when the dev server shuts down; only a
 			// production build may write into the style guide folder
 			if (env !== 'production') {

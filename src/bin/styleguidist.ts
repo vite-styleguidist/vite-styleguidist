@@ -92,6 +92,10 @@ function updateConfig(prevConfig: Rsg.StyleguidistConfig): Rsg.StyleguidistConfi
 	// Set serverPort from from command line or config option
 	const serverPort = parseInt(argv.port) || prevConfig.serverPort;
 
+	// `--no-cache` ignores (and does not write) the persistent parse cache for one run. mri
+	// turns `--no-<name>` into `<name>: false`, so an absent flag leaves the option alone.
+	const cache = argv.cache === false ? false : prevConfig.cache;
+
 	// Setup logger *before* config validation (because validations may use logger to print warnings)
 	setupLogger(prevConfig.logger as Record<string, (message: string) => void>, verbose);
 
@@ -99,6 +103,7 @@ function updateConfig(prevConfig: Rsg.StyleguidistConfig): Rsg.StyleguidistConfi
 		...prevConfig,
 		verbose,
 		serverPort,
+		cache,
 	};
 }
 
@@ -210,6 +215,9 @@ function commandHelp() {
 			'    ' + kleur.yellow('--config') + '        Config file path',
 			'    ' + kleur.yellow('--port') + '          Port to run development server on',
 			'    ' + kleur.yellow('--open') + '          Open Styleguidist in the default browser',
+			'    ' +
+				kleur.yellow('--no-cache') +
+				'      Ignore the parse cache for this run (build, server)',
 			'    ' + kleur.yellow('--verbose') + '       Print debug information',
 			'    ' + kleur.yellow('--json') + '          Print the doctor report as JSON',
 		].join('\n')

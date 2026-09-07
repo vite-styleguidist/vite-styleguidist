@@ -49,8 +49,26 @@ export interface ExamplesModuleOptions {
  */
 export type ScrollSync = false | 'selection' | 'hash';
 
+/**
+ * The `propsParser` option's function form: given a component file and its source, return a
+ * react-docgen documentation object (or an array of them, of which the first is used).
+ */
+export type PropsParser = (
+	filePath: string,
+	code: string,
+	resolver: Resolver,
+	handlers: Handler[]
+) => Documentation | Documentation[];
+
 interface BaseStyleguidistConfig {
 	assetsDir: string | string[];
+	/**
+	 * Reuse the component and example parses of previous runs, from a cache inside Vite’s
+	 * `cacheDir` (`node_modules/.vite/vite-styleguidist/` by default). `true` by default;
+	 * `styleguidist build --no-cache` and `styleguidist server --no-cache` turn it off for
+	 * one run. See docs/decisions/0018-parse-cache-and-parallel-parsing.md.
+	 */
+	cache: boolean;
 	tocMode: ExpandMode;
 	/** Initial colour scheme of the UI; `light`/`dark` force it and hide the toggle. */
 	colorScheme: ColorScheme;
@@ -117,18 +135,34 @@ interface BaseStyleguidistConfig {
 	 */
 	pageNav: boolean;
 	pagePerSection: boolean;
+	/**
+	 * Parse components and examples in worker threads.
+	 *
+	 * `'auto'` (the default) turns the pool on from 150 resolved components and runs two to
+	 * four workers; `true` always turns it on, a number sets the worker count, `false` keeps
+	 * every parse on the main thread. Parses that read a function from the config
+	 * (`propsParser`, `resolver`, `handlers`, `sortProps`, `updateDocs`, `updateExample`,
+	 * `getExampleFilename`) stay on the main thread whatever this says, because a worker
+	 * cannot be given a function. See
+	 * docs/decisions/0018-parse-cache-and-parallel-parsing.md.
+	 */
+	parallel: boolean | number | 'auto';
 	previewDelay: number;
 	printBuildInstructions(config: SanitizedStyleguidistConfig): void;
 	printServerInstructions(
 		config: SanitizedStyleguidistConfig,
 		options: { isHttps: boolean; urls: { local: string[]; network: string[] } }
 	): void;
-	propsParser(
-		filePath: string,
-		code: string,
-		resolver: Resolver,
-		handlers: Handler[]
-	): Documentation | Documentation[];
+	/**
+	 * Override how props are parsed out of a component file.
+	 *
+	 * Either the function itself, or — recommended — the path of a module whose default
+	 * export is that function, resolved from the config file’s folder (a package name works
+	 * too). Only the module form can be identified across runs, so only it lets the parse
+	 * cache (`cache`) skip a component that has not changed; a function form turns docs
+	 * caching off. Both forms always run on the main thread, never in a `parallel` worker.
+	 */
+	propsParser: PropsParser | string;
 	require: string[];
 	resolver: Resolver;
 	ribbon?: {

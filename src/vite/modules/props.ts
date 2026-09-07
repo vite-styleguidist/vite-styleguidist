@@ -4,6 +4,7 @@ import type { Documentation, Handler, Resolver } from 'react-docgen';
 import createLogger from 'glogg';
 import getExamples from '../../loaders/utils/getExamples.js';
 import getProps from '../../loaders/utils/getProps.js';
+import { getPropsParser } from '../../loaders/utils/propsParser.js';
 import defaultSortProps from '../../loaders/utils/sortProps.js';
 import ModuleSerializer from '../serialize.js';
 import * as consts from '../../scripts/consts.js';
@@ -38,7 +39,9 @@ export default function generatePropsModule(
 	file: string,
 	source: string
 ): PropsModule {
-	const propsParser = config.propsParser || defaultParser;
+	// The `propsParser` option in either form — a function, or a module path this loads and
+	// memoizes (see getPropsParser) — falling back to react-docgen
+	const propsParser = getPropsParser(config) || defaultParser;
 
 	let docs: Documentation = {};
 	try {

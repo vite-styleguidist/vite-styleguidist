@@ -12,6 +12,7 @@ import { DEFAULT_COMPILER_CONFIG } from '../../client/utils/compileCode.js';
 import { COLOR_SCHEMES } from '../../client/styles/colorSchemes.js';
 import { SCROLL_SYNC_MODES } from '../../client/consts.js';
 import FindAnnotatedExportsResolver from '../../loaders/utils/FindAnnotatedExportsResolver.js';
+import { resolvePropsParserPath } from '../../loaders/utils/propsParser.js';
 import getUserPackageJson from '../utils/getUserPackageJson.js';
 import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive.js';
 import dirname from '../utils/dirname.js';
@@ -87,6 +88,13 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	assetsDir: {
 		type: ['array', 'existing directory path'],
 		example: 'assets',
+	},
+	// Reuse the parses of previous runs (see src/vite/persistentCache.ts). On by default:
+	// a cold run is unchanged and a warm one is more than twice as fast; the cache lives in
+	// Vite's own cacheDir, so everything that clears Vite's caches clears this one.
+	cache: {
+		type: 'boolean',
+		default: true,
 	},
 	tocMode: {
 		type: 'string',
@@ -300,6 +308,42 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 		type: 'boolean',
 		default: false,
 	},
+	// Parse components and examples in worker threads (see src/vite/parsePool.ts).
+	// `'auto'` decides from the number of components the guide really resolved.
+	parallel: {
+		type: ['boolean', 'number', 'string'],
+		default: 'auto',
+		example: 4,
+		process: (value?: unknown): unknown => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value === undefined || typeof value === 'boolean' || value === 'auto') {
+				return value;
+			}
+			if (typeof value === 'number') {
+				// `0` is rejected rather than read as “off”: a pool of no workers is not a thing,
+				// and guessing which of `false` and `1` was meant would be a coin toss
+				if (!Number.isInteger(value) || value < 1) {
+					throw new StyleguidistError(
+						`${kleur.bold('parallel')} config option must be a whole number of workers, at least 1, got ${JSON.stringify(
+							value
+						)}. Use ${kleur.bold('false')} to parse on the main thread.`,
+						'parallel'
+					);
+				}
+				return value;
+			}
+			if (typeof value === 'string') {
+				throw new StyleguidistError(
+					`${kleur.bold('parallel')} config option must be ${kleur.bold(
+						'"auto"'
+					)}, a boolean or a number of workers, got ${JSON.stringify(value)}.`,
+					'parallel'
+				);
+			}
+			// Anything else is left alone for the schema’s own type error
+			return value;
+		},
+	},
 	previewDelay: {
 		type: 'number',
 		default: 500,
@@ -310,8 +354,19 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	printServerInstructions: {
 		type: 'function',
 	},
+	// Either the parser function itself, or the path of a module whose default export is
+	// that function. The module form is the recommended one: it has an identity, so the
+	// parse cache can trust it across runs, which a closure cannot (see
+	// src/loaders/utils/propsParser.ts and src/vite/persistentCache.ts).
 	propsParser: {
-		type: 'function',
+		type: ['function', 'string'],
+		example: './styleguide.parser.js',
+		process: (value: unknown, config: Rsg.StyleguidistConfig, rootDir: string): unknown => {
+			// Resolved here rather than at the first parse so that a path nobody can resolve is
+			// a config error, reported with every other config error, before anything is built.
+			// Stored absolute: it is what the cache fingerprint and every message name.
+			return typeof value === 'string' ? resolvePropsParserPath(value, rootDir) : value;
+		},
 	},
 	require: {
 		type: 'array',

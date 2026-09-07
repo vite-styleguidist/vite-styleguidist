@@ -6,7 +6,7 @@ import createLogger from 'glogg';
 import type { Connect, EnvironmentModuleNode, Plugin, ViteDevServer } from 'vite';
 import renderHtml from './html.js';
 import generateStyleguideModule from './modules/styleguide.js';
-import generatePropsModule from './modules/props.js';
+import generatePropsModule, { clearImportedFilesCache } from './modules/props.js';
 import generateExamplesModule from './modules/examples.js';
 import generateMdxModule from './modules/mdx.js';
 import {
@@ -164,6 +164,12 @@ export default function styleguidistPlugin({
 	// examples file belongs to here, instead of walking the whole module graph (which also
 	// holds every dependency of every example).
 	let componentFiles: string[] = [];
+	// Which components a file *other than a component* takes part in the documentation of:
+	// the module a component's `propTypes` were imported from, the file its props interface
+	// is declared in (see PropsModule.dependencies). Filled by every props parse and by every
+	// parse the cache answered — the entry carries the same list — and read by hotUpdate,
+	// which has no other way to know that editing `types.ts` changes `Card`'s props table.
+	const propsDependents = new Map<string, Set<string>>();
 	let server: ViteDevServer | undefined;
 	// The section tree the styleguide module was generated from, reused by the
 	// machine-readable docs in builds (see generateBundle).
@@ -251,6 +257,27 @@ export default function styleguidistPlugin({
 		}
 		persistent.flush();
 		logger.debug(cacheSummary(persistent));
+	};
+
+	/**
+	 * Remember what a component's documentation was parsed from, and watch those files.
+	 *
+	 * `addWatchFile` is what makes the dev server *notice* the change; `propsDependents` is
+	 * what turns “this file changed” back into “this component has to be parsed again”,
+	 * because the file is not a module of the graph and its path is not a props id.
+	 */
+	const rememberDependencies = (
+		componentPath: string,
+		dependencies: string[],
+		watch: (file: string) => void
+	) => {
+		for (const dependency of dependencies) {
+			watch(dependency);
+			const key = toPosix(dependency);
+			const dependents = propsDependents.get(key) || new Set<string>();
+			dependents.add(componentPath);
+			propsDependents.set(key, dependents);
+		}
 	};
 
 	const watchContextDirs = () => {
@@ -361,6 +388,11 @@ export default function styleguidistPlugin({
 				const cached = persistent?.getDocs(docsKey);
 				if (cached) {
 					setCachedDocs(parseCache, config, file, cached.docs);
+					// An answer from the cache depends on exactly the same files the parse that
+					// produced it did, and the dev server has to watch them just the same
+					rememberDependencies(file, Object.keys(cached.dependencies || {}), (dependency) =>
+						this.addWatchFile(dependency)
+					);
 					return cached.code;
 				}
 
@@ -368,16 +400,18 @@ export default function styleguidistPlugin({
 				// the next load instead of blocking behind this parse.
 				parseMisses++;
 				const worker = eligible.props ? ensurePool() : undefined;
-				const { code, docs } =
+				const { code, docs, dependencies } =
 					worker && worker.alive
 						? await worker.props(file, source)
 						: generatePropsModule(config, file, source);
 				setCachedDocs(parseCache, config, file, docs);
+				rememberDependencies(file, dependencies, (dependency) => this.addWatchFile(dependency));
 				if (persistent) {
 					const docletFile = exampleDocletFile(file, docs);
 					persistent.setDocs(docsKey, {
 						docs,
 						code,
+						dependencies,
 						exampleFile: docletFile,
 						exampleFileExists: docletFile !== null && fs.existsSync(docletFile),
 					});
@@ -518,6 +552,12 @@ export default function styleguidistPlugin({
 			const graph = this.environment.moduleGraph;
 			const extra: EnvironmentModuleNode[] = [];
 
+			// react-docgen's importer keeps every file it has followed parsed in memory, and
+			// so does the import scan behind a custom parser's dependencies. Either may hold
+			// the file that has just changed, and a re-parse against a remembered copy of it
+			// would produce exactly the stale documentation this hook exists to prevent.
+			clearImportedFilesCache();
+
 			const invalidate = (id: string) => {
 				const mod = graph.getModuleById(id);
 				if (mod && !extra.includes(mod)) {
@@ -533,6 +573,14 @@ export default function styleguidistPlugin({
 			if (type !== 'delete') {
 				invalidate(NULL + propsId(file));
 			}
+
+			// A file a component's documentation was *parsed from* — the module its propTypes
+			// were imported from, the one its props interface lives in — changed. It is not a
+			// component, so nothing above matches it; the components that read it have to be
+			// parsed again, deleted file included (they document what is left).
+			propsDependents.get(toPosix(file))?.forEach((componentPath) => {
+				invalidate(NULL + propsId(componentPath));
+			});
 
 			if (type === 'create' || type === 'delete') {
 				// A file was added or removed where components live: re-run the globs

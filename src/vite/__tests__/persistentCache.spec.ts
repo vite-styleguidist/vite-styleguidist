@@ -51,6 +51,7 @@ const docsValue = {
 	code: 'export default { displayName: "Button" };',
 	exampleFile: null,
 	exampleFileExists: false,
+	dependencies: [] as string[],
 };
 
 describe('createPersistentCache', () => {

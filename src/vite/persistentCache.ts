@@ -11,7 +11,11 @@
  * run. Four rules make that safe:
  *
  *  1. entries are keyed by the **content** of the file (sha256), not its mtime, so a branch
- *     switch, a fresh clone or a `git checkout` of an unchanged file still hits;
+ *     switch, a fresh clone or a `git checkout` of an unchanged file still hits — and a
+ *     component is more than its own file, so every entry also carries the content hash of
+ *     every *other* file the parse read (`dependencies`, see below) and is dropped as soon
+ *     as one of them differs. Nothing keyed on a component's own bytes alone could notice
+ *     an edit to the module its `propTypes`, or the interface its props extend, live in;
  *  2. every key lives under a fingerprint of everything else the answer depends on — the
  *     Styleguidist version, the parser's identity, the versions of the packages that do
  *     the parsing, and every config option a parse can read. See PARSE_RELEVANT_OPTIONS
@@ -24,6 +28,11 @@
  *  4. the file existence a parse branched on (the examples file, the file an `@example`
  *     doclet names) is re-checked on every read, because a file that has appeared or
  *     vanished changes the answer without changing any content hash.
+ *
+ * The one thing rule 1 cannot promise for a `propsParser` of your own: what such a parser
+ * reads is not observable, so its dependencies are approximated by the component's own
+ * relative imports (src/loaders/utils/getImportedFiles.ts). A type it reaches through a
+ * path alias, or through a package, is outside that set — documented next to the option.
  *
  * Failure is never fatal: an unreadable or corrupt cache file is deleted and the run
  * continues as if there had been none, and a cache that cannot be written is a debug line.
@@ -45,7 +54,7 @@ const logger = createLogger('rsg');
  * Bumped by hand whenever the shape of what is stored changes. A file with another format
  * is discarded, not migrated: it is a cache.
  */
-const FORMAT = 1;
+const FORMAT = 2;
 
 /** Folder created inside Vite's `cacheDir`, and the file inside it. */
 export const CACHE_DIR_NAME = 'vite-styleguidist';
@@ -89,6 +98,13 @@ export interface PersistedDocs {
 	/** The file an `@example` doclet named (absolute), and whether it existed at parse time. */
 	exampleFile: string | null;
 	exampleFileExists: boolean;
+	/**
+	 * The other files the parse read, and the sha256 each had then (see PropsModule).
+	 *
+	 * Revalidated rather than keyed: which files a parse reads is only known once it has
+	 * run, so they cannot be part of the key the *lookup* is made with.
+	 */
+	dependencies: Record<string, string>;
 	/** The run this entry was last used in; see MAX_UNUSED_RUNS. */
 	run: number;
 }
@@ -116,7 +132,7 @@ export interface CacheCounters {
 export interface PersistentCache {
 	/** `undefined` when the config makes docs caching unsafe (a function `propsParser`). */
 	getDocs(key: DocsKeyParts): PersistedDocs | undefined;
-	setDocs(key: DocsKeyParts, value: Omit<PersistedDocs, 'run'>): void;
+	setDocs(key: DocsKeyParts, value: DocsValueParts): void;
 	getExamples(moduleId: string, source: string): PersistedExamples | undefined;
 	setExamples(moduleId: string, source: string, value: Omit<PersistedExamples, 'run'>): void;
 	/** Write the file if anything changed, evicting first. Safe to call more than once. */
@@ -136,6 +152,12 @@ export interface PersistentCache {
 	readonly docsCacheable: boolean;
 }
 
+/** What is written into a docs entry; `dependencies` are hashed on the way in. */
+export interface DocsValueParts extends Omit<PersistedDocs, 'run' | 'dependencies'> {
+	/** Absolute paths of the other files the parse read (PropsModule.dependencies). */
+	dependencies: string[];
+}
+
 /** Everything a docs entry is keyed and revalidated on. */
 export interface DocsKeyParts {
 	/** Absolute path of the component. */
@@ -149,6 +171,50 @@ export interface DocsKeyParts {
 
 const sha = (input: string | Buffer): string =>
 	crypto.createHash('sha256').update(input).digest('hex').slice(0, 32);
+
+/** What a file that is not there hashes to; it can never equal a real hash. */
+const MISSING = 'missing';
+
+/**
+ * The content hash of a file, memoized on its mtime and size for the life of the run.
+ *
+ * Every docs entry is revalidated against the files its parse read, and a design system's
+ * components share those files — one `types.ts` can be a dependency of a hundred entries.
+ * Hashing it a hundred times per build is what this avoids; the stamp is only the memo key,
+ * so the answer stays content-addressed (rule 1) and a `git checkout` that restores a file
+ * byte for byte still hits.
+ */
+const hashes = new Map<string, { stamp: string; hash: string }>();
+
+function fileHash(file: string): string {
+	let stamp: string;
+	try {
+		const stat = fs.statSync(file);
+		stamp = `${stat.mtimeMs}:${stat.size}`;
+	} catch {
+		stamp = MISSING;
+	}
+	const cached = hashes.get(file);
+	if (cached && cached.stamp === stamp) {
+		return cached.hash;
+	}
+	let hash = MISSING;
+	if (stamp !== MISSING) {
+		try {
+			hash = sha(fs.readFileSync(file));
+		} catch {
+			// Unreadable now: treat it as a change, which is the safe direction
+			hash = 'unreadable';
+		}
+	}
+	hashes.set(file, { stamp, hash });
+	return hash;
+}
+
+/** Only for tests: the memo above lives as long as the process does. */
+export function clearFileHashCache(): void {
+	hashes.clear();
+}
 
 /** This package's own version, which every cached answer is implicitly tied to. */
 function ownVersion(): string {
@@ -433,6 +499,17 @@ export function createPersistentCache(
 				misses.docs++;
 				return undefined;
 			}
+			// …and so does any other file the parse read: the module a component's propTypes
+			// came from, the one its props interface is declared in. Editing one of those
+			// leaves the component's own bytes — and therefore this entry's key — untouched,
+			// so without this check the entry would answer with the old documentation for
+			// ever (see rule 1 and PropsModule.dependencies)
+			for (const [dependency, hash] of Object.entries(entry.dependencies || {})) {
+				if (fileHash(dependency) !== hash) {
+					misses.docs++;
+					return undefined;
+				}
+			}
 			hits.docs++;
 			// Touch it, so the eviction clock treats a cache that is being used as fresh
 			if (entry.run !== run) {
@@ -445,7 +522,11 @@ export function createPersistentCache(
 			if (!docsCacheable) {
 				return;
 			}
-			data.docs[docsKey(key)] = { ...value, run };
+			const dependencies: Record<string, string> = {};
+			for (const dependency of value.dependencies) {
+				dependencies[dependency] = fileHash(dependency);
+			}
+			data.docs[docsKey(key)] = { ...value, dependencies, run };
 			dirty = true;
 		},
 		getExamples(moduleId, source) {

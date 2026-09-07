@@ -260,3 +260,44 @@ test('hot updates a component’s documentation when its first examples file app
 	const removed = await (await fetch(BASE + url)).text();
 	expect(removed).not.toContain('rsg-examples');
 }, 30000);
+
+// A component's documentation is parsed from more than the component's file: react-docgen
+// follows its imports, so the module its `propTypes` live in is part of the answer. The
+// dev server has to watch those files and re-parse the components that read them.
+test('hot updates a component’s documentation when a file it imports changes', async () => {
+	const dir = path.join(projectDir, 'components/Imported');
+	fs.mkdirSync(dir, { recursive: true });
+	fs.writeFileSync(
+		path.join(dir, 'importedProps.js'),
+		"import PropTypes from 'prop-types';\nexport default { color: PropTypes.string };\n"
+	);
+	fs.writeFileSync(
+		path.join(dir, 'Imported.js'),
+		`import React from 'react';
+import importedProps from './importedProps.js';
+const Imported = (props) => <b>{props.color}</b>;
+Imported.propTypes = importedProps;
+export default Imported;
+`
+	);
+	await collectUpdates();
+
+	const url = propsUrl(path.join(dir, 'Imported.js'));
+	const before = await (await fetch(BASE + url)).text();
+	expect(before).toContain('"color"');
+	expect(before).not.toContain('"tone"');
+
+	// Only the imported file changes; the component's own bytes are untouched
+	fs.writeFileSync(
+		path.join(dir, 'importedProps.js'),
+		"import PropTypes from 'prop-types';\nexport default { tone: PropTypes.string };\n"
+	);
+	await collectUpdates();
+
+	const after = await (await fetch(BASE + url)).text();
+	expect(after).toContain('"tone"');
+	expect(after).not.toContain('"color"');
+
+	fs.rmSync(dir, { recursive: true, force: true });
+	await collectUpdates();
+}, 30000);

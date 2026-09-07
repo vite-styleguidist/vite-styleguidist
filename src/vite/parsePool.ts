@@ -113,6 +113,8 @@ export interface JobResponse {
 export interface PropsResult {
 	code: string;
 	docs: Rsg.PropsObject;
+	/** The other files the parse read; see PropsModule.dependencies. */
+	dependencies: string[];
 }
 
 export interface ExamplesResult {

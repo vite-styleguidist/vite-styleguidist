@@ -75,6 +75,8 @@ The cache is shared by `styleguidist build` and `styleguidist server`, so a buil
 
 An entry is only used when everything it could depend on is unchanged: the file's content, the version of Vite Styleguidist and of the packages that do the parsing (`react-docgen`, `@mdx-js/mdx`, `remark-gfm`), and every config option a parse can read — [context](#context), [defaultExample](#defaultexample), [getExampleFilename](#getexamplefilename), [handlers](#handlers), [mdx](#mdx), [propsParser](#propsparser), [resolver](#resolver), [sortProps](#sortprops), [updateDocs](#updatedocs) and [updateExample](#updateexample), functions included, by their source text. Change any of them and the cache starts empty. Options that cannot affect a parse — [theme](#theme), [serverPort](#serverport), [styleguideDir](#styleguidedir) and the rest — deliberately do not invalidate it.
 
+“The file's content” means more than the component's own file. Documenting a component reads the files it imports — the module its `propTypes` come from, the file its props interface is declared in — so each entry also remembers those files and the content each had, and is thrown away as soon as one of them differs. The dev server watches them too: editing a shared `types.ts` updates the props table of every component that reads it, without a restart.
+
 ```javascript
 module.exports = {
   cache: false
@@ -86,6 +88,8 @@ module.exports = {
 Nothing in it is secret that the style guide does not already publish, but it is a build artefact: keep it out of version control, like the rest of `node_modules`.
 
 > **Note:** A [propsParser](#propsparser) written as a *function* turns off caching of component documentation (examples are still cached). A function has no identity across processes — two runs can pass different closures with the same source — so a cached answer could not be trusted. Write the parser as a module and point the option at its path instead; that form is cacheable, and it is what the [cookbook recipe](Cookbook.md#components-re-exported-from-another-package) uses.
+
+> **Note:** With a [propsParser](#propsparser) of your own, in either form, Styleguidist cannot observe which files the parser read, so it follows the component's own relative imports instead — transitively, type-only imports included. That covers the ordinary shape (`import type { CardProps } from './types'`), and it does not cover a type reached through a path alias such as `@/types`, or one that lives in an installed package. Run `styleguidist build --no-cache` once after editing a file in that last group.
 
 > **Note:** `styleguidist doctor` prints where the cache is, how large it is, and whether component documentation is being cached.
 
@@ -688,6 +692,8 @@ The two forms call exactly the same parser; the difference is what Styleguidist 
 > **Note:** The module is loaded once per process, so anything expensive it sets up at module scope — a TypeScript program, a compiler host — is set up once, exactly as it would be at the top of your config file.
 
 > **Note:** Only that one file's content is part of the cache key. If your parser module imports helpers of its own, changing a helper does not invalidate the cache: run `styleguidist build --no-cache` once, or delete `node_modules/.vite/vite-styleguidist/`.
+
+> **Note:** What your parser *reads* cannot be observed either — the parsers this option exists for resolve types through a TypeScript program of their own. The [cache](#cache) therefore assumes a parse depends on the component and on the files the component imports relatively, transitively; a type reached through a path alias or from an installed package is outside that assumption, and `--no-cache` is the answer after such an edit. The default parser has no such limit: react-docgen is given an importer Styleguidist owns, so the files it follows are known exactly.
 
 > **Note:** Either form always runs on the main thread, never in a [parallel](#parallel) worker. Four workers would build four copies of whatever the parser sets up — for `react-docgen-typescript`, four TypeScript programs of about a gigabyte each. See [decision 0018](decisions/0018-parse-cache-and-parallel-parsing.md).
 

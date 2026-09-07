@@ -924,6 +924,122 @@ module.exports = {
 
 Styleguidist uses the `vite.config.js` next to your style guide config automatically, see [configuring Vite](Vite.md#reusing-your-projects-vite-config) for other cases.
 
+## How to deploy a style guide under a sub-path (GitHub Pages)?
+
+Nothing to configure: `styleguidist build` writes an `index.html` that references the bundle and the stylesheet relatively (`./build/bundle.<hash>.js`), and every asset the bundle loads — an imported image, a CSS `background-image` — is resolved against the bundle’s own URL. The folder therefore works at the root of a domain, at `/styleguide/`, or at `/some/sub/path/`, unchanged and without a `base` setting.
+
+Navigation is hash-based (`index.html#!/Button`, or `index.html#/Components?id=button` with [pagePerSection](Configuration.md#pagepersection)), so the server never sees the route: a plain static host with no SPA fallback and no rewrite rules is enough. The machine-readable files follow the same rule — the links inside `llms.txt` and `docs.json` are relative to the file, so they keep working under any prefix; the only absolute URLs are the ones you wrote yourself in an external [section](Configuration.md#sections) `href`.
+
+One thing does need care: **link to the folder with a trailing slash**. At `https://example.com/styleguide/` the relative `./build/…` resolves inside the style guide; served at `https://example.com/styleguide` (no slash) it would resolve one level up. Most hosts, GitHub Pages included, redirect the folder to the trailing-slash form for you.
+
+For a GitHub Pages _project_ site — `https://USERNAME.github.io/REPOSITORY/`, a sub-path — the whole setup is the build plus two optional files that live next to `index.html`:
+
+- `.nojekyll`, so Pages serves files and folders whose name starts with an underscore instead of skipping them;
+- `CNAME`, if the guide has a custom domain.
+
+Both survive rebuilds: only `styleguideDir/build` is emptied before a build, everything else in the folder is kept.
+
+```yaml
+# .github/workflows/styleguide.yml
+name: Style guide
+on:
+  push:
+    branches: [main]
+
+# The token the checkout gets may only read; publishing rights are granted to the deploy
+# job alone, which never touches the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx styleguidist build
+      # Pages runs Jekyll, which skips files and folders starting with an underscore
+      - run: touch styleguide/.nojekyll
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: styleguide
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+```
+
+To check a build the way it will be served, put it behind a prefix locally rather than opening `index.html` from the file system (an ES module can’t be loaded from a `file://` URL):
+
+```bash
+mkdir -p /tmp/preview/some/sub/path
+cp -r styleguide/* /tmp/preview/some/sub/path/
+npx sirv-cli /tmp/preview --port 6060
+# then open http://localhost:6060/some/sub/path/
+```
+
+Everything the page requests must appear under `/some/sub/path/` in the server log; a request for `/build/…` at the root would mean an absolute URL slipped into the output, which is a bug worth [reporting](https://github.com/vite-styleguidist/vite-styleguidist/issues).
+
+## How to support older browsers?
+
+A style guide is built for [current browsers](Compatibility.md#supported-versions): Vite’s default build target is `baseline-widely-available`, which today means Chrome 111, Edge 111, Firefox 114 and Safari 16.4. If yours have to be older than that, lower the [build target](https://vite.dev/config/build-options#build-target) in [viteConfig](Configuration.md#viteconfig):
+
+```javascript
+module.exports = {
+  viteConfig: {
+    build: {
+      target: 'es2018'
+    }
+  }
+}
+```
+
+The target applies to the whole bundle, not only to the code you wrote: the style guide’s own dependencies are compiled down with it. Measured on the basic example, a default build carries 49 occurrences of `?.`, 33 of `??` and 72 logical assignments (`||=`, `&&=`, `??=`); with `target: 'es2018'` that becomes 3, 3 and none — and the six that stay are inside string literals, where `sucrase` and `acorn` name their tokens `'?.'` and `'??'`. In an unminified build the lowered code is mostly not yours: `markdown-to-jsx` and `react-dom` account for most of it. Count them in your own build with:
+
+```bash
+npx styleguidist build
+grep -o '?\.' styleguide/build/bundle.*.js | wc -l
+```
+
+Two limits are worth knowing before promising a browser version to anyone:
+
+- **Syntax is lowered, APIs are not.** Nothing injects polyfills, so a browser that lacks `Promise`, `Object.assign` or `IntersectionObserver` still needs them loaded first, for example through the [template](Configuration.md#template) option.
+- **A few class static blocks survive the target.** They come from the name-preserving output Styleguidist asks for, which is what keeps `styles` and `theme` overrides matching renderer names such as `ButtonRenderer` after minification. Class static blocks are ES2022, so a browser older than that trips on them even with `target: 'es2018'`. Turning the naming off removes them, at the price of those overrides in a minified build:
+
+```javascript
+module.exports = {
+  dangerouslyUpdateViteConfig(viteConfig) {
+    // Names are mangled after this: `styles: { ButtonRenderer: … }` stops matching
+    viteConfig.build.rolldownOptions.output.keepNames = false
+    return viteConfig
+  }
+}
+```
+
+Browsers with no ES module support at all (Internet Explorer, very old Android) are out of reach: the page loads its bundle with `<script type="module">`, and [@vitejs/plugin-legacy](https://www.npmjs.com/package/@vitejs/plugin-legacy), which normally solves that, can’t help here — it builds the legacy chunks, but Styleguidist writes its own `index.html` and the plugin never gets to add the `nomodule` scripts that would load them. If your components must run there, they can still be tested in your application; the style guide is a development tool and is expected to be opened in a current browser.
+
+Modern CSS can be lowered separately with Vite’s [build.cssTarget](https://vite.dev/config/build-options#build-csstarget) when a browser handles the JavaScript but not the stylesheet.
+
 ## How to use Styleguidist with Redux, Relay or Styled Components?
 
 See [working with third-party libraries](Thirdparties.md).

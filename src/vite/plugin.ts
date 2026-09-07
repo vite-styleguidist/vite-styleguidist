@@ -11,12 +11,13 @@ import generateExamplesModule from './modules/examples.js';
 import generateMdxModule from './modules/mdx.js';
 import {
 	buildManifest,
-	createManifestCache,
 	isMachineReadableFile,
 	machineReadableContentType,
 	renderMachineReadableFile,
 	renderMachineReadableFiles,
 } from './machineReadable.js';
+import { createParseCache, setCachedDocs, setCachedExamples } from './parseCache.js';
+import type { ParseCache } from './parseCache.js';
 import {
 	ENTRY_ID,
 	STYLEGUIDE_ID,
@@ -40,6 +41,14 @@ const logger = createLogger('rsg');
 
 // How Vite exposes a `\0`-prefixed virtual module id to the browser in development
 const devUrl = (resolvedId: string) => `/@id/${resolvedId.replace(NULL, '__x00__')}`;
+
+/**
+ * The module id as it was written in the importing module, i.e. without the `\0` this
+ * plugin's resolveId adds. That is the form the import markers of the style guide carry
+ * (see getExamples()), and therefore the key the parse cache is shared on.
+ */
+const unresolveId = (resolvedId: string) =>
+	resolvedId.startsWith(NULL) ? resolvedId.slice(NULL.length) : resolvedId;
 
 const isInside = (dir: string, file: string) => {
 	const relative = path.relative(dir, file);
@@ -87,12 +96,17 @@ export interface StyleguidistPluginOptions {
 /**
  * Serve docs.json, llms.txt and llms-full.txt in development (`machineReadable` option).
  * The files are regenerated on every request so they always reflect the sources; the
- * expensive part (react-docgen) is memoized on file mtimes, see ManifestCache.
+ * expensive part (react-docgen) is memoized on file mtimes, see ParseCache.
+ *
+ * The cache is the plugin's, shared with the `load` hook: by the time the first request
+ * arrives the dev server has usually transformed the whole module graph already, so the
+ * manifest is assembled from parses that have happened rather than from a fresh sweep of
+ * the guide (which used to take seconds on a TypeScript design system, on the event loop).
  */
 export function createMachineReadableMiddleware(
-	config: Rsg.SanitizedStyleguidistConfig
+	config: Rsg.SanitizedStyleguidistConfig,
+	cache: ParseCache = createParseCache()
 ): Connect.NextHandleFunction {
-	const cache = createManifestCache();
 	return async (req, res, next) => {
 		const name = (req.url || '').split('?')[0].replace(/^\//, '');
 		if ((req.method !== 'GET' && req.method !== 'HEAD') || !isMachineReadableFile(name)) {
@@ -130,6 +144,12 @@ export default function styleguidistPlugin({
 	// Directories where new/removed files should trigger a rescan of components
 	let contextDirs: string[] = [];
 	let server: ViteDevServer | undefined;
+	// The section tree the styleguide module was generated from, reused by the
+	// machine-readable docs in builds (see generateBundle).
+	let sections: Rsg.LoaderSection[] | undefined;
+	// Everything parsed during this run — one build, or one dev server — so that the
+	// machine-readable docs never re-parse a file the virtual modules already parsed.
+	const parseCache = createParseCache();
 
 	const watchContextDirs = () => {
 		if (server) {
@@ -186,22 +206,35 @@ export default function styleguidistPlugin({
 				const styleguide = generateStyleguideModule(config);
 				styleguide.watchFiles.forEach((file) => this.addWatchFile(file));
 				contextDirs = styleguide.contextDirs;
+				sections = styleguide.sections;
 				watchContextDirs();
 				return styleguide.code;
 			}
+
+			// Every branch below remembers what it parsed (see ./parseCache.ts): the
+			// machine-readable docs describe exactly these modules, and would otherwise run
+			// react-docgen and chunkify a second time over the same, unchanged files.
 
 			if (isPropsId(id)) {
 				const file = parsePropsId(id);
 				// Re-run react-docgen when the component changes
 				this.addWatchFile(file);
-				return generatePropsModule(config, file, fs.readFileSync(file, 'utf8')).code;
+				const { code, docs } = generatePropsModule(config, file, fs.readFileSync(file, 'utf8'));
+				setCachedDocs(parseCache, config, file, docs);
+				return code;
 			}
 
 			if (isExamplesId(id)) {
 				const options = parseExamplesId(id);
 				// Re-parse the examples when the Markdown file changes
 				this.addWatchFile(options.file);
-				return generateExamplesModule(config, options, fs.readFileSync(options.file, 'utf8'));
+				const { code, chunks } = generateExamplesModule(
+					config,
+					options,
+					fs.readFileSync(options.file, 'utf8')
+				);
+				setCachedExamples(parseCache, unresolveId(id), options.file, chunks);
+				return code;
 			}
 
 			if (isMdxId(id)) {
@@ -209,9 +242,14 @@ export default function styleguidistPlugin({
 				// Same as above: the file is not in the module graph, so watch it explicitly
 				// and the importing chain (props/styleguide → client) propagates the update
 				this.addWatchFile(options.file);
-				return generateMdxModule(config, options, fs.readFileSync(options.file, 'utf8'), {
-					isProduction: env === 'production',
-				});
+				const { code, chunks } = await generateMdxModule(
+					config,
+					options,
+					fs.readFileSync(options.file, 'utf8'),
+					{ isProduction: env === 'production' }
+				);
+				setCachedExamples(parseCache, unresolveId(id), options.file, chunks);
+				return code;
 			}
 
 			return null;
@@ -261,7 +299,7 @@ export default function styleguidistPlugin({
 				// `assetsDir` is copied with `force: false`), the generated files win over
 				// a docs.json or llms.txt the user keeps in `assetsDir`
 				if (config.machineReadable) {
-					devServer.middlewares.use(createMachineReadableMiddleware(config));
+					devServer.middlewares.use(createMachineReadableMiddleware(config, parseCache));
 				}
 
 				// Static assets (`assetsDir` option) are served from the root URL
@@ -359,7 +397,11 @@ export default function styleguidistPlugin({
 			// option). Emitted as assets, so Vite writes them with the rest of the output
 			// and `closeBundle` can’t let an `assetsDir` copy overwrite them.
 			if (config.machineReadable) {
-				Object.entries(await renderMachineReadableFiles(config)).forEach(([fileName, source]) => {
+				// `cache` and `sections`: everything here was parsed once already, when the
+				// modules of this very bundle were loaded. Without them a build runs
+				// react-docgen twice per component and chunkify twice per Markdown page.
+				const files = await renderMachineReadableFiles(config, { cache: parseCache, sections });
+				Object.entries(files).forEach(([fileName, source]) => {
 					this.emitFile({ type: 'asset', fileName, source });
 				});
 			}

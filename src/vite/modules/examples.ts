@@ -7,6 +7,7 @@ import importIt from '../../loaders/utils/importIt.js';
 import dirname from '../../scripts/utils/dirname.js';
 import ModuleSerializer from '../serialize.js';
 import { toPosix } from '../ids.js';
+import type { Chunk } from '../parseCache.js';
 import type * as Rsg from '../../typings/index.js';
 
 // Browser-side helpers, imported by the generated module. They live next to the
@@ -139,6 +140,17 @@ export function generateExampleRuntime(
 	return { requireMapCode: serializer.serialize(requireMap), header };
 }
 
+export interface ExamplesModule {
+	/** ES module source code, `export default <examples array>`. */
+	code: string;
+	/**
+	 * The chunks the module was generated from, so the caller can hand them to the
+	 * machine-readable docs instead of having them parsed a second time (see
+	 * src/vite/parseCache.ts).
+	 */
+	chunks: Chunk[];
+}
+
 /**
  * Generate the `rsg-examples:<file>?...` module: the examples of a Markdown file,
  * each code example bundled with an `evalInContext()` function that can run it in
@@ -150,7 +162,7 @@ export default function generateExamplesModule(
 	config: Rsg.SanitizedStyleguidistConfig,
 	options: Rsg.ExamplesModuleOptions,
 	source: string
-): string {
+): ExamplesModule {
 	// Load examples
 	const examples = parseExamples(config, options, source);
 
@@ -171,7 +183,7 @@ export default function generateExamplesModule(
 
 	const examplesCode = serializer.serialize(examplesWithEval);
 
-	return `${serializer.renderImports()}
+	const code = `${serializer.renderImports()}
 import requireInRuntimeBase from ${JSON.stringify(clientHelper('requireInRuntime'))};
 import evalInContextBase from ${JSON.stringify(clientHelper('evalInContext'))};
 
@@ -181,4 +193,6 @@ const evalInContext = evalInContextBase.bind(null, ${JSON.stringify(header)}, re
 
 export default ${examplesCode};
 `;
+
+	return { code, chunks: examples };
 }

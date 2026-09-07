@@ -36,6 +36,11 @@ export const CLIENT_CONFIG_OPTIONS = [
 export interface StyleguideModule {
 	/** ES module source code, `export default { config, welcomeScreen, patterns, sections }`. */
 	code: string;
+	/**
+	 * The section tree the module describes. Handed to the machine-readable docs in builds so
+	 * that the component globs and the tree walk happen once per build, not twice.
+	 */
+	sections: Rsg.LoaderSection[];
 	/** Absolute paths of all components in the style guide. */
 	componentFiles: string[];
 	/** Extra files the module depends on (theme/styles files). */
@@ -138,5 +143,5 @@ export default function generateStyleguideModule(
 export default ${styleguide};
 `;
 
-	return { code, componentFiles: allComponentFiles, watchFiles, contextDirs };
+	return { code, sections, componentFiles: allComponentFiles, watchFiles, contextDirs };
 }

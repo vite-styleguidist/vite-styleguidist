@@ -22,6 +22,7 @@ import parseMdx from '../../loaders/utils/mdx.js';
 import { ACORN_OPTIONS } from '../../loaders/utils/getAst.js';
 import ModuleSerializer from '../serialize.js';
 import { clientHelper, generateExampleRuntime, resolveExampleImport } from './examples.js';
+import type { ExamplesModule } from './examples.js';
 import type * as Rsg from '../../typings/index.js';
 
 /**
@@ -134,13 +135,16 @@ export interface MdxModuleOptions {
  *
  * Async because `compile()` is: the plugin's `load` hook, `generateBundle` and the dev
  * middleware all tolerate promises.
+ *
+ * Returns the chunks alongside the code for the same reason generateExamplesModule() does:
+ * the machine-readable docs need them and must not compile the page a second time.
  */
 export default async function generateMdxModule(
 	config: Rsg.SanitizedStyleguidistConfig,
 	options: Rsg.ExamplesModuleOptions,
 	source: string,
 	{ isProduction = false }: MdxModuleOptions = {}
-): Promise<string> {
+): Promise<ExamplesModule> {
 	const { file } = options;
 	const parsed = await parseMdx(config, options, source);
 
@@ -174,7 +178,7 @@ export default async function generateMdxModule(
 		}))
 	);
 
-	return `${serializer.renderImports()}
+	const code = `${serializer.renderImports()}
 import requireInRuntimeBase from ${JSON.stringify(clientHelper('requireInRuntime'))};
 import evalInContextBase from ${JSON.stringify(clientHelper('evalInContext'))};
 
@@ -194,4 +198,6 @@ export default [
 	}
 ];
 `;
+
+	return { code, chunks: parsed.chunks };
 }

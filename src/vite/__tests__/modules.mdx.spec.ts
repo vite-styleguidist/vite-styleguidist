@@ -31,8 +31,11 @@ const config = () =>
 		mdx: {},
 	}) as unknown as Rsg.SanitizedStyleguidistConfig;
 
-const generate = (source: string, options: Partial<Rsg.ExamplesModuleOptions> = {}) =>
-	generateMdxModule(config(), { file, ...options }, source, { isProduction: true });
+const generate = async (
+	source: string,
+	options: Partial<Rsg.ExamplesModuleOptions> = {}
+): Promise<string> =>
+	(await generateMdxModule(config(), { file, ...options }, source, { isProduction: true })).code;
 
 describe('the generated module', () => {
 	it('should export an array of one mdx chunk with the page component and its examples', async () => {

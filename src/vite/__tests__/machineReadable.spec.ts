@@ -2,9 +2,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { parse as reactDocgenParse } from 'react-docgen';
 import getConfig from '../../scripts/config.js';
 import { collectSections } from '../modules/styleguide.js';
+import generatePropsModule from '../modules/props.js';
 import { parseExamples } from '../modules/examples.js';
+import { setCachedDocs } from '../parseCache.js';
 import parseMdx from '../../loaders/utils/mdx.js';
 import {
 	buildManifest,
@@ -521,6 +524,37 @@ Some **intro** text.
 		expect(findComponent(manifest, 'Typed').description).toMatch(/Updated\.$/);
 	});
 
+	it('should reuse the parse the virtual modules already did', async () => {
+		// What the plugin does: `load` generates the props and examples modules and records
+		// what it parsed, `generateBundle` builds the manifest from the same cache. Nothing
+		// may be handed to react-docgen or to chunkify twice in one build.
+		const parses: string[] = [];
+		const config = sectionsConfig({
+			propsParser: (filePath, source, resolver, handlers) => {
+				parses.push(filePath);
+				return reactDocgenParse(source, { resolver, handlers, filename: filePath });
+			},
+		});
+		const cache = createManifestCache();
+		const sections = collectSections(config);
+		const componentFiles = (list: Rsg.LoaderSection[]): string[] =>
+			list.flatMap((section) => [
+				...section.components.map((component) => component.module.__rsgImport),
+				...componentFiles(section.sections),
+			]);
+		for (const file of componentFiles(sections)) {
+			const { docs } = generatePropsModule(config, file, fs.readFileSync(file, 'utf8'));
+			setCachedDocs(cache, config, file, docs);
+		}
+		expect(parses).toHaveLength(2);
+
+		const manifest = await buildManifest(config, sections, { now: NOW, cache });
+		// The manifest asked the parser for nothing: it read what `load` had parsed
+		expect(parses).toHaveLength(2);
+		// …and it is the manifest a cold build would have produced
+		expect(manifest).toEqual(await buildManifest(config, undefined, { now: NOW }));
+	});
+
 	it('should reuse cached docs until a file changes', async () => {
 		const config = sectionsConfig();
 		const cache = createManifestCache();
@@ -636,9 +670,8 @@ describe('toManifestExamples', () => {
 		mdx: false,
 	});
 	const mdxSource = async () => ({
-		chunks: (
-			await parseMdx(configIn(testDir, {}), { file: path.join(testDir, 'Readme.mdx') }, MDX)
-		).chunks,
+		chunks: (await parseMdx(configIn(testDir, {}), { file: path.join(testDir, 'Readme.mdx') }, MDX))
+			.chunks,
 		mdx: true,
 	});
 

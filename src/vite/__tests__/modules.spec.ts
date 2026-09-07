@@ -283,7 +283,7 @@ describe('generateExamplesModule', () => {
 		findDeclaration(code, 'evalInContext').arguments[1].value;
 
 	it('should generate an ES module exporting the examples', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		const ast = parseModule(code);
 		expect(ast.body.at(-1)?.type).toBe('ExportDefaultDeclaration');
 		expect(code).toMatch(
@@ -296,7 +296,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should split Markdown and code examples', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		expect(code).toMatch('"type": "markdown"');
 		expect(code).toMatch('"type": "code"');
 		expect(code).toMatch('"content": "<Button>Push Me</Button>"');
@@ -305,7 +305,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should import React and the current component implicitly', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		expect(importsOf(code)).toEqual(
 			expect.arrayContaining(['react', component('Button/Button.js')])
 		);
@@ -326,7 +326,7 @@ describe('generateExamplesModule', () => {
 			'    const Price = require("./Price.js");',
 			'    <Button />',
 		].join('\n');
-		const code = generateExamplesModule(config, options, markdown);
+		const { code } = generateExamplesModule(config, options, markdown);
 		expect(requireMapKeys(code)).toEqual([
 			'lodash/map',
 			'../Label',
@@ -341,7 +341,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should make context modules available in examples', () => {
-		const code = generateExamplesModule(
+		const { code } = generateExamplesModule(
 			{ ...config, context: { map: 'lodash/map', 'Foo.Bar': 'foo-bar' } },
 			options,
 			source
@@ -354,7 +354,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should expand the component placeholder of the default example', () => {
-		const code = generateExamplesModule(
+		const { code } = generateExamplesModule(
 			config,
 			{ ...options, shouldShowDefaultExample: true },
 			'    <__COMPONENT__>Default</__COMPONENT__>'
@@ -364,12 +364,12 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should not expand the placeholder of a regular examples file', () => {
-		const code = generateExamplesModule(config, options, '    <__COMPONENT__ />');
+		const { code } = generateExamplesModule(config, options, '    <__COMPONENT__ />');
 		expect(code).toMatch('__COMPONENT__');
 	});
 
 	it('should work without a component (section content)', () => {
-		const code = generateExamplesModule(config, { file }, '# Hello\n\n    <Button />');
+		const { code } = generateExamplesModule(config, { file }, '# Hello\n\n    <Button />');
 		expect(importsOf(code)).toEqual(['react']);
 		expect(header(code)).not.toMatch('Button');
 	});
@@ -379,7 +379,7 @@ describe('generateExamplesModule', () => {
 			...props,
 			content: `/* updated */ ${props.content}`,
 		}));
-		const code = generateExamplesModule({ ...config, updateExample }, options, source);
+		const { code } = generateExamplesModule({ ...config, updateExample }, options, source);
 		expect(updateExample).toHaveBeenCalledWith(
 			expect.objectContaining({ content: '<Button>Push Me</Button>' }),
 			file

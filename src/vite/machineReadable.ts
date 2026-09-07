@@ -30,6 +30,14 @@ import generatePropsModule from './modules/props.js';
 import { parseExamples } from './modules/examples.js';
 import parseMdx from '../loaders/utils/mdx.js';
 import { MDX_PREFIX, NULL, parseExamplesId, toPosix } from './ids.js';
+import {
+	createParseCache,
+	getCachedDocs,
+	getCachedExamples,
+	setCachedDocs,
+	setCachedExamples,
+} from './parseCache.js';
+import type { Chunk, ParseCache } from './parseCache.js';
 import { isImportMarker } from '../typings/index.js';
 import type * as Rsg from '../typings/index.js';
 
@@ -180,29 +188,25 @@ export interface DocsManifest {
 }
 
 /**
- * Memo of the parsed component docs and examples files, keyed by file path and
- * invalidated by mtime/size. The dev server regenerates the manifest on every request;
- * react-docgen is the expensive part, and a guide with hundreds of components would
- * otherwise take seconds per request. Builds don’t need it (they run once).
+ * Memo of the parsed component docs and examples files, keyed by file path and invalidated
+ * by mtime/size — the same cache the virtual modules fill while they are generated, see
+ * src/vite/parseCache.ts. The dev server regenerates the manifest on every request and
+ * react-docgen is the expensive part; a build would otherwise re-parse in `generateBundle`
+ * everything its `load` hook already parsed.
  */
-export interface ManifestCache {
-	docs: Map<
-		string,
-		{
-			key: string;
-			docs: Rsg.PropsObject;
-			/** The file an `@example` doclet points at (absolute), and whether it existed at parse time */
-			exampleFile: string | null;
-			exampleFileExists: boolean;
-		}
-	>;
-	examples: Map<string, { key: string; chunks: Chunk[] }>;
-}
+export type ManifestCache = ParseCache;
 
-export const createManifestCache = (): ManifestCache => ({ docs: new Map(), examples: new Map() });
+export const createManifestCache = createParseCache;
 
 export interface BuildManifestOptions {
 	cache?: ManifestCache;
+	/**
+	 * The section tree, when the caller already has it: `generateBundle` passes the very tree
+	 * the styleguide virtual module was generated from, so a build walks the component globs
+	 * once instead of twice. Left out in development, where a component added since the last
+	 * page load must still show up in docs.json.
+	 */
+	sections?: Rsg.LoaderSection[];
 	/**
 	 * Keep going when an examples file cannot be read: that page contributes no examples and
 	 * carries the reason in its `error`, the rest of the guide is still served. The dev
@@ -215,37 +219,12 @@ export interface BuildManifestOptions {
 	now?: Date;
 }
 
-/**
- * A chunk of an examples file. The MDX parser stamps `index` on its code chunks — the
- * playground's ordinal *within its own page* — because an MDX page's isolated-example URL
- * counts playgrounds while a Markdown page's counts every chunk (prose included).
- * `toManifestExamples()` turns both into the single number the UI uses.
- */
-type Chunk = (Rsg.CodeExample & { index?: number }) | Rsg.MarkdownExample;
-
 /** One examples file of a component, as `toManifestExamples()` needs to see it. */
 export interface ExampleSource {
 	chunks: Chunk[];
 	/** Whether the chunks came from an `.mdx` page (their code chunks carry page ordinals). */
 	mdx: boolean;
 }
-
-/** The part of a file’s stat that tells whether it changed since the last parse. */
-const fileKey = (file: string): string => {
-	const stat = fs.statSync(file);
-	return `${stat.mtimeMs}:${stat.size}`;
-};
-
-/**
- * The file an `@example` doclet points at, resolved like getProps() resolves it (relative
- * to the component), or `null` when the component has no such doclet.
- */
-const exampleDocletFile = (file: string, docs: Rsg.PropsObject): string | null => {
-	const doclet = docs.doclets?.example;
-	return typeof doclet === 'string' && doclet.trim()
-		? path.resolve(path.dirname(file), doclet.trim())
-		: null;
-};
 
 /**
  * Reproducible builds: the SOURCE_DATE_EPOCH convention
@@ -592,29 +571,17 @@ class ManifestBuilder {
 		private tolerateErrors: boolean = false
 	) {}
 
-	/** Component documentation, straight from the props virtual module generator. */
+	/**
+	 * Component documentation, straight from the props virtual module generator — or from
+	 * the parse that generator already did, when the plugin filled the cache for us.
+	 */
 	private readDocs(file: string): Rsg.PropsObject {
-		// The docs also depend on whether the examples file exists (see getExamples()) and
-		// on whether the file an `@example` doclet names exists (see getProps()), so a
-		// Readme.md or an examples file that appears later must invalidate the memo too
-		const key = `${fileKey(file)}|${this.config.getExampleFilename(file) || ''}`;
-		const cached = this.cache?.docs.get(file);
-		if (
-			cached &&
-			cached.key === key &&
-			(cached.exampleFile === null ||
-				fs.existsSync(cached.exampleFile) === cached.exampleFileExists)
-		) {
-			return cached.docs;
+		const cached = getCachedDocs(this.cache, this.config, file);
+		if (cached) {
+			return cached;
 		}
 		const { docs } = generatePropsModule(this.config, file, fs.readFileSync(file, 'utf8'));
-		const exampleFile = exampleDocletFile(file, docs);
-		this.cache?.docs.set(file, {
-			key,
-			docs,
-			exampleFile,
-			exampleFileExists: exampleFile !== null && fs.existsSync(exampleFile),
-		});
+		setCachedDocs(this.cache, this.config, file, docs);
 		return docs;
 	}
 
@@ -632,16 +599,15 @@ class ManifestBuilder {
 		if (!fs.existsSync(options.file)) {
 			return [];
 		}
-		const key = `${fileKey(options.file)}|${marker.__rsgImport}`;
-		const cached = this.cache?.examples.get(marker.__rsgImport);
-		if (cached && cached.key === key) {
-			return cached.chunks;
+		const cached = getCachedExamples(this.cache, marker.__rsgImport, options.file);
+		if (cached) {
+			return cached;
 		}
 		const source = fs.readFileSync(options.file, 'utf8');
 		const chunks = isMdxMarker(marker)
 			? (await parseMdx(this.config, options, source)).chunks
 			: parseExamples(this.config, options, source);
-		this.cache?.examples.set(marker.__rsgImport, { key, chunks });
+		setCachedExamples(this.cache, marker.__rsgImport, options.file, chunks);
 		return chunks;
 	}
 
@@ -1137,7 +1103,7 @@ export async function renderMachineReadableFiles(
 	config: Rsg.SanitizedStyleguidistConfig,
 	options: BuildManifestOptions & RenderOptions = {}
 ): Promise<Record<MachineReadableFile, string>> {
-	const manifest = await buildManifest(config, undefined, options);
+	const manifest = await buildManifest(config, options.sections, options);
 	return {
 		[DOCS_JSON]: renderDocsJson(manifest),
 		[LLMS_TXT]: renderLlmsTxt(manifest, options),

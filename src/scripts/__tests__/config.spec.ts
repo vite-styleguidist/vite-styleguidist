@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import getConfig from '../config.js';
+import getConfig, { getConfigFilepath, reloadConfig } from '../config.js';
 
 const testComponent = (name: string) =>
 	path.resolve(import.meta.dirname, '../../../test/components', name);
@@ -148,6 +148,50 @@ describe('config file formats', () => {
 	it('should reject a TypeScript config that exports a function', () => {
 		const file = writeTempConfig('styleguide.config.ts', 'export default () => ({});');
 		expect(() => getConfig(file)).toThrow('must export a plain object');
+	});
+});
+
+describe('reloading a config file', () => {
+	it('should read the config file again', () => {
+		const file = writeTempConfig(
+			'styleguide.config.mjs',
+			`export default { title: 'Before' };`
+		);
+		const config = getConfig(file);
+		expect(config).toMatchObject({ title: 'Before' });
+
+		fs.writeFileSync(file, `export default { title: 'After' };`);
+		expect(reloadConfig(config)).toMatchObject({ title: 'After' });
+		// The config that is still in use has to be left alone
+		expect(config).toMatchObject({ title: 'Before' });
+	});
+
+	it('should replay the update callback', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default { title: 'Before' };`);
+		const config = getConfig(file, (conf) => ({ ...conf, serverPort: 6199 }));
+
+		fs.writeFileSync(file, `export default { title: 'After' };`);
+		expect(reloadConfig(config)).toMatchObject({ title: 'After', serverPort: 6199 });
+	});
+
+	it('should throw the usual error when the config file has become invalid', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default { title: 'Before' };`);
+		const config = getConfig(file);
+
+		fs.writeFileSync(file, `export default { components: 42 };`);
+		expect(() => reloadConfig(config)).toThrow('Something is wrong with your style guide config');
+	});
+
+	it('should throw for a config that wasn’t read from a file', () => {
+		expect(() => reloadConfig(getConfig({ title: 'Style guide' }))).toThrow(
+			'wasn’t read from a config file'
+		);
+	});
+
+	it('should expose the config file path of a config read from a file', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default {};`);
+		expect(getConfigFilepath(getConfig(file))).toBe(file);
+		expect(getConfigFilepath(getConfig({}))).toBeUndefined();
 	});
 });
 

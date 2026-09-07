@@ -24,6 +24,19 @@ export const CONFIG_FILENAMES = [
 	'styleguide.config.cts',
 ];
 
+/** How a config object was produced, so that it can be produced again (see `reloadConfig`). */
+interface ConfigSource {
+	/** Absolute path of the config file it was read from. */
+	filepath: string;
+	/** The `update` callback of the `getConfig()` call, replayed on every reload. */
+	update?: (config: Rsg.StyleguidistConfig) => Rsg.StyleguidistConfig;
+}
+
+// Kept outside the config object itself: the sanitized config is the user’s own object with
+// defaults applied, and everything on it is a documented config option. A WeakMap adds
+// nothing to it and forgets the entry as soon as the config is garbage.
+const configSources = new WeakMap<object, ConfigSource>();
+
 /**
  * Try to find config file up the file tree.
  *
@@ -43,6 +56,65 @@ function findConfigFile(): string | false {
 			return false;
 		}
 		dir = parent;
+	}
+}
+
+/**
+ * Read a config file and check that it exports something a style guide can be made of.
+ */
+function readConfigFile(configFilepath: string, fresh = false): Rsg.StyleguidistConfig {
+	const config = loadConfigFile<Rsg.StyleguidistConfig>(configFilepath, { fresh });
+	// Anything but a config object would silently fall through to all defaults
+	if (typeof config === 'function' || typeof (config as any)?.then === 'function') {
+		throw new StyleguidistError(
+			`Styleguidist config must export a plain object; functions and promises (async configs) are not supported: ${configFilepath}`
+		);
+	}
+	if (!config || typeof config !== 'object') {
+		throw new StyleguidistError(
+			`Styleguidist config must export an object (did you forget \`export default\`?): ${configFilepath}`
+		);
+	}
+	return config;
+}
+
+/**
+ * Apply the caller’s `update` callback, validate and normalize the config in *collect* mode —
+ * every problem is reported instead of only the first one, and none of them throws — and
+ * remember where the config came from so that a dev server can reload it.
+ */
+function finalizeConfig(
+	config: Rsg.StyleguidistConfig,
+	configFilepath: string | false,
+	update?: (config: Rsg.StyleguidistConfig) => Rsg.StyleguidistConfig
+): { config: Rsg.SanitizedStyleguidistConfig; problems: ConfigProblem[] } {
+	if (update) {
+		config = update(config);
+	}
+
+	const configDir = configFilepath ? path.dirname(configFilepath) : process.cwd();
+
+	const collected = collectConfigProblems(config, schema, configDir);
+	const sanitized = collected.config as unknown as Rsg.SanitizedStyleguidistConfig;
+
+	if (configFilepath) {
+		configSources.set(sanitized, { filepath: configFilepath, update });
+	}
+
+	return { config: sanitized, problems: collected.problems };
+}
+
+/**
+ * Turn collected config problems into the one error `getConfig()` has always thrown. Does
+ * nothing when the config only collected warnings (deprecations), or nothing at all.
+ */
+function throwOnProblems(problems: ConfigProblem[]): void {
+	const exception = configProblemsToError(problems);
+	if (exception) {
+		throw new StyleguidistError(
+			`Something is wrong with your style guide config\n\n${exception.message}`,
+			exception.extra
+		);
 	}
 }
 
@@ -89,32 +161,15 @@ export function loadConfig(
 	}
 
 	if (configFilepath) {
-		config = loadConfigFile<Rsg.StyleguidistConfig>(configFilepath);
-		// Anything but a config object would silently fall through to all defaults
-		if (typeof config === 'function' || typeof (config as any)?.then === 'function') {
-			throw new StyleguidistError(
-				`Styleguidist config must export a plain object; functions and promises (async configs) are not supported: ${configFilepath}`
-			);
-		}
-		if (!config || typeof config !== 'object') {
-			throw new StyleguidistError(
-				`Styleguidist config must export an object (did you forget \`export default\`?): ${configFilepath}`
-			);
-		}
+		config = readConfigFile(configFilepath);
 	}
 
 	if (!config || isString(config)) {
 		return { config: {} as any, problems: [], configFilepath };
 	}
 
-	if (update) {
-		config = update(config);
-	}
-
-	const configDir = configFilepath ? path.dirname(configFilepath) : process.cwd();
-
-	const collected = collectConfigProblems(config, schema, configDir);
-	return { config: collected.config as any, problems: collected.problems, configFilepath };
+	const finalized = finalizeConfig(config, configFilepath, update);
+	return { config: finalized.config, problems: finalized.problems, configFilepath };
 }
 
 /**
@@ -130,15 +185,43 @@ function getConfig(
 ): Rsg.SanitizedStyleguidistConfig {
 	const loaded = loadConfig(config, update);
 
-	const exception = configProblemsToError(loaded.problems);
-	if (exception) {
-		throw new StyleguidistError(
-			`Something is wrong with your style guide config\n\n${exception.message}`,
-			exception.extra
-		);
-	}
+	throwOnProblems(loaded.problems);
 
 	return loaded.config;
+}
+
+/**
+ * Absolute path of the config file a normalized config was read from, or `undefined` when
+ * it was passed as an object.
+ */
+export function getConfigFilepath(config: Rsg.SanitizedStyleguidistConfig): string | undefined {
+	return configSources.get(config)?.filepath;
+}
+
+/**
+ * Read the config file a normalized config came from again, as it is on disk now, and
+ * normalize it the same way — including the `update` callback of the original `getConfig()`
+ * call, which is where the CLI applies its `--port` and `--verbose` switches.
+ *
+ * Throws the same errors `getConfig()` throws for a config file that has become invalid,
+ * and never touches the config it was given.
+ */
+export function reloadConfig(
+	config: Rsg.SanitizedStyleguidistConfig
+): Rsg.SanitizedStyleguidistConfig {
+	const source = configSources.get(config);
+	if (!source) {
+		throw new StyleguidistError(
+			'Cannot reload a style guide config that wasn’t read from a config file.'
+		);
+	}
+	const reloaded = finalizeConfig(
+		readConfigFile(source.filepath, true),
+		source.filepath,
+		source.update
+	);
+	throwOnProblems(reloaded.problems);
+	return reloaded.config;
 }
 
 export default getConfig;

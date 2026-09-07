@@ -1,0 +1,21 @@
+{
+  // Type-checking config for this example's components (`npm run typecheck` inside this
+  // folder). react-docgen-typescript also reads it when you follow the second road in the
+  // Readme: it type-checks the whole program, so it needs a real tsconfig.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "pretty": true,
+    "strict": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

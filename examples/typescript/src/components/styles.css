@@ -1,0 +1,76 @@
+/* One small stylesheet, imported by each component: Vite compiles the `.tsx` files and this
+   `.css` import with no configuration of its own — there is no bundler setup in this example. */
+
+.rsg-ts-button {
+	border: 1px solid currentColor;
+	border-radius: 6px;
+	cursor: pointer;
+	font: inherit;
+	padding: 6px 14px;
+}
+.rsg-ts-button[data-variant='primary'] {
+	background: #2f6feb;
+	border-color: #2f6feb;
+	color: #fff;
+}
+.rsg-ts-button[data-variant='secondary'] {
+	background: transparent;
+	color: #2f6feb;
+}
+.rsg-ts-button[data-variant='danger'] {
+	background: #c1352b;
+	border-color: #c1352b;
+	color: #fff;
+}
+.rsg-ts-button[data-size='small'] {
+	font-size: 13px;
+	padding: 3px 10px;
+}
+.rsg-ts-button[data-size='large'] {
+	font-size: 18px;
+	padding: 9px 20px;
+}
+.rsg-ts-button:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.rsg-ts-badge {
+	border-radius: 999px;
+	display: inline-block;
+	font-size: 12px;
+	line-height: 1;
+	padding: 4px 8px;
+}
+.rsg-ts-badge[data-tone='neutral'] {
+	background: #e4e4e7;
+	color: #27272a;
+}
+.rsg-ts-badge[data-tone='success'] {
+	background: #d7f5df;
+	color: #14532d;
+}
+.rsg-ts-badge[data-tone='warning'] {
+	background: #fdf0ce;
+	color: #713f12;
+}
+
+.rsg-ts-field {
+	display: inline-flex;
+	flex-direction: column;
+	font: inherit;
+	gap: 4px;
+}
+.rsg-ts-field input,
+.rsg-ts-field select {
+	border: 1px solid #a1a1aa;
+	border-radius: 6px;
+	font: inherit;
+	padding: 5px 8px;
+}
+.rsg-ts-field small {
+	color: #52525b;
+}
+.rsg-ts-field small[data-error='true'] {
+	color: #c1352b;
+}

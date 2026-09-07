@@ -183,6 +183,7 @@
     "start:customised": "node lib/bin/styleguidist.js server --config examples/customised/styleguide.config.js",
     "start:sections": "node lib/bin/styleguidist.js server --config examples/sections/styleguide.config.js",
     "start:mdx": "node lib/bin/styleguidist.js server --config examples/mdx/styleguide.config.js",
+    "start:typescript": "node lib/bin/styleguidist.js server --config examples/typescript/styleguide.config.js",
     "start:ui": "node lib/bin/styleguidist.js server",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
@@ -199,6 +200,7 @@
     "build:styled-components": "node lib/bin/styleguidist.js build --config examples/styled-components/styleguide.config.js",
     "build:vite": "node lib/bin/styleguidist.js build --config examples/vite/styleguide.config.js",
     "build:mdx": "node lib/bin/styleguidist.js build --config examples/mdx/styleguide.config.js",
+    "build:typescript": "node lib/bin/styleguidist.js build --config examples/typescript/styleguide.config.js",
     "hooks:install": "husky"
   },
   "keywords": [

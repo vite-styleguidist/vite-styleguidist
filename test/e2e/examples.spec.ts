@@ -2,7 +2,7 @@
 // and must render without a JavaScript error. Replaces the puppeteer script test/browser.js
 // and the eight `test:browser:*` npm scripts that ran it (see ADR 0009).
 //
-// The examples must be built first (`npm run build:basic` ... `npm run build:mdx`, exactly
+// The examples must be built first (`npm run build:basic` ... `npm run build:typescript`, exactly
 // what the CI integration job does); a missing build fails on the render assertion, and the
 // browser console attached to the report shows the 404s.
 import http from 'node:http';
@@ -24,6 +24,7 @@ const EXAMPLES = [
 	'styled-components',
 	'vite',
 	'mdx',
+	'typescript',
 ];
 
 const EXAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../examples');

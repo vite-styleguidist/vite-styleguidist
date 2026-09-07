@@ -1,0 +1,33 @@
+{
+  "name": "vite-styleguidist-example-typescript",
+  "description": "Vite Styleguidist TypeScript example",
+  "version": "1.0.0",
+  "private": true,
+  "homepage": "https://github.com/vite-styleguidist/vite-styleguidist",
+  "author": {
+    "name": "Mihail-Gabriel Alexe"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vite-styleguidist/vite-styleguidist.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "scripts": {
+    "styleguide": "styleguidist server",
+    "styleguide:build": "styleguidist build",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.9.0",
+    "vite-styleguidist": "file:../../"
+  }
+}

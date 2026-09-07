@@ -6,6 +6,8 @@ This page is written in MDX. The prose around the playgrounds is a React tree, s
   This box is a `Callout` component, imported at the top of `Readme.mdx` and used as a JSX element. A `.md` page cannot do that — it can only put a component inside a playground, where it is editable source code rather than page furniture.
 </Callout>
 
+Every heading on an `.mdx` page gets an id, the same one the equivalent `.md` page would get, so any heading can be linked to: [jump to the sizes table](#!/Button?id=sizes).
+
 A fence in a playground language, with no modifiers, is an interactive example:
 
 ```jsx

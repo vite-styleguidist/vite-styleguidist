@@ -143,6 +143,8 @@ MDX is not a superset of Markdown. Six constructs that a `.md` file accepts beha
 
 GitHub-flavoured Markdown — tables, task lists, strikethrough, literal URLs — works out of the box, because [remark-gfm](https://github.com/remarkjs/remark-gfm) is enabled by default. If you replace the plugin list with the [mdx](Configuration.md#mdx) option, add it back yourself.
 
+Headings get ids, so they are deep-linkable: `#!/Button?id=sizes` opens the `Button` page and scrolls to its `Sizes` heading. The id is the slug of the heading text — `## Usage & setup` becomes `usage--setup` — and a heading that appears twice in the same file gets a `-1`, `-2` suffix. An `.mdx` page and a `.md` page slug the same way, so a page rewritten from one to the other keeps every link written against it. A heading whose text has no ASCII letter or digit gets no id, in either pipeline.
+
 ### Differences from a `.md` page
 
 - **Isolated-example links count differently.** In a Markdown page the index in `#!/Button/2` counts every chunk of the page, prose included; an MDX page has no prose chunks — the prose is one React tree — so its index counts playgrounds only, and `#!/Button/1` is the second playground. Both agree with `docs.json`.

@@ -6,7 +6,8 @@
  * languages, the same fence modifiers (parseModifiers, shared with parseExample), the
  * same `updateExample` hook at the same point, the same Prism highlighting of non-JS
  * fences (only reached through a `<RsgStatic/>` element instead of raw HTML, because MDX
- * has no raw-HTML passthrough — raw HTML *is* JSX there).
+ * has no raw-HTML passthrough — raw HTML *is* JSX there), and the same heading ids, which
+ * @mdx-js/mdx does not produce on its own (see addHeadingIds).
  *
  * @mdx-js/mdx is an OPTIONAL peer dependency: a style guide without a single `.mdx` file
  * must keep building with no new dependency, so it is imported lazily and resolved from
@@ -21,6 +22,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import createLogger from 'glogg';
+import GithubSlugger from 'github-slugger';
 import expandDefaultComponent from './expandDefaultComponent.js';
 import highlightCode from './highlightCode.js';
 import parseExample, { isExampleError } from './parseExample.js';
@@ -255,13 +257,24 @@ export interface MdxParseResult {
 }
 
 /**
+ * As much of `unist-util-visit`'s signature as the passes below use. The module is
+ * imported lazily inside parseMdx (it is only needed for `.mdx` files), so the passes take
+ * it as a parameter instead of importing it themselves.
+ */
+type Visit = (
+	tree: any,
+	test: string | string[],
+	visitor: (node: any, index?: any, parent?: any) => void
+) => void;
+
+/**
  * Decide what happens to every fenced code block, without touching the tree yet: the
  * chunks of the machine-readable docs are cut out of the *original* source with the node
  * positions, which the replacements below would destroy.
  */
 function planFences(
 	tree: any,
-	visit: (tree: any, type: string, visitor: (node: any) => void) => void,
+	visit: Visit,
 	updateExample: (example: Omit<Rsg.CodeExample, 'type'>) => Omit<Rsg.CodeExample, 'type'>
 ): { plan: Map<any, FenceKind>; examples: Rsg.CodeExample[] } {
 	const plan = new Map<any, FenceKind>();
@@ -333,11 +346,7 @@ function toChunks(tree: any, source: string, plan: Map<any, FenceKind>): MdxChun
 }
 
 /** Swap every planned fence for the element the client renders. */
-function replaceFences(
-	tree: any,
-	visit: (tree: any, type: string, visitor: (node: any, index: any, parent: any) => void) => void,
-	plan: Map<any, FenceKind>
-): void {
+function replaceFences(tree: any, visit: Visit, plan: Map<any, FenceKind>): void {
 	visit(tree, 'code', (node: any, index: any, parent: any) => {
 		const fence = plan.get(node);
 		if (!fence || !parent || typeof index !== 'number') {
@@ -361,6 +370,82 @@ function replaceFences(
 }
 
 /**
+ * The words a heading id is made of: the text a reader sees, with the inline markup gone.
+ *
+ * `text` and `inlineCode` are the only mdast nodes that carry visible characters, so
+ * joining them turns ``## The `code` and *em* heading`` into `The code and em heading`,
+ * which is exactly the string markdown-to-jsx slugifies on the Markdown side. Anything
+ * else a heading can contain in MDX — a JSX element, a `{expression}` — has no text at
+ * compile time and is skipped.
+ */
+function headingText(node: any, visit: Visit): string {
+	const words: string[] = [];
+	visit(node, ['text', 'inlineCode'], (child: any) => {
+		words.push(String(child.value ?? ''));
+	});
+	return words.join('');
+}
+
+/**
+ * Give every heading an `id`, so `#!/Page?id=heading` deep links work on an `.mdx` page
+ * the way they already do on a `.md` one.
+ *
+ * @mdx-js/mdx emits no heading ids of its own, so before this pass a fragment link into an
+ * MDX page silently did nothing while the same link into a Markdown page worked.
+ *
+ * The ids have to be the *same* ids the Markdown pipeline produces for the same heading
+ * text: the two pipelines document one style guide, a page may be rewritten from `.md` to
+ * `.mdx` (or the other way round) and every link written against it has to survive that.
+ * Markdown ids are computed in the browser by markdown-to-jsx (see Markdown.tsx, which
+ * calls its `compiler()`), so this pass borrows markdown-to-jsx's own `slugify` rather
+ * than re-deriving the algorithm — the caller imports it from the `markdown-to-jsx/html`
+ * entry point, which exports the very same function as the React one without pulling
+ * React into the build process. mdx.spec.ts pins the two against each other, so a
+ * markdown-to-jsx upgrade that changed the algorithm fails a test instead of quietly
+ * breaking half the links in a style guide.
+ *
+ * github-slugger is only the bookkeeper for duplicates. Its `slug()` leaves a string that
+ * is already a markdown-to-jsx slug untouched (verified over the whole battery in
+ * mdx.spec.ts), and the `-1`, `-2` suffixes it appends to a repeat are the same ones
+ * markdown-to-jsx appends within one document.
+ *
+ * The instance is created here, once per compiled file, and deliberately not shared
+ * through a module-level singleton the way `slugger.ts` is for component and section
+ * slugs: `slug()` is stateful, so one instance across files would number the second
+ * page's "Usage" `usage-1`, and the same page would get different ids depending on which
+ * other pages had been compiled before it — ids would then change on a rebuild, on a hot
+ * update, and with the order `glob` happened to return. A heading id must depend on its
+ * own file and nothing else, which is also what markdown-to-jsx does: its duplicate table
+ * lives inside one `compiler()` call, i.e. one document.
+ *
+ * Two things are out of reach by construction rather than by a check: a `#` inside a
+ * fenced code block is the *value* of a `code` node and never a `heading`, and this pass
+ * runs before replaceFences, when no `<RsgPlayground/>` or `<RsgStatic/>` element exists
+ * yet.
+ */
+function addHeadingIds(tree: any, visit: Visit, slugify: (text: string) => string): void {
+	const slugger = new GithubSlugger();
+	visit(tree, 'heading', (node: any) => {
+		const slug = slugify(headingText(node, visit));
+		// A heading with no ASCII letter or digit ("## 日本語の見出し") slugifies to an empty
+		// string, because markdown-to-jsx drops everything it cannot transliterate. Markdown
+		// renders `id=""` there, which is not a link target either, so MDX leaves the heading
+		// alone instead of emitting an empty attribute — and the slugger never sees the empty
+		// string, so a second such heading does not become `id="-1"`.
+		if (!slug) {
+			return;
+		}
+		const id = slugger.slug(slug);
+		node.data = {
+			...(node.data || {}),
+			// `hProperties` is how a remark plugin adds attributes to the element mdast-util-to-hast
+			// will produce; @mdx-js/mdx runs that bridge, so this becomes `<h2 id="...">` in the JSX.
+			hProperties: { ...(node.data?.hProperties || {}), id },
+		};
+	});
+}
+
+/**
  * Compile one `.mdx` file: the ES module source, its playgrounds, and the chunks the
  * machine-readable docs need.
  *
@@ -380,9 +465,14 @@ export default async function parseMdx(
 		source = expandDefaultComponent(source, displayName);
 	}
 
-	const [mdx, { visit }] = await Promise.all([
+	const [mdx, { visit }, { slugify }] = await Promise.all([
 		loadMdxCompiler(config.configDir, file),
 		import('unist-util-visit'),
+		// markdown-to-jsx's own heading slugifier, so MDX and Markdown ids match (see
+		// addHeadingIds). The `/html` entry point exports the same function as the React one
+		// that Markdown.tsx uses, minus the React import — and it is loaded here, next to the
+		// MDX compiler, so a style guide with no `.mdx` file never pays for it.
+		import('markdown-to-jsx/html'),
 	]);
 
 	const updateExample = (props: Omit<Rsg.CodeExample, 'type'>) =>
@@ -392,10 +482,14 @@ export default async function parseMdx(
 	let chunks: MdxChunk[] = [];
 
 	const rsgPlaygrounds = () => (tree: any) => {
-		const planned = planFences(tree, visit as any, updateExample);
+		const planned = planFences(tree, visit, updateExample);
 		examples = planned.examples;
 		chunks = toChunks(tree, source, planned.plan);
-		replaceFences(tree, visit as any, planned.plan);
+		// Before replaceFences, while the tree still holds nothing but Markdown nodes; and
+		// before the user's own `mdx.remarkPlugins`, which run after this one, so a plugin that
+		// assigns its own heading ids (remark-heading-id and friends) still wins.
+		addHeadingIds(tree, visit, slugify);
+		replaceFences(tree, visit, planned.plan);
 	};
 
 	const mdxOptions = config.mdx || {};

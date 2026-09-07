@@ -339,6 +339,83 @@ it('should detect sections containing current selection when tocMode is collapse
 	expect(getByText('1.1')).not.toBeEmptyDOMElement();
 });
 
+/**
+ * `scrollSync: 'selection'` is on by default, so `activeSlug` changes long after mount —
+ * and in `tocMode: 'collapse'` the section holding the new selection is closed, so its
+ * children are not in the DOM to carry the mark. Before the collapsed section stood in for
+ * them, the sidebar highlighted the first entry on load and then nothing at all for the
+ * rest of the page.
+ */
+it('should mark a collapsed section that holds the scrolled-to entry', () => {
+	const context = { config: { tocMode: 'collapse' } };
+	const Provider = (props: any) => <Context.Provider value={context} {...props} />;
+	const tree = [
+		{
+			sections: [
+				{ visibleName: 'Intro', href: '#/intro', slug: 'intro' },
+				{
+					visibleName: 'Components',
+					href: '#/components',
+					slug: 'components',
+					sections: [{ visibleName: 'Button', href: '#/button', slug: 'button' }],
+				},
+			],
+		},
+	];
+	const toc = (activeSlug: string) => (
+		<Provider>
+			<TableOfContents
+				tocMode="collapse"
+				sections={tree}
+				activeSlug={activeSlug}
+				loc={{ pathname: '', hash: '' }}
+			/>
+		</Provider>
+	);
+
+	// Mount somewhere else, so the section starts closed the way it does in a browser
+	const { queryAllByTestId, rerender } = render(toc('intro'));
+	// The list, not the small-screen chip row, which renders the same top-level entries
+	const row = (name: string) =>
+		queryAllByTestId('rsg-toc-link').find((link) => link.textContent === name);
+
+	expect(row('Intro')).toHaveAttribute('aria-current', 'true');
+
+	rerender(toc('button'));
+
+	expect(row('Button')).toBeUndefined();
+	expect(row('Components')).toHaveAttribute('aria-current', 'true');
+	expect(row('Intro')).not.toHaveAttribute('aria-current');
+});
+
+it('should mark the entry itself, not its ancestor, while the section is open', () => {
+	// The default `tocMode`: every level is rendered, so marking the ancestor as well would
+	// put two current entries in one list
+	const { queryAllByTestId } = render(
+		<TableOfContents
+			sections={[
+				{
+					sections: [
+						{
+							visibleName: 'Components',
+							href: '#/components',
+							slug: 'components',
+							sections: [{ visibleName: 'Button', href: '#/button', slug: 'button' }],
+						},
+					],
+				},
+			]}
+			activeSlug="button"
+			loc={{ pathname: '', hash: '' }}
+		/>
+	);
+	const row = (name: string) =>
+		queryAllByTestId('rsg-toc-link').find((link) => link.textContent === name);
+
+	expect(row('Button')).toHaveAttribute('aria-current', 'true');
+	expect(row('Components')).not.toHaveAttribute('aria-current');
+});
+
 it('should show sections with expand: true when tocMode is collapse', () => {
 	const { getByText } = render(
 		<TableOfContents

@@ -42,6 +42,12 @@ export interface TOCItem extends ProcessedSection {
 	heading?: boolean;
 	shouldOpenInNewTab?: boolean;
 	selected?: boolean;
+	/**
+	 * Whether the current entry is somewhere *inside* this one. A collapsed section stands
+	 * in for it then, because its children are not rendered at all (see
+	 * ComponentsList/ComponentsListRenderer).
+	 */
+	containsSelected?: boolean;
 	initialOpen?: boolean;
 	forcedOpen?: boolean;
 	content?: React.ReactNode;

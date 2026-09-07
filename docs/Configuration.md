@@ -854,6 +854,8 @@ Defines if the table of contents sections will behave like an accordion:
 
 Collapse the sections created in the sidebar to reduce the height of the sidebar. This can be useful in large codebases with lots of components to avoid having to scroll too far.
 
+With `collapse`, a section whose contents are hidden is highlighted itself while you are reading something inside it, so the sidebar still says where you are — see [scrollSync](#scrollsync).
+
 ## `updateDocs`
 
 Type: `Function`, optional

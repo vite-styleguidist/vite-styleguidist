@@ -120,6 +120,10 @@ export default class TableOfContents extends Component<TableOfContentsProps> {
 				heading: !!section.name && children.length > 0,
 				content,
 				selected,
+				// Kept separate from `selected`: while the subtree is open the child carries the
+				// mark itself, and marking both would show two current entries. It is the
+				// collapsed case the renderer needs it for.
+				containsSelected,
 				shouldOpenInNewTab,
 				initialOpen: this.props.tocMode !== 'collapse' || containsSelected || section.expand,
 				forcedOpen: !!this.state.searchTerm.length,

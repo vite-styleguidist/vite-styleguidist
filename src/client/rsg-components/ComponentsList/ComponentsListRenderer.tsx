@@ -186,6 +186,7 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 	content,
 	shouldOpenInNewTab,
 	selected,
+	containsSelected,
 	initialOpen,
 	forcedOpen,
 }) => {
@@ -197,11 +198,20 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 	// Hooks must be called unconditionally; sections only collapse in `tocMode: 'collapse'`
 	const [isOpen, setOpen] = React.useState(!!initialOpen);
 	const open = tocMode !== 'collapse' || isOpen;
+	// A closed section stands in for the entry inside it that the reader is on: its children
+	// are not in the DOM, so there is nothing else to carry the mark. Without this the
+	// highlight simply vanished as soon as the scroll spy moved into a collapsed subtree —
+	// which in `tocMode: 'collapse'` is most of the page (`scrollSync` is on by default, so
+	// the sidebar highlighted the first section on load and nothing afterwards). The chip row
+	// in TableOfContents marks its ancestors the same way. `initialOpen` is initial state
+	// only, on purpose: re-opening a section the reader has just collapsed would be worse
+	// than leaving it closed and saying where they are.
+	const current = selected || (!open && !forcedOpen && !!containsSelected);
 	return (
 		<li
 			className={cx(classes.item, {
 				[classes.isChild]: !content && !shouldOpenInNewTab,
-				[classes.isSelected]: selected,
+				[classes.isSelected]: current,
 			})}
 			key={href}
 		>
@@ -214,7 +224,7 @@ const ComponentsListSectionRenderer: React.FunctionComponent<Rsg.TOCItem & JssIn
 					closePanel();
 				}}
 				target={shouldOpenInNewTab ? '_blank' : undefined}
-				aria-current={selected ? 'true' : undefined}
+				aria-current={current ? 'true' : undefined}
 				data-testid="rsg-toc-link"
 			>
 				{visibleName}

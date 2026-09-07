@@ -17,5 +17,9 @@ module.exports = {
 	},
 	theme: 'styleguide.theme.js',
 	styles: 'styleguide.styles.js',
+	// The palette itself: custom properties with a value per colour scheme, which
+	// styleguide.theme.js points the `link` and `linkHover` tokens at. A stylesheet listed
+	// here is loaded before the style guide, which is all this needs.
+	require: [path.join(__dirname, 'styleguide.colors.css')],
 	version,
 };

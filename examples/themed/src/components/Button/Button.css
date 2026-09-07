@@ -1,7 +1,17 @@
+/*
+ * The button is neutral chrome — a surface, a label and a border — so instead of literal
+ * colours it reads the style guide's own: every `theme.color.*` token is published on the
+ * page as a custom property named `--rsg-color-<kebab-name>`, so this component follows the
+ * light/dark toggle without knowing that the toggle exists. The value after the comma is the
+ * light-scheme fallback, used wherever the style guide is not around — the same component
+ * rendered inside your application, or in a unit test.
+ *
+ * See docs/Cookbook.md, "How to make my components follow the style guide’s colour scheme?".
+ */
 .button {
 	padding: 0.5em 1.5em;
-	color: #666;
-	background-color: #fff;
+	color: var(--rsg-color-light, #625d57);
+	background-color: var(--rsg-color-base-background, #fcfbf9);
 	border: 1px solid currentColor;
 	border-radius: 0.3em;
 	text-align: center;
@@ -14,12 +24,41 @@
 	cursor: default;
 }
 
+/*
+ * The "big pink button" of Readme.md is the other half of the recipe: pink is the example's
+ * own identity, and no style guide token can stand in for it, so it keeps its hue and gets
+ * one value per colour scheme — declared exactly the way the style guide declares its own
+ * (src/client/styles/cssVariables.ts): light on `:root`, dark under the attribute the toggle
+ * sets, and dark again when the operating system asks for it and no light choice was made.
+ *
+ * One literal could not do this job: a pink dark enough to clear WCAG AA on the light page
+ * (4.5:1) is far too dark to clear it on the dark one. These two are at 6.3:1 and 8.1:1.
+ */
+:root {
+	--button-pink: #b3125f;
+}
+
+[data-rsg-theme='dark'] {
+	--button-pink: #ff8ac0;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-rsg-theme='light']) {
+		--button-pink: #ff8ac0;
+	}
+}
+
+/*
+ * Used by the ```js { "props": { "className": "checks" } } fence in Readme.md: a transparency
+ * checkerboard. The squares are the guide's code surface and the gaps are the page behind
+ * them, so the pattern stays a faint texture in both colour schemes.
+ */
 .checks {
 	background-image:
-		linear-gradient(45deg, #f5f5f5 25%, transparent 25%),
-		linear-gradient(-45deg, #f5f5f5 25%, transparent 25%),
-		linear-gradient(45deg, transparent 75%, #f5f5f5 75%),
-		linear-gradient(-45deg, transparent 75%, #f5f5f5 75%);
+		linear-gradient(45deg, var(--rsg-color-code-background, #f3f1ec) 25%, transparent 25%),
+		linear-gradient(-45deg, var(--rsg-color-code-background, #f3f1ec) 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, var(--rsg-color-code-background, #f3f1ec) 75%),
+		linear-gradient(-45deg, transparent 75%, var(--rsg-color-code-background, #f3f1ec) 75%);
 	background-size: 16px 16px;
 	background-position:
 		0 0,

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import checkEnvironment, {
@@ -14,6 +15,11 @@ import checkEnvironment, {
 import type { DoctorFinding } from '../types.js';
 
 const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../../test/apps', name);
+
+// Read, not assumed: the react-compat job of the CI workflow swaps the repo’s React for every
+// supported major, and the root flavour the doctor reports follows it.
+const ownReactDomVersion: string = createRequire(import.meta.url)('react-dom/package.json').version;
+const ownFlavor = parseInt(ownReactDomVersion, 10) >= 18 ? 'modern' : 'legacy';
 
 const byId = (findings: DoctorFinding[], id: string) =>
 	findings.filter((finding) => finding.id === id);
@@ -158,10 +164,11 @@ describe('checkEnvironment', () => {
 			'react',
 			'react-dom',
 		]);
-		// The repo develops against React 19, so a style guide of it mounts with createRoot()
+		// The fixture app has no react-dom of its own, so resolution walks up to the repo’s: as
+		// far as the doctor is concerned that is the project’s own copy
 		expect(byId(findings, 'env.react-root')[0]).toMatchObject({
 			level: 'info',
-			meta: { flavor: 'modern' },
+			meta: { flavor: ownFlavor, version: ownReactDomVersion, source: 'project' },
 		});
 		expect(byId(findings, 'env.react-missing')).toHaveLength(0);
 		expect(byId(findings, 'env.react-styleguidist')).toHaveLength(0);
@@ -186,7 +193,12 @@ describe('checkEnvironment', () => {
 			'react-dom',
 		]);
 		expect(byId(findings, 'env.react-missing')[0].level).toBe('error');
-		// Without a react-dom there is nothing to say about the React root
-		expect(byId(findings, 'env.react-root')).toHaveLength(0);
+		// The guide would still mount, with the react-dom of Vite Styleguidist itself (the copy
+		// Vite falls back to as well), and the report has to name where that came from
+		expect(byId(findings, 'env.react-root')[0]).toMatchObject({
+			level: 'info',
+			detail: expect.stringContaining('inside Vite Styleguidist'),
+			meta: { flavor: ownFlavor, version: ownReactDomVersion, source: 'package' },
+		});
 	});
 });

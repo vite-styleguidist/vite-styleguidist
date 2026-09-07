@@ -1,5 +1,6 @@
 // @vitest-environment node
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
@@ -10,11 +11,18 @@ import makeViteConfig, {
 	getAliases,
 	getAliasNames,
 	getReactRootFlavor,
+	resolveReactRoot,
 } from '../make-vite-config.js';
 import type * as Rsg from '../../typings/index.js';
 
 const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../test/apps', name);
 const clientDir = path.resolve(import.meta.dirname, '../../client');
+
+// The react-dom of this repository, which is what a style guide with no react-dom of its own
+// falls back to. Read at run time, never hard-coded: the react-compat job of the CI workflow
+// swaps it for every supported major, and a test that assumed React 19 would then be a lie.
+const ownReactDomVersion: string = createRequire(import.meta.url)('react-dom/package.json').version;
+const ownFlavor = parseInt(ownReactDomVersion, 10) >= 18 ? 'modern' : 'legacy';
 
 const cwd = process.cwd();
 afterEach(() => {
@@ -51,10 +59,12 @@ describe('getAliases', () => {
 		const aliases = getAliases(loadConfig('defaults'));
 		expect(aliases).toEqual([
 			{ find: 'rsg-components', replacement: path.join(clientDir, 'rsg-components') },
-			// The repo develops against React 19, so the fixture app resolves the modern root
+			// The fixture app has no react-dom of its own, so the repo’s copy picks the root
 			{
 				find: /^rsg-react-root$/,
-				replacement: expect.stringMatching(/\/client\/utils\/reactRoot\.modern\.ts$/),
+				replacement: expect.stringMatching(
+					new RegExp(`/client/utils/reactRoot\\.${ownFlavor}\\.ts$`)
+				),
 			},
 			{
 				find: /^assert$/,
@@ -186,18 +196,45 @@ describe('getReactRootFlavor', () => {
 		}
 	});
 
-	it('should fall back to the modern root when react-dom is not installed', () => {
+	it('should prefer the react-dom of the project over the one of this package', () => {
+		// Both copies exist here: the fake 16.14.0 in the temp project and the repo’s own. The
+		// project wins — on a repo running React 18 or 19 (the usual case) that is visible as a
+		// flavour the package’s copy would never have chosen.
+		const dir = createProject('16.14.0');
+		try {
+			expect(getReactRootFlavor(dir)).toBe('legacy');
+			expect(resolveReactRoot(dir)).toEqual({
+				flavor: 'legacy',
+				version: '16.14.0',
+				source: 'project',
+			});
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should fall back to the react-dom of this package when the project has none', () => {
+		// A config directory outside any project with a React (a temp folder, a design system
+		// elsewhere in a monorepo) is what Vite resolves from the importer instead — our own
+		// tree — so the root has to be chosen from the same copy.
 		const dir = createProject();
 		try {
-			expect(getReactRootFlavor(dir)).toBe('modern');
+			expect(getReactRootFlavor(dir)).toBe(ownFlavor);
+			expect(resolveReactRoot(dir)).toEqual({
+				flavor: ownFlavor,
+				version: ownReactDomVersion,
+				source: 'package',
+			});
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
 		}
 	});
 
 	it('should resolve react-dom from the style guide config directory', () => {
-		// The fixture apps have no node_modules of their own: the repo's React 19 is found
-		expect(getReactRootFlavor(testApp('defaults'))).toBe('modern');
+		// The fixture apps have no node_modules of their own: walking up finds the repo’s copy,
+		// which is the project’s as far as resolution is concerned
+		expect(getReactRootFlavor(testApp('defaults'))).toBe(ownFlavor);
+		expect(resolveReactRoot(testApp('defaults'))).toMatchObject({ source: 'project' });
 	});
 });
 

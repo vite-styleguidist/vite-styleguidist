@@ -84,41 +84,93 @@ export function findExampleDependencies(exampleFiles: string[], aliases: string[
 	return uniq(deps);
 }
 
+/** Where the `react-dom` a root flavour was chosen from was found. */
+export type ReactDomSource = 'project' | 'package';
+
+export interface ReactRoot {
+	/** Which of src/client/utils/reactRoot.{modern,legacy}.ts the client will import. */
+	flavor: 'modern' | 'legacy';
+	/** Version of the `react-dom` the flavour was chosen from, undefined when there is none. */
+	version?: string;
+	/** Where that `react-dom` was found, undefined when there is none. */
+	source?: ReactDomSource;
+}
+
 /**
- * Which React root API the project's `react-dom` supports: `modern` (`createRoot()`,
- * React 18 and newer) or `legacy` (`ReactDOM.render()`, React 16.14 and 17).
+ * The `react-dom` that will end up in the bundle, resolved the way Vite resolves it.
+ *
+ * Two steps, in Vite’s own order: from the project first (`config.configDir`), then from
+ * this package’s own directory. `resolve.dedupe` (see the Vite config below) pins React to
+ * the copy it finds from the project root, and when the project root has none Vite keeps
+ * the one it resolved from the importer instead — our client code, which lives inside this
+ * package. A config directory outside any project tree (a temporary folder, as
+ * test/e2e/config-restart.spec.ts uses, or a config kept next to a design system the
+ * components are not part of) therefore resolves nothing in step one and this package’s own
+ * `react-dom` in step two, which is exactly the copy the bundle gets.
+ *
+ * `react-dom/package.json` resolves on every supported version: 16 and 17 have no `exports`
+ * map, 18 and 19 export it.
+ */
+function resolveReactDom(
+	configDir: string
+): { version: string; source: ReactDomSource } | undefined {
+	const anchors: [ReactDomSource, string][] = [
+		['project', path.join(configDir, 'package.json')],
+		// PACKAGE_DIR is this package’s own root, the anchor findClientFile() walks from
+		['package', path.join(PACKAGE_DIR, 'package.json')],
+	];
+	for (const [source, anchor] of anchors) {
+		try {
+			const { version } = createRequire(anchor)('react-dom/package.json') as { version: string };
+			return { version, source };
+		} catch {
+			// Not resolvable from there, try the next anchor
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Which React root API the `react-dom` the bundle will use supports: `modern`
+ * (`createRoot()`, React 18 and newer) or `legacy` (`ReactDOM.render()`, React 16.14 and 17),
+ * and which `react-dom` that was (the doctor reports both, see checkEnvironment.ts).
  *
  * The two implementations live in src/client/utils/reactRoot.{modern,legacy}.ts and the
  * client imports whichever one the `rsg-react-root` alias points at (see reactRoot.ts for
- * why the choice cannot be made at runtime). `react-dom` is resolved from the project
- * (`config.configDir`), the same place `resolve.dedupe` pins the runtime copy to, so the
- * branch and the React that ends up in the bundle always agree. `react-dom/package.json`
- * resolves on every supported version: 16 and 17 have no `exports` map, 18 and 19 export it.
+ * why the choice cannot be made at runtime). It has to agree with the React that is really
+ * bundled, so the copy is looked up exactly as Vite looks it up (see resolveReactDom()
+ * above): mounting with `createRoot()` against a bundled React 16 throws inside the mount
+ * and the whole style guide stays blank.
  *
- * Not resolvable (Preact-only projects, unusual layouts) falls back to `modern`, the only
- * behaviour before React 16 support; `preact/compat` provides both APIs anyway.
+ * Resolvable nowhere (Preact-only projects, unusual layouts) falls back to `modern`, the
+ * only behaviour before React 16 support; `preact/compat` provides both APIs anyway.
  */
-export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
-	let version: string;
-	try {
-		const requireFromProject = createRequire(path.join(configDir, 'package.json'));
-		({ version } = requireFromProject('react-dom/package.json') as { version: string });
-	} catch {
-		logger.debug('Cannot resolve react-dom from the project, mounting with createRoot()');
-		return 'modern';
+export function resolveReactRoot(configDir: string): ReactRoot {
+	const reactDom = resolveReactDom(configDir);
+	if (!reactDom) {
+		logger.debug(
+			'Cannot resolve react-dom from the project or from vite-styleguidist, mounting with createRoot()'
+		);
+		return { flavor: 'modern' };
 	}
-	// A major of 0 is React's experimental channel (`0.0.0-experimental-<hash>-<date>`), which
+	const { version, source } = reactDom;
+	// A major of 0 is React’s experimental channel (`0.0.0-experimental-<hash>-<date>`), which
 	// tracks the newest React and no longer exports `render()`; an unparseable version is a
 	// custom build we know nothing about. Both are safer on the modern branch: `createRoot()`
 	// has existed since 18 and is the only API the experimental builds still ship.
 	const major = parseInt(version, 10);
 	const flavor = major >= 18 || major === 0 || Number.isNaN(major) ? 'modern' : 'legacy';
 	logger.debug(
-		`Found react-dom ${version}, mounting with ${
-			flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'
-		}`
+		`Found react-dom ${version} in ${
+			source === 'project' ? 'the project' : 'vite-styleguidist'
+		}, mounting with ${flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'}`
 	);
-	return flavor;
+	return { flavor, version, source };
+}
+
+/** Shorthand for the flavour alone, which is all the alias below needs. */
+export function getReactRootFlavor(configDir: string): 'modern' | 'legacy' {
+	return resolveReactRoot(configDir).flavor;
 }
 
 /**
@@ -242,7 +294,8 @@ export function getAliases(config: Rsg.SanitizedStyleguidistConfig): Alias[] {
 		replacement: toPosix(path.join(CLIENT_DIR, 'rsg-components')),
 	});
 
-	// The React root implementation matching the project’s react-dom (see getReactRootFlavor)
+	// The React root implementation matching the react-dom that will be bundled (see
+	// resolveReactDom(): the project’s copy, ours when the project has none)
 	alias.push({
 		find: /^rsg-react-root$/,
 		replacement: toPosix(findClientFile(`utils/reactRoot.${getReactRootFlavor(config.configDir)}`)),

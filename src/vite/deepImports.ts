@@ -37,10 +37,14 @@ const isInside = (dir: string, file: string): boolean => {
 /**
  * Is `react-styleguidist` a real dependency of the user’s project?
  *
- * Resolved from the project (`configDir`) rather than from Styleguidist’s own location, the
- * same anchor `getReactRootFlavor()` uses. `react-styleguidist/package.json` is tried first
- * because it resolves whatever the package’s own `exports` map allows (13.x has none, but a
- * fork might); the bare name is the fallback.
+ * Resolved from the project (`configDir`) only: the first of the two anchors
+ * `resolveReactDom()` tries, and deliberately without its fallback to Styleguidist’s own
+ * location, because the question here is whether the *user* depends on the old package and
+ * our own tree could only ever answer that about ourselves.
+ *
+ * `react-styleguidist/package.json` is tried first because it resolves whatever the
+ * package’s own `exports` map allows (13.x has none, but a fork might); the bare name is
+ * the fallback.
  */
 export function isLegacyPackageInstalled(configDir: string): boolean {
 	const requireFromProject = createRequire(path.join(configDir, 'package.json'));

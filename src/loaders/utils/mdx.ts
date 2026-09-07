@@ -73,7 +73,8 @@ export class MissingMdxError extends StyleguidistError {
  *
  * The style guide is the package that declares the peer dependency, and under pnpm's
  * strict layout (or in a monorepo) our own `node_modules` cannot see it. This is the same
- * trick getReactRootFlavor() uses for `react-dom`.
+ * two-step resolution `resolveReactDom()` uses for `react-dom` (make-vite-config.ts), and
+ * the order Vite itself resolves a dependency in.
  */
 function resolveOptional(request: string, configDir: string): string | undefined {
 	for (const from of [path.join(configDir, 'package.json'), import.meta.url]) {

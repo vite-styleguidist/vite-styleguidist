@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import dirname from '../utils/dirname.js';
-import { getReactRootFlavor } from '../make-vite-config.js';
+import { resolveReactRoot } from '../make-vite-config.js';
 import * as consts from '../consts.js';
 import type { DoctorFinding } from './types.js';
 
@@ -207,16 +207,23 @@ export default function checkEnvironment(configDir: string): DoctorFinding[] {
 		});
 	}
 
-	// Which React root the guide will mount with, the one thing that differs by react-dom major
-	if (resolveProjectPackage(configDir, 'react-dom')) {
-		const flavor = getReactRootFlavor(configDir);
+	// Which React root the guide will mount with, the one thing that differs by react-dom
+	// major — and which react-dom answered it, because that is not always the project’s: the
+	// flavour follows the copy Vite will really bundle, ours when the project has none
+	// (resolveReactRoot() in make-vite-config.ts).
+	const reactRoot = resolveReactRoot(configDir);
+	if (reactRoot.source) {
 		findings.push({
 			id: 'env.react-root',
 			level: 'info',
 			title: `The style guide will mount with ${
-				flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'
-			} (react-dom ${flavor === 'modern' ? '18 and newer' : '16/17'})`,
-			meta: { flavor },
+				reactRoot.flavor === 'modern' ? 'createRoot()' : 'ReactDOM.render()'
+			} (react-dom ${reactRoot.flavor === 'modern' ? '18 and newer' : '16/17'})`,
+			detail:
+				reactRoot.source === 'project'
+					? `Chosen from react-dom ${reactRoot.version}, resolved from ${configDir}`
+					: `This project has no react-dom: chosen from the react-dom ${reactRoot.version} inside Vite Styleguidist, which is the copy the bundle would get too`,
+			meta: { flavor: reactRoot.flavor, version: reactRoot.version, source: reactRoot.source },
 		});
 	}
 

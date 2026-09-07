@@ -81,7 +81,14 @@ export const styles = ({
 			isolate: false,
 			outline: 0,
 			borderRadius,
-			boxShadow: [[0, 0, 0, 3, color.focus]],
+			// Two layers, as in the sidebar rows and the chip row: `focus` is a translucent
+			// halo, which composites to 1.55:1 in the light scheme and 2.19:1 in the dark one
+			// — under the 3:1 WCAG 2.2 SC 1.4.11 asks of a focus indicator. The opaque `link`
+			// ring inside it is what carries the contrast (5:1 and 8.4:1 on the same grounds).
+			boxShadow: [
+				[0, 0, 0, 1, color.link],
+				[0, 0, 0, 3, color.focus],
+			],
 		},
 		'$details[open] > &': {
 			isolate: false,
@@ -142,7 +149,11 @@ export const styles = ({
 		'&:focus-visible': {
 			isolate: false,
 			outline: 0,
-			boxShadow: [[0, 0, 0, 3, color.focus]],
+			// The opaque ring carries the 3:1 of SC 1.4.11; see $summary
+			boxShadow: [
+				[0, 0, 0, 1, color.link],
+				[0, 0, 0, 3, color.focus],
+			],
 		},
 		// The current entry: the accent colour and the weight, on no surface of its own, so
 		// that a hovered entry (which does take a surface) still reads as “not this one”

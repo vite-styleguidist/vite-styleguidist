@@ -92,6 +92,23 @@ describe('PageNavRenderer', () => {
 		expect(link['$isSelected > &::before'].background).toBe(theme.color.link);
 	});
 
+	/**
+	 * `color.focus` is a translucent halo — 1.55:1 over the light surface, 2.19:1 over the
+	 * dark one — so on its own it is under the 3:1 WCAG 2.2 SC 1.4.11 asks of a focus
+	 * indicator. The opaque `color.link` ring inside it is what makes the indicator visible,
+	 * and it is what the sidebar rows and the chip row already do.
+	 */
+	it('should give both focusable elements an opaque focus ring, not the halo alone', () => {
+		const rules = styles(theme as unknown as Rsg.Theme);
+		for (const key of ['link', 'summary']) {
+			const rule = rules[key] as Record<string, any>;
+			expect(rule['&:focus-visible'].boxShadow).toEqual([
+				[0, 0, 0, 1, theme.color.link],
+				[0, 0, 0, 3, theme.color.focus],
+			]);
+		}
+	});
+
 	// The other half of that contract: the key a user writes in the `styles` option is the
 	// renderer's name without `Renderer` (rsg-components/Styled), so it has to be `PageNav`
 	it('should be addressed as PageNav by the styles option', () => {

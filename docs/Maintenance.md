@@ -165,6 +165,17 @@ Any commit of a `feat` type merged into a release branch is published as a _mino
 
 Any commit with a `BREAKING CHANGE:` footer (and a `!` in the header) merged into a release branch is published as a _major_ release as soon as CI passes. On `next` it produces the first prerelease of the next major (`2.0.0-next.1`); on `main` it publishes the major directly, which is why breaking changes should go through `next` first.
 
+### Deprecating an option
+
+What users are promised is written down in the [deprecation policy](Compatibility.md#deprecation-policy); this is how a maintainer keeps it.
+
+1. Ship the replacement first, documented in [Configuration](Configuration.md). A deprecation with nothing to point at is a dead end for the person reading the warning.
+2. Add a `deprecated` string to the option’s entry in `src/scripts/schemas/config.ts`, naming the replacement (`'Use exampleMode option instead'`). Styleguidist prints it as a warning and the option keeps working; don’t change what it does at the same time.
+3. Say it in the commit body, so the sentence lands in the generated release notes of the version that introduces it.
+4. Remove it only in the next major: replace `deprecated` with `removed`, whose string must name the replacement, and add the option to the migration guide of that major. Inside a major, a removal is a breaking change dressed as a feature.
+
+An option that never worked is a different case: it can be corrected as a fix, because there is no behaviour to preserve.
+
 ### Release checklist
 
 Before the very first release only:

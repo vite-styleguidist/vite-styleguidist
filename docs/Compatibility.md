@@ -17,6 +17,23 @@ This page is the single source of truth for what Vite Styleguidist supports. `pa
 | Operating system | Linux (tested), macOS and Windows (best effort) | CI runs on `ubuntu-latest`. macOS and Windows are used by the maintainer and by contributors but aren’t part of CI; bugs on them are accepted and fixed on a best-effort basis. Note the default component glob is case-sensitive, see [Locating components](Components.md#finding-components). |
 | Browsers | Current evergreen browsers | The style guide is built as ES modules with modern syntax, which is what every supported browser expects. Internet Explorer and other legacy browsers aren’t supported, for the style guide UI or for the examples. |
 
+## Deprecation policy
+
+Config options are the surface most style guides depend on, so they change on a schedule you can plan around. Every option is in exactly one of three states, and Styleguidist tells you which one when it reads your config:
+
+| State | What Styleguidist does | What it means for you |
+| --- | --- | --- |
+| Deprecated | Prints one warning when the config is read, naming the replacement (`showCode config option is deprecated. Use exampleMode option instead`), and the option keeps working. | Nothing breaks. Move to the replacement when it suits you; the warning is the only cost. |
+| Removed | Throws an error naming the replacement and, where there is one, the documentation page that explains the move (`webpackConfig config option was removed. Styleguidist now uses Vite instead of webpack. Use the "viteConfig" option instead: …`). | The build stops until you change the option. This only happens in a major version. |
+| Unknown | Throws an error printing the value it found, with `Did you mean …?` when the name is close to a real option. | A typo, or an option from another tool. |
+
+The rules behind the table:
+
+- **A deprecated option keeps working for the whole major version it was deprecated in.** It is only ever removed in the next major, and its replacement is documented before the deprecation ships — a deprecation without a replacement to point at isn’t one.
+- **Nothing is removed inside 1.x.** The options 1.0 refuses are the webpack-era ones — `webpackConfig`, `dangerouslyUpdateWebpackConfig` and `updateWebpackConfig`, all covered by the [migration guide](Migration.md) — plus `editorConfig`, which went with the old code editor long before the fork. That list doesn’t grow again until 2.0.
+- **Deprecations are announced in the release notes** of the version that introduces them, with the replacement, so a changelog read is enough to see what will need attention before the next major.
+- **New options are additive.** They arrive with a default that keeps the previous behaviour, so upgrading within a major never means editing a config to keep what you had.
+
 ## Support policy
 
 - **Only the latest major version receives fixes.** When 2.0.0 ships, 1.x stops receiving fixes, including security fixes, unless a fix is trivial to backport and someone volunteers to do it.

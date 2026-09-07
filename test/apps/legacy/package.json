@@ -1,0 +1,8 @@
+{
+  "name": "legacy-style-guide",
+  "private": true,
+  "devDependencies": {
+    "react-styleguidist": "^13.1.4",
+    "webpack": "^5.0.0"
+  }
+}

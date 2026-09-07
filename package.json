@@ -117,7 +117,7 @@
     "@types/react-dom": "^19.2.5",
     "@types/styled-system__theme-get": "^5.0.4",
     "@types/type-detect": "^4.0.3",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.0",
     "conventional-changelog-conventionalcommits": "^9.3.1",
     "deepfreeze": "^2.0.0",
     "dog-names": "^3.0.1",

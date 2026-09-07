@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import getConfig from '../config.js';
 
@@ -9,11 +10,26 @@ const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../te
 const cwd = process.cwd();
 const configDir = testApp('defaults');
 
+// Config files that are written, and sometimes rewritten, by a test. They live outside the
+// repository so that a leftover one can never be picked up as a fixture.
+const tempDirs: string[] = [];
+function writeTempConfig(name: string, source: string): string {
+	const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'rsg-config-'));
+	tempDirs.push(dir);
+	// The package the config file belongs to decides whether a `.js` or `.ts` file is an ES
+	// module, and a folder in the system temp directory belongs to none
+	fs.writeFileSync(path.join(dir, 'package.json'), '{ "name": "rsg-temp", "type": "module" }');
+	const file = path.join(dir, name);
+	fs.writeFileSync(file, source);
+	return file;
+}
+
 beforeEach(() => {
 	process.chdir(configDir);
 });
 afterAll(() => {
 	process.chdir(cwd);
+	tempDirs.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true }));
 });
 
 it('should read a config file', () => {
@@ -75,6 +91,63 @@ describe('config file formats', () => {
 		expect(() => getConfig()).toThrow(
 			/uses the CommonJS `require`[\s\S]*export default[\s\S]*import\.meta\.url[\s\S]*styleguide\.config\.cjs/
 		);
+	});
+
+	// TypeScript configs are compiled with Sucrase before Node loads them (see
+	// utils/loadConfigFile.ts); each fixture pins one thing the compiled file has to keep.
+	it('should load a styleguide.config.ts file, keeping import.meta.url', () => {
+		process.chdir(testApp('ts'));
+		expect(getConfig()).toMatchObject({
+			title: 'TS Style Guide',
+			assetsDir: testApp('ts'),
+		});
+	});
+
+	it('should load a styleguide.config.mts file as an ES module in a CommonJS package', () => {
+		process.chdir(testApp('mts'));
+		expect(getConfig()).toMatchObject({
+			title: 'MTS Style Guide',
+			assetsDir: testApp('mts'),
+		});
+	});
+
+	it('should load a styleguide.config.cts file as CommonJS in an ES module package', () => {
+		process.chdir(testApp('cts'));
+		expect(getConfig()).toMatchObject({
+			title: 'CTS Style Guide',
+			assetsDir: testApp('cts'),
+		});
+	});
+
+	it('should load a styleguide.config.ts file as CommonJS in a CommonJS package', () => {
+		process.chdir(testApp('ts-cjs'));
+		expect(getConfig()).toMatchObject({
+			title: 'TS CommonJS Style Guide',
+			assetsDir: testApp('ts-cjs'),
+		});
+	});
+
+	// The TypeScript names were added after the JavaScript ones and come last in
+	// CONFIG_FILENAMES, so a project that has both keeps loading the file it always loaded
+	it('should prefer a JavaScript config file over a TypeScript one', () => {
+		process.chdir(testApp('js-and-ts'));
+		expect(getConfig()).toMatchObject({ title: 'JS Style Guide' });
+	});
+
+	it('should not leave the compiled TypeScript config behind', () => {
+		process.chdir(testApp('ts'));
+		getConfig();
+		expect(fs.readdirSync(testApp('ts'))).toEqual(['package.json', 'styleguide.config.ts']);
+	});
+
+	it('should report a syntax error in a TypeScript config', () => {
+		const file = writeTempConfig('styleguide.config.ts', 'export default { title: ;');
+		expect(() => getConfig(file)).toThrow(`Cannot compile ${file}`);
+	});
+
+	it('should reject a TypeScript config that exports a function', () => {
+		const file = writeTempConfig('styleguide.config.ts', 'export default () => ({});');
+		expect(() => getConfig(file)).toThrow('must export a plain object');
 	});
 });
 

@@ -9,14 +9,19 @@ import {
 	configProblemsToError,
 	type ConfigProblem,
 } from './utils/sanitizeConfig.js';
-import loadModule from './utils/loadModule.js';
+import loadConfigFile from './utils/loadConfigFile.js';
 import type * as Rsg from '../typings/index.js';
 
 // Config file names looked up (in this order) in the current directory and its parents.
+// The TypeScript ones come last so that a project that has both keeps loading the file it
+// has always loaded.
 export const CONFIG_FILENAMES = [
 	'styleguide.config.js',
 	'styleguide.config.mjs',
 	'styleguide.config.cjs',
+	'styleguide.config.ts',
+	'styleguide.config.mts',
+	'styleguide.config.cts',
 ];
 
 /**
@@ -84,7 +89,7 @@ export function loadConfig(
 	}
 
 	if (configFilepath) {
-		config = loadModule<Rsg.StyleguidistConfig>(configFilepath);
+		config = loadConfigFile<Rsg.StyleguidistConfig>(configFilepath);
 		// Anything but a config object would silently fall through to all defaults
 		if (typeof config === 'function' || typeof (config as any)?.then === 'function') {
 			throw new StyleguidistError(

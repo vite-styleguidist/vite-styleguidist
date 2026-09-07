@@ -129,7 +129,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.11.0",
     "husky": "^9.1.7",
-    "jsdom": "^27.4.0",
+    "jsdom": "^30.0.1",
     "lint-staged": "^16.4.0",
     "memfs": "^4.68.2",
     "polished": "^4.3.1",

@@ -40,7 +40,9 @@ module.exports = {
 
 Please see our [examples](../examples) and refer to [react-docgen](https://github.com/reactjs/react-docgen) documentation for more information about what types of syntax are supported.
 
-While Styleguidist supports TypeScript out of the box, thanks to `react-docgen`, this support is limited. Consider this example:
+Styleguidist documents TypeScript components out of the box: `react-docgen` reads the type annotations, so `.tsx` files need no parser configuration, no `tsconfig.json` and no extra dependency (see the [cookbook](Cookbook.md#how-to-document-typescript-components) and [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript)).
+
+It has one real limit, and it is the one this page is about. Consider:
 
 ```javascript
 import Button from 'antd/es/button'
@@ -48,19 +50,13 @@ import Button from 'antd/es/button'
 export default Button
 ```
 
-Here we’re reexporting a third-party component from `node_modules`. Styleguidist won’t be able to render prop types of this component, unless we’re using `react-docgen-typescript`:
+Here we’re reexporting a third-party component from `node_modules`. `react-docgen` parses the file you point it at, so there is nothing in this file to document and the page comes out empty. Resolving `Button` back to its declaration needs the TypeScript compiler, which is what [react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript) runs. It plugs into the [`propsParser`](Configuration.md#propsparser) option:
 
-1. Install [react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript). Note that it lives under the `styleguidist` GitHub organization, which has been dormant since early 2025, and its last npm release dates from June 2025 (`react-docgen-typescript@2.4.0`). It still works with Styleguidist’s `propsParser` API, which hasn’t changed; if it stops keeping up with TypeScript, please [open an issue](https://github.com/vite-styleguidist/vite-styleguidist/issues) so we can document an alternative.
+1. Install it: `npm install --save-dev react-docgen-typescript`. Note that it lives under the `styleguidist` GitHub organization, which has been dormant since early 2025, and its last npm release dates from June 2025 (`react-docgen-typescript@2.4.0`, last non-Dependabot commit the same month). It still works with Styleguidist’s `propsParser` API, which hasn’t changed; if it stops keeping up with TypeScript, please [open an issue](https://github.com/vite-styleguidist/vite-styleguidist/issues) so we can document an alternative.
 2. Create a `styleguide.config.js`, see [configuration](Configuration.md) reference.
-3. Update your `styleguide.config.js`:
+3. Add the parser, using the recipe in the [cookbook](Cookbook.md#components-re-exported-from-another-package). Copy that one rather than the parser’s own minimal example: it carries a `propFilter` and an entry-picking step that two measured defects need, one of which silently strips every prop of the very components you installed the parser for.
 
-   ```javascript
-   module.exports = {
-     propsParser: require('react-docgen-typescript').withCustomConfig(
-       './tsconfig.json'
-     ).parse
-   }
-   ```
+Use it for the components the default parser cannot reach, not as a blanket replacement for TypeScript projects — [decision 0017](decisions/0017-typescript-props.md) records the measurements behind that advice. `propsParser` receives the file path, so one style guide can use both parsers.
 
 ## Using Styleguidist with other libraries
 

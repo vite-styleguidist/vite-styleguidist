@@ -592,6 +592,10 @@ module.exports = {
 }
 ```
 
+> **TypeScript: you probably don’t need this option.** The default parser reads TypeScript type annotations, so `.tsx` components are documented with no configuration at all — types, required flags, default values and JSDoc descriptions, including prop types imported from a neighbouring module. It documents the props a component _declares_, so a component whose props extend `React.ButtonHTMLAttributes` gets a table of its own props rather than the ~290 attributes the DOM interface adds. See the [TypeScript example](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) and the [cookbook recipe](Cookbook.md#how-to-document-typescript-components).
+>
+> Reach for `propsParser` when a component is resolved through the type system instead of written in the file being parsed — above all one re-exported from another package, which the default parser cannot follow. The cookbook has a verified [react-docgen-typescript recipe](Cookbook.md#components-re-exported-from-another-package) for exactly that case, and [decision 0017](decisions/0017-typescript-props.md) has the measurements behind the split.
+
 ## `require`
 
 Type: `String[]`, optional

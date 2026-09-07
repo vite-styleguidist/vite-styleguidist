@@ -1094,6 +1094,89 @@ module.exports = {
 }
 ```
 
+## How to document TypeScript components?
+
+Nothing to configure. Vite compiles `.tsx` files and the default props parser reads their type annotations, so a TypeScript component is documented exactly like a JavaScript one:
+
+```javascript
+// styleguide.config.js
+module.exports = {
+  components: 'src/components/**/[A-Z]*.tsx'
+}
+```
+
+That gets you the prop name, its type as you wrote it, whether it is required, the default value from the destructuring pattern and the JSDoc description — for interfaces and type aliases, unions and literal unions, enums, generics, `React.FC`, `React.forwardRef`, and prop types imported from a neighbouring module. It also documents the props a component _declares_: a component whose props extend `React.ButtonHTMLAttributes` gets a table of its own props, not the ~290 attributes the DOM interface adds.
+
+A runnable version of all of that is [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript).
+
+Two things the default parser cannot do, and what to do about them:
+
+- **`readonly T[]` is reported as `unknown`** (react-docgen 8.0.3). Write `T[]` if the props table matters more than the modifier.
+- **It cannot follow a component into another package.** It parses the file you point it at (plus type-only modules that file imports relatively), so `export { Button } from 'antd'` gives it nothing to document. That is what the next recipe is for.
+
+### Components re-exported from another package
+
+[react-docgen-typescript](https://github.com/styleguidist/react-docgen-typescript) runs the TypeScript compiler over your whole program, so it resolves types across packages. Use it for the components the default parser cannot reach — see [decision 0017](decisions/0017-typescript-props.md) for why the recommendation is scoped this narrowly, and note that its last release is `2.4.0` from June 2025.
+
+```bash
+npm install --save-dev react-docgen-typescript
+```
+
+```javascript
+// styleguide.config.js
+const path = require('path')
+const { withCustomConfig } = require('react-docgen-typescript')
+
+const parser = withCustomConfig('./tsconfig.json', {
+  savePropValueAsString: true,
+  // This parser follows resolved types, so a component whose props extend
+  // React.ButtonHTMLAttributes gets ~290 DOM attributes in its table. Drop what
+  // @types/react contributes, and nothing else: the widely copied
+  // `!prop.parent.fileName.includes('node_modules')` filter ALSO drops every prop of the
+  // third-party components you installed this parser to document.
+  propFilter: prop =>
+    !prop.parent ||
+    !/node_modules[\\/]@types[\\/]react[\\/]/.test(
+      prop.parent.fileName
+    )
+})
+
+module.exports = {
+  components: 'src/components/**/[A-Z]*.tsx',
+  propsParser(filePath) {
+    const docs = parser.parse(filePath)
+    // It returns an entry for every exported symbol it takes for a component, including
+    // exported enums, and Styleguidist documents the first entry. A file that exports
+    // `enum BadgeTone` before `Badge` would be documented as an empty “BadgeTone”, so put
+    // the entry named after the file first.
+    const name = path.basename(filePath, path.extname(filePath))
+    const match = docs.find(doc => doc.displayName === name)
+    return match ? [match] : docs
+  }
+}
+```
+
+The trade: a `tsconfig.json` is required, the whole program is type-checked on every parse (building the four components of `examples/typescript` takes 0.6 s with the default parser and 3.6 s with this one), and types are printed as `T | undefined` rather than `T`.
+
+You do not have to choose once for the whole style guide. `propsParser` receives the file path, so you can send one directory through the TypeScript parser and let everything else fall through to the default:
+
+```javascript
+// `parser` and the entry picking are the ones from the recipe above
+const { parse } = require('react-docgen')
+
+module.exports = {
+  propsParser(filePath, source, resolver, handlers) {
+    if (filePath.includes('/src/vendor/')) {
+      const docs = parser.parse(filePath)
+      const name = path.basename(filePath, path.extname(filePath))
+      const match = docs.find(doc => doc.displayName === name)
+      return match ? [match] : docs
+    }
+    return parse(source, { resolver, handlers, filename: filePath })
+  }
+}
+```
+
 ## How to re-use the types in Styleguidist?
 
 From version 10, Styleguidist is written using TypeScript language.

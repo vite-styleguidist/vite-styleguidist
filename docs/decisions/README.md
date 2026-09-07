@@ -22,6 +22,7 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0014](0014-mdx-examples.md) | MDX examples and section pages | accepted |
 | [0015](0015-scroll-synced-selection.md) | Scroll-synced selection and hash | accepted |
 | [0016](0016-table-of-contents.md) | “On this page” navigation (`pageNav`) | accepted |
+| [0017](0017-typescript-props.md) | Props parser for TypeScript components | accepted |
 
 ## Convention
 

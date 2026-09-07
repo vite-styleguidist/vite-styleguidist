@@ -103,7 +103,10 @@ const styles = ({
 			display: 'none',
 		},
 	},
-	// Horizontally scrollable row of the top-level entries, small screens only
+	// Horizontally scrollable row of the top-level entries, small screens only. It is the
+	// COLLAPSED state of the navigation (Mobile artboard): the panel below replaces it
+	// while it is open, so the same entries are never on screen — or in the accessibility
+	// tree — twice (see $isChipsHidden).
 	chips: {
 		display: 'none',
 		[mq.small]: {
@@ -119,14 +122,23 @@ const styles = ({
 		flexShrink: 0,
 		display: 'inline-flex',
 		alignItems: 'center',
-		height: TOUCH_TARGET,
-		padding: [[0, 12]],
-		borderRadius,
 		fontWeight: fontWeight.normal,
 		lineHeight: lineHeight.base,
-		background: 'transparent',
-		whiteSpace: 'nowrap',
-		cursor: 'pointer',
+		// The box of the chip, doubled for the same reason the sidebar rows are (see
+		// ComponentsList/ComponentsListRenderer): a chip is a Link, and the
+		// jss-plugin-isolate reset lists the Link class as `.link, .link:link,
+		// .link:visited`, which outranks any single-class rule of ours. Left on the plain
+		// rule these were dead — including the height, so the chips were nowhere near the
+		// 44 px touch target the Mobile artboard specifies.
+		'&&': {
+			isolate: false,
+			height: TOUCH_TARGET,
+			padding: [[0, 12]],
+			borderRadius,
+			background: 'transparent',
+			whiteSpace: 'nowrap',
+			cursor: 'pointer',
+		},
 		// Doubled class: the four properties the Link component declares for the base
 		// state (`&, &:link, &:visited`, one class + one pseudo-class) have to outrank it.
 		// Everything else stays on the plain rule above, where a `styles` override —
@@ -138,10 +150,11 @@ const styles = ({
 			textDecoration: 'none',
 			transition: `background-color ${transition.fast}, color ${transition.fast}`,
 		},
+		// The same quiet, colourless lift the sidebar rows use on hover
 		'&&:hover': {
 			isolate: false,
 			color: color.base,
-			background: color.selectedBackground,
+			background: color.baseBackground,
 		},
 		'&&:focus-visible': {
 			isolate: false,
@@ -153,11 +166,23 @@ const styles = ({
 		},
 	},
 	isSelectedChip: {
+		// The chip row's version of the sidebar's accent edge: a 1 px accent ring around
+		// the tinted pill, which is what a left-hand rail turns into on a horizontal row.
+		// An inset shadow rather than a border, so the chip keeps its width; $chip's own
+		// focus ring outranks it (three classes against two) and still replaces it.
 		'&&, &&:link, &&:visited, &&:hover': {
 			isolate: false,
 			color: color.link,
 			fontWeight: fontWeight.bold,
 			background: color.selectedBackground,
+			boxShadow: [[0, 0, 0, 1, color.link, 'inset']],
+		},
+	},
+	// Small screens: the chip row while the panel that replaces it is open. After $chips
+	// in the sheet, so it wins inside the same media query at equal specificity.
+	isChipsHidden: {
+		[mq.small]: {
+			display: 'none',
 		},
 	},
 });
@@ -186,7 +211,11 @@ export const TableOfContentsRenderer: React.FunctionComponent<TableOfContentsRen
 			<div className={classes.root}>
 				<nav className={classes.nav}>
 					{chips.length > 0 && (
-						<div className={classes.chips} role="group" aria-label="Sections">
+						<div
+							className={cx(classes.chips, { [classes.isChipsHidden]: isPanelOpen })}
+							role="group"
+							aria-label="Sections"
+						>
 							{chips.map((item) => (
 								<Link
 									key={item.slug}

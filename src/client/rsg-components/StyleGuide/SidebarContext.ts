@@ -9,7 +9,10 @@ import React from 'react';
  *
  * On wide screens the panel is always visible and this state is ignored; the
  * default (no provider, e.g. a custom StyleGuideRenderer or a unit test rendering the
- * table of contents on its own) is "open" so that nothing is ever hidden by accident.
+ * table of contents on its own) is "open" so that the full list is never hidden by
+ * accident. On small screens the chip row and the panel are the two halves of one
+ * control — the chips are the collapsed state, the panel replaces them — so the default
+ * shows the panel and drops the chips rather than showing both.
  */
 export interface SidebarState {
 	isPanelOpen: boolean;

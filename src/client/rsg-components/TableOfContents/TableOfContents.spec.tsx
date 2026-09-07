@@ -241,6 +241,24 @@ it('should render the panel with the id the menu button controls, collapsed when
 });
 
 /**
+ * The chip row is the collapsed state of the small-screen navigation, so the panel that
+ * the menu button opens has to replace it: with both on screen the top-level entries were
+ * listed twice, and read out twice (the maintainer's report, and QA F36 before it).
+ */
+it('should hide the chip row while the panel is open', () => {
+	const chipRow = (isPanelOpen: boolean) => {
+		const { container } = render(
+			<SidebarContext.Provider value={{ isPanelOpen, closePanel: () => undefined }}>
+				<TableOfContents sections={sections} />
+			</SidebarContext.Provider>
+		);
+		return container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+	};
+	expect(chipRow(false).className).not.toMatch(/rsg--isChipsHidden-\d+/);
+	expect(chipRow(true).className).toMatch(/rsg--isChipsHidden-\d+/);
+});
+
+/**
  * testing this layer with no mocking makes no sense...
  */
 it('should render components with useRouterLinks', () => {

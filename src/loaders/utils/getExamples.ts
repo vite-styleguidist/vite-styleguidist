@@ -13,7 +13,7 @@ const logger = createLogger('rsg');
  * if it exists, or the default example if one was configured, or null.
  *
  * The extension of the file selects the pipeline: `.mdx` goes through @mdx-js/mdx
- * (`rsg-mdx:`), anything else through the Markdown one (`rsg-examples:`).
+ * (`virtual:rsg-mdx?`), anything else through the Markdown one (`virtual:rsg-examples?`).
  */
 export default function getExamples(
 	config: Rsg.SanitizedStyleguidistConfig,

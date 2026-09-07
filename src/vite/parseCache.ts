@@ -113,7 +113,7 @@ export function setCachedDocs(
 }
 
 /**
- * Examples are keyed by the module id (`rsg-examples:<file>?displayName=…`) rather than by
+ * Examples are keyed by the module id (`virtual:rsg-examples?file=…&displayName=…&rsg`) rather than by
  * the file, because the same Markdown file can be rendered for two components with
  * different `displayName`s and `__COMPONENT__` expands differently in each.
  */

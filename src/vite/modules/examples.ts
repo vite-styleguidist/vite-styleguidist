@@ -152,7 +152,7 @@ export interface ExamplesModule {
 }
 
 /**
- * Generate the `rsg-examples:<file>?...` module: the examples of a Markdown file,
+ * Generate the `virtual:rsg-examples?file=…&rsg` module: the examples of a Markdown file,
  * each code example bundled with an `evalInContext()` function that can run it in
  * the browser with access to the modules it imports.
  *

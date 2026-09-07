@@ -9,6 +9,7 @@ import getConfig from '../../scripts/config.js';
 import generateStyleguideModule, { CLIENT_CONFIG_OPTIONS } from '../modules/styleguide.js';
 import generatePropsModule from '../modules/props.js';
 import generateExamplesModule, { resolveExampleImport } from '../modules/examples.js';
+import { propsId, toPosix } from '../ids.js';
 import type * as Rsg from '../../typings/index.js';
 
 const logger = glogg('rsg');
@@ -73,7 +74,7 @@ describe('generateStyleguideModule', () => {
 		const { code } = generateStyleguideModule(config);
 		const imports = importsOf(code);
 		expect(imports).toContain(component('Button/Button.js'));
-		expect(imports).toContain(`rsg-props:${component('Button/Button.js')}`);
+		expect(imports).toContain(propsId(component('Button/Button.js')));
 		expect(imports).toContain(component('Placeholder/Placeholder.json'));
 		// Section/component data references the imports
 		expect(code).toMatch(/"module": __rsg_\d+,/);
@@ -187,11 +188,13 @@ describe('generatePropsModule', () => {
 	it('should reference the examples module', () => {
 		const { code, docs } = generatePropsModule(config, file, source);
 		expect(docs.examples).toEqual({
-			__rsgImport: expect.stringMatching(/^rsg-examples:.*Button\/Readme\.md\?displayName=Button/),
+			__rsgImport: expect.stringMatching(
+				/^virtual:rsg-examples\?file=.*Button\/Readme\.md&displayName=Button/
+			),
 			__rsgDefault: true,
 		});
 		expect(importsOf(code)).toEqual([
-			`rsg-examples:${component('Button/Readme.md')}?displayName=Button&component=${encodeURIComponent(file)}`,
+			`virtual:rsg-examples?file=${toPosix(component('Button/Readme.md'))}&displayName=Button&component=${toPosix(file)}&rsg`,
 		]);
 	});
 
@@ -202,7 +205,9 @@ describe('generatePropsModule', () => {
 			randomButton,
 			fs.readFileSync(randomButton, 'utf8')
 		);
-		expect(docs.examples?.__rsgImport).toMatch(/^rsg-examples:.*DefaultExample\.md\?.*&default=1$/);
+		expect(docs.examples?.__rsgImport).toMatch(
+			/^virtual:rsg-examples\?file=.*DefaultExample\.md&.*&default=1&rsg$/
+		);
 	});
 
 	it('should have no examples without an examples file nor default example', () => {
@@ -400,16 +405,16 @@ describe('config wiring lost with the webpack loaders', () => {
 
 	it('skipComponentsWithoutExample removes components without an examples file', () => {
 		const withAll = generateStyleguideModule(fixturesConfig());
-		expect(withAll.code).toMatch('rsg-props:');
-		expect(withAll.code).toMatch(/rsg-props:[^"]*RandomButton\.js/);
+		expect(withAll.code).toMatch('virtual:rsg-props?');
+		expect(withAll.code).toMatch(/virtual:rsg-props\?file=[^"]*RandomButton\.js/);
 
 		const filtered = generateStyleguideModule({
 			...fixturesConfig(),
 			skipComponentsWithoutExample: true,
 		});
 		// Button has a Readme.md, RandomButton has no examples file
-		expect(filtered.code).toMatch(/rsg-props:[^"]*Button\.js/);
-		expect(filtered.code).not.toMatch(/rsg-props:[^"]*RandomButton\.js/);
+		expect(filtered.code).toMatch(/virtual:rsg-props\?file=[^"]*Button\.js/);
+		expect(filtered.code).not.toMatch(/virtual:rsg-props\?file=[^"]*RandomButton\.js/);
 	});
 
 	it('warns when a component file cannot be parsed', () => {

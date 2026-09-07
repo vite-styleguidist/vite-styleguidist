@@ -924,6 +924,40 @@ module.exports = {
 
 Styleguidist uses the `vite.config.js` next to your style guide config automatically, see [configuring Vite](Vite.md#reusing-your-projects-vite-config) for other cases.
 
+## How to keep a Vite plugin from processing Styleguidist’s own modules?
+
+Styleguidist generates one module per component and per Markdown file — the component’s props, the examples of a page — and gives them to Vite as [virtual modules](https://vite.dev/guide/api-plugin.html#virtual-modules). Their ids look like this, with the leading `\0` Vite’s convention adds once they are resolved:
+
+```
+\0virtual:rsg-props?file=/src/components/Button/Button.tsx&rsg
+\0virtual:rsg-examples?file=/src/components/Button/Readme.md&displayName=Button&component=/src/components/Button/Button.tsx&rsg
+\0virtual:rsg-mdx?file=/docs/introduction.mdx&rsg
+```
+
+There is no user code in them — only data about your components — so **your plugins should not match them**. Nothing is gained by transforming them, and on a large style guide the waste is real: a 350-component guide whose project Babel plugins ran over them spent two thirds of all its Babel calls, and about half a second of a four-second build, on modules with nothing in them to transform.
+
+You do not have to configure that. The ids are shaped so the usual filters miss them: the source path is a query parameter and the last parameter is always `rsg`, so an id never ends with `.js`, `.tsx` or `.md`, and there is no file extension in front of the `?` either — which is exactly what an extension filter, anchored or not, looks for.
+
+A plugin that still matches them — one whose filter is “everything outside `node_modules`”, say — takes one line to fix. `/^\0/` skips every virtual module, ours and other plugins’ alike:
+
+```javascript
+const babel = require('@rolldown/plugin-babel').default
+
+module.exports = {
+  viteConfig: {
+    plugins: [
+      babel({
+        // Your components, not the modules Styleguidist generates for them
+        exclude: [/[\\/]node_modules[\\/]/, /^\0/],
+        plugins: ['babel-plugin-styled-components']
+      })
+    ]
+  }
+}
+```
+
+The ids themselves are not an API: they are stable within a version, but treat them as something to skip, not something to match.
+
 ## How to deploy a style guide under a sub-path (GitHub Pages)?
 
 Nothing to configure: `styleguidist build` writes an `index.html` that references the bundle and the stylesheet relatively (`./build/bundle.<hash>.js`), and every asset the bundle loads — an imported image, a CSS `background-image` — is resolved against the bundle’s own URL. The folder therefore works at the root of a domain, at `/styleguide/`, or at `/some/sub/path/`, unchanged and without a `base` setting.

@@ -46,7 +46,9 @@ it('should import the examples file if it exists', () => {
 	const result = getExamples(config, file, displayName, examplesFile, defaultExample);
 
 	expect(result).toEqual({ __rsgImport: expect.any(String), __rsgDefault: true });
-	expect(result?.__rsgImport.startsWith(`${EXAMPLES_PREFIX}${toPosix(examplesFile)}?`)).toBe(true);
+	expect(result?.__rsgImport.startsWith(`${EXAMPLES_PREFIX}file=${toPosix(examplesFile)}&`)).toBe(
+		true
+	);
 	expect(parseId(result?.__rsgImport ?? '')).toEqual({
 		file: toPosix(examplesFile),
 		displayName,
@@ -94,7 +96,7 @@ describe('MDX', () => {
 
 		const result = getExamples(config, file, displayName, mdxFile, defaultExample);
 
-		expect(result?.__rsgImport.startsWith(`${MDX_PREFIX}${toPosix(mdxFile)}?`)).toBe(true);
+		expect(result?.__rsgImport.startsWith(`${MDX_PREFIX}file=${toPosix(mdxFile)}&`)).toBe(true);
 		expect(parseExamplesId(NULL + (result?.__rsgImport ?? ''))).toEqual({
 			file: toPosix(mdxFile),
 			displayName,

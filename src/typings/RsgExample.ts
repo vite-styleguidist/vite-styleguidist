@@ -20,7 +20,7 @@ export interface RuntimeCodeExample extends CodeExample {
 /**
  * A whole `.mdx` page: one compiled React component plus the playgrounds it renders.
  *
- * The `rsg-mdx:` virtual module exports an array holding a single chunk of this type (see
+ * The `virtual:rsg-mdx?` virtual module exports an array holding a single chunk of this type (see
  * docs/decisions/0014-mdx-examples.md), so every consumer of `component.props.examples` and
  * `section.content` keeps seeing an array and needs no special case. `Content` is what
  * `@mdx-js/mdx` compiled; its `components` prop maps element names and JSX tags to React

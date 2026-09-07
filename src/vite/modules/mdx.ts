@@ -1,5 +1,5 @@
 /**
- * The `rsg-mdx:<file>?...` virtual module: an MDX page compiled to a React component,
+ * The `virtual:rsg-mdx?file=…&rsg` virtual module: an MDX page compiled to a React component,
  * together with the playgrounds it contains.
  *
  * The module exports an **array of one chunk**, not a bare object:
@@ -131,7 +131,7 @@ export interface MdxModuleOptions {
 }
 
 /**
- * Generate the `rsg-mdx:<file>?...` module for one `.mdx` file.
+ * Generate the `virtual:rsg-mdx?file=…&rsg` module for one `.mdx` file.
  *
  * Async because `compile()` is: the plugin's `load` hook, `generateBundle` and the dev
  * middleware all tolerate promises.
@@ -149,7 +149,7 @@ export default async function generateMdxModule(
 	const parsed = await parseMdx(config, options, source);
 
 	// @vitejs/plugin-react never sees this module: its filter is a RegExp over the module
-	// id, and ours is `\0rsg-mdx:<file>`. So the JSX is lowered here, with the same Oxc
+	// id, and ours is `\0virtual:rsg-mdx?…`. So the JSX is lowered here, with the same Oxc
 	// call src/vite/jsxInJs.ts makes for JSX in `.js` files.
 	const lowered = await transformWithOxc(parsed.code, `${file}.jsx`, {
 		lang: 'jsx',

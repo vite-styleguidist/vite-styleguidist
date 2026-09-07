@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * The `rsg-mdx:` virtual module. The contract the client codes against lives here: an
+ * The `virtual:rsg-mdx?` virtual module. The contract the client codes against lives here: an
  * array of one `{ type: 'mdx', Content, examples }` chunk, whose examples are the same
  * runtime code examples a Markdown file produces.
  */

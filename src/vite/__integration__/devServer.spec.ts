@@ -172,8 +172,8 @@ test('serves the whole module graph', async () => {
 	const list = [...urls];
 	expect(list).toContain(STYLEGUIDE_URL);
 	expect(list.some((url) => url.includes('/components/Button/Button.js'))).toBe(true);
-	expect(list.some((url) => url.includes('__x00__rsg-props:'))).toBe(true);
-	expect(list.some((url) => url.includes('__x00__rsg-examples:'))).toBe(true);
+	expect(list.some((url) => url.includes('__x00__virtual:rsg-props?'))).toBe(true);
+	expect(list.some((url) => url.includes('__x00__virtual:rsg-examples?'))).toBe(true);
 	expect(list.some((url) => url.endsWith('/theme.js'))).toBe(true);
 	expect(list.some((url) => url.includes('global.css'))).toBe(true);
 	payloads.splice(0);

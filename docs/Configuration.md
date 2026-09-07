@@ -1108,6 +1108,8 @@ module.exports = {
 
 > **Note:** Styleguidist adds [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) unless your `plugins` already include it.
 
+> **Note:** The modules Styleguidist generates for your components (`virtual:rsg-props?…`, `virtual:rsg-examples?…`, `virtual:rsg-mdx?…`) hold no user code, and their ids are shaped so that plugins filtering by file extension skip them. Should a plugin of yours process them anyway, exclude every virtual module with `/^\0/` — see [the cookbook](Cookbook.md#how-to-keep-a-vite-plugin-from-processing-styleguidists-own-modules).
+
 > **Tip:** Run style guide in verbose mode to see the actual Vite config used by Styleguidist: `npx styleguidist server --verbose`.
 
 See [Configuring Vite](Vite.md) for examples.

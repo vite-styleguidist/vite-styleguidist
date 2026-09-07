@@ -28,7 +28,7 @@ const defaultParser = (
 ): Documentation[] => parse(code, { resolver, handlers, filename: filePath });
 
 /**
- * Generate the `rsg-props:<file>` module: react-docgen documentation of a component
+ * Generate the `virtual:rsg-props?file=…&rsg` module: react-docgen documentation of a component
  * (props, methods, description, JSDoc tags) plus a reference to its examples module.
  *
  * Successor of the webpack `props-loader`.

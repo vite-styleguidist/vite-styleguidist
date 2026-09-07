@@ -5,6 +5,7 @@ import {
 	RESOLVED_ENTRY_ID,
 	RESOLVED_STYLEGUIDE_ID,
 	NULL,
+	MARKER,
 	PROPS_PREFIX,
 	EXAMPLES_PREFIX,
 	MDX_PREFIX,
@@ -40,7 +41,9 @@ describe('toPosix', () => {
 
 describe('props ids', () => {
 	it('should build an id from a component path', () => {
-		expect(propsId('/components/Button.js')).toBe(`${PROPS_PREFIX}/components/Button.js`);
+		expect(propsId('/components/Button.js')).toBe(
+			`${PROPS_PREFIX}file=/components/Button.js&${MARKER}`
+		);
 	});
 
 	it('should only recognize resolved (null-prefixed) ids', () => {
@@ -59,7 +62,7 @@ describe('props ids', () => {
 describe('examples ids', () => {
 	it('should build an id from the Markdown file only', () => {
 		expect(examplesId({ file: '/components/Readme.md' })).toBe(
-			`${EXAMPLES_PREFIX}/components/Readme.md`
+			`${EXAMPLES_PREFIX}file=/components/Readme.md&${MARKER}`
 		);
 	});
 
@@ -71,7 +74,7 @@ describe('examples ids', () => {
 			shouldShowDefaultExample: true,
 		});
 		expect(id).toBe(
-			`${EXAMPLES_PREFIX}/components/Readme.md?displayName=Button&component=%2Fcomponents%2FButton.js&default=1`
+			`${EXAMPLES_PREFIX}file=/components/Readme.md&displayName=Button&component=/components/Button.js&default=1&${MARKER}`
 		);
 	});
 
@@ -107,7 +110,27 @@ describe('examples ids', () => {
 			displayName: 'Button',
 			componentPath: '/my docs/Button&Co.js',
 		};
+		const id = examplesId(options);
+		// The characters that would end the value (or the query) are escaped…
+		expect(id).toContain('component=/my%20docs/Button%26Co.js');
+		// …and only those: a path still reads as a path
+		expect(id).toContain('file=/my%20docs/Read%20me.md');
+		expect(parseExamplesId(NULL + id)).toMatchObject(options);
+	});
+
+	it('should round-trip a path with characters that are special in a query', () => {
+		const options = {
+			file: '/a b/#hash?q=1/+plus/100%/Read me.md',
+			componentPath: '/a b/#hash?q=1/+plus/100%/Button.js',
+		};
 		expect(parseExamplesId(NULL + examplesId(options))).toMatchObject(options);
+	});
+
+	it('should keep a Windows drive letter readable and intact', () => {
+		const options = { file: 'C:/docs/Read me.md', componentPath: 'C:/src/Button.tsx' };
+		const id = examplesId(options);
+		expect(id).toContain('file=C:/docs/');
+		expect(parseExamplesId(NULL + id)).toMatchObject(options);
 	});
 });
 
@@ -121,7 +144,7 @@ describe('mdx ids', () => {
 
 	it('should build an id with posix paths and the module options as query params', () => {
 		expect(mdxId(options)).toBe(
-			`${MDX_PREFIX}/components/Button/Readme.mdx?displayName=Button&component=%2Fcomponents%2FButton%2FButton.js&default=1`
+			`${MDX_PREFIX}file=/components/Button/Readme.mdx&displayName=Button&component=/components/Button/Button.js&default=1&${MARKER}`
 		);
 	});
 
@@ -136,7 +159,7 @@ describe('mdx ids', () => {
 
 	it('should omit empty options', () => {
 		const id = mdxId({ file: '/a/Readme.mdx' });
-		expect(id).toBe(`${MDX_PREFIX}/a/Readme.mdx`);
+		expect(id).toBe(`${MDX_PREFIX}file=/a/Readme.mdx&${MARKER}`);
 		expect(parseMdxId(NULL + id)).toEqual({
 			file: '/a/Readme.mdx',
 			displayName: undefined,
@@ -148,8 +171,64 @@ describe('mdx ids', () => {
 	it('should recognize only resolved mdx ids', () => {
 		expect(isMdxId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(true);
 		expect(isMdxId(mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
-		expect(isMdxId(NULL + EXAMPLES_PREFIX + '/a/Readme.md')).toBe(false);
+		expect(isMdxId(NULL + examplesId({ file: '/a/Readme.md' }))).toBe(false);
 		expect(isExamplesId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
 		expect(isPropsId(NULL + mdxId({ file: '/a/Readme.mdx' }))).toBe(false);
+	});
+});
+
+/**
+ * The reason the ids have the shape they have (see the note in ../ids.ts): a plugin that
+ * picks its modules with an extension filter must not pick ours. These are the filters we
+ * measured a real project against — @rolldown/plugin-babel’s default `include`, and
+ * @vitejs/plugin-react’s — plus the two shapes a filter can take: over the whole id, and
+ * over the id with its query stripped.
+ */
+describe('id filters of other plugins', () => {
+	/** @rolldown/plugin-babel’s default `include` (unanchored, hence the old problem). */
+	const BABEL_INCLUDE = /\.(?:[jt]sx?|[cm][jt]s)(?:$|\?)/;
+	/** @vitejs/plugin-react’s filter, and the shape most `transform` hooks are written with. */
+	const REACT_INCLUDE = /\.[tj]sx?$/;
+	/** An MDX plugin’s filter, over the id without its query — the other common shape. */
+	const MDX_INCLUDE = /\.mdx?$/;
+
+	const ids = [
+		propsId('/components/Button.tsx'),
+		propsId('/components/Button.js'),
+		examplesId({ file: '/components/Readme.md', displayName: 'Button' }),
+		examplesId({
+			file: '/components/Readme.md',
+			displayName: 'Button',
+			componentPath: '/components/Button.tsx',
+		}),
+		examplesId({
+			file: '/components/Readme.md',
+			displayName: 'Button',
+			componentPath: '/components/Button.tsx',
+			shouldShowDefaultExample: true,
+		}),
+		mdxId({ file: '/components/Page.mdx', componentPath: '/components/Button.tsx' }),
+	].flatMap((id) => [id, NULL + id]);
+
+	it.each([
+		['@rolldown/plugin-babel include', BABEL_INCLUDE],
+		['@vitejs/plugin-react include', REACT_INCLUDE],
+		['an .mdx include', MDX_INCLUDE],
+	])('should not be matched by %s', (_name, filter) => {
+		expect(ids.filter((id) => filter.test(id))).toEqual([]);
+	});
+
+	it('should not be matched with the query stripped either', () => {
+		const cleaned = ids.map((id) => id.split('?')[0]);
+		expect(cleaned.filter((id) => BABEL_INCLUDE.test(id) || MDX_INCLUDE.test(id))).toEqual([]);
+		// Nothing that looks like a file name is left in front of the query at all
+		expect(new Set(cleaned)).toEqual(
+			new Set(
+				[PROPS_PREFIX, EXAMPLES_PREFIX, MDX_PREFIX].flatMap((prefix) => {
+					const head = prefix.slice(0, -1);
+					return [head, NULL + head];
+				})
+			)
+		);
 	});
 });

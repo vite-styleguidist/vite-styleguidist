@@ -176,9 +176,9 @@ describe('import markers', () => {
 
 	it('should escape module ids in import statements', () => {
 		const serializer = new ModuleSerializer();
-		serializer.serialize(importIt('\0rsg-props:/path/with "quotes".js'));
+		serializer.serialize(importIt('\0virtual:rsg-props?file=/path/with "quotes".js&rsg'));
 		expect(serializer.renderImports()).toBe(
-			'import * as __rsg_0 from "\\u0000rsg-props:/path/with \\"quotes\\".js";'
+			'import * as __rsg_0 from "\\u0000virtual:rsg-props?file=/path/with \\"quotes\\".js&rsg";'
 		);
 	});
 

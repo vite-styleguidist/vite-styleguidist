@@ -208,7 +208,7 @@ exports[`should return an import marker for the @example doclet 1`] = `
   "doclets": {},
   "example": {
     "__rsgDefault": true,
-    "__rsgImport": "rsg-examples:~/test/components/Placeholder/examples.md",
+    "__rsgImport": "virtual:rsg-examples?file=~/test/components/Placeholder/examples.md&rsg",
   },
   "methods": [],
   "tags": {

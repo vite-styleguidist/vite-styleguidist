@@ -25,10 +25,10 @@ A Vite plugin (see below) generates JavaScript modules with all user components,
 Styleguidist is a [Vite](https://vite.dev/) plugin plus a browser app. The plugin lives in [src/vite](../src/vite):
 
 - `plugin.ts` — the plugin itself. It resolves and loads the virtual modules, serves the style guide page in development (`configureServer`), emits `index.html` in builds (`generateBundle`), copies `assetsDir` into the output (`closeBundle`) and drives hot module replacement (`hotUpdate`).
-- `ids.ts` — the ids of the virtual modules and helpers to build and parse them. Following the Vite convention, `resolveId` prefixes an id with `\0` and `load` generates its source.
+- `ids.ts` — the ids of the virtual modules and helpers to build and parse them. Following the Vite convention, `resolveId` prefixes an id with `\0` and `load` generates its source. The shape — the source path as a query parameter, a trailing `rsg` flag, never a source extension at the end — is what keeps other plugins’ id filters from matching our modules; the file has the full reasoning.
 - `modules/styleguide.ts` — generates `virtual:rsg-styleguide`: the sections with their components, plus the part of the config the client needs (`CLIENT_CONFIG_OPTIONS`). It replaces the old `styleguide-loader`.
-- `modules/props.ts` — generates `rsg-props:<file>`: the react-docgen documentation of one component (props, methods, description, JSDoc tags) and a reference to its examples module. It replaces `props-loader`.
-- `modules/examples.ts` — generates `rsg-examples:<file>?…`: the examples parsed from one Markdown file, each with an `evalInContext()` function that can run it in the browser with access to the modules it imports. It replaces `examples-loader`.
+- `modules/props.ts` — generates `virtual:rsg-props?file=…&rsg`: the react-docgen documentation of one component (props, methods, description, JSDoc tags) and a reference to its examples module. It replaces `props-loader`.
+- `modules/examples.ts` — generates `virtual:rsg-examples?file=…&rsg`: the examples parsed from one Markdown file, each with an `evalInContext()` function that can run it in the browser with access to the modules it imports. It replaces `examples-loader`.
 - `serialize.ts` — `ModuleSerializer` turns the generated data into ES module source code. File references are _import markers_ (`importIt()` / `importDefault()` from `src/loaders/utils/importIt.ts`) that become `import` statements at the top of the module. Functions are serialized with `Function.prototype.toString()`, so anything that reaches the browser this way (like a `styles: theme => ({…})` config function) must be self-contained.
 - `html.ts` — renders the HTML page for both the dev server and builds, implementing the [template](Configuration.md#template) config option.
 - `jsxInJs.ts` — compiles JSX in `.js` files, which Vite doesn’t do by default.
@@ -46,7 +46,7 @@ The Node-side helpers the plugin uses to find components, run react-docgen and s
 The client accepts updates of `virtual:rsg-styleguide` (`import.meta.hot.accept` in `src/client/index.ts`) and re-renders the whole style guide with the new data. Everything else is about invalidating the right virtual module:
 
 - Markdown examples and `theme`/`styles` files are registered with `this.addWatchFile()` when their modules load, so Vite invalidates the modules that depend on them on change.
-- When a component file changes, `hotUpdate` invalidates its `rsg-props:` module to re-run react-docgen; React Fast Refresh takes care of the component itself.
+- When a component file changes, `hotUpdate` invalidates its `virtual:rsg-props?…` module to re-run react-docgen; React Fast Refresh takes care of the component itself.
 - When a file is added or removed inside the components directories (the common parent of all components, or `contextDependencies`), `hotUpdate` invalidates `virtual:rsg-styleguide` to re-run the globs. Added or removed Markdown files invalidate the docs module of their component.
 
 ## React components

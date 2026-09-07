@@ -31,7 +31,7 @@ export interface MdxOptions {
 	recmaPlugins?: readonly unknown[];
 }
 
-/** Parameters carried by the `rsg-examples:` virtual module id (see src/vite/ids.ts). */
+/** Parameters carried by the `virtual:rsg-examples?` module id (see src/vite/ids.ts). */
 export interface ExamplesModuleOptions {
 	/** Absolute path of the Markdown file with examples. */
 	file: string;

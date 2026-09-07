@@ -22,6 +22,26 @@ const CODE_EXTENSIONS = ['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '
 /** Environment variables Styleguidist itself replaces in the bundle (see make-vite-config). */
 export const REPLACED_ENV_VARS = ['NODE_ENV', 'STYLEGUIDIST_ENV'];
 
+/**
+ * Name prefixes the config exposes to the bundle with the `envPrefix` option: a variable whose
+ * name starts with one of them *is* replaced (see getEnvDefine() in make-vite-config.ts), so
+ * the scan below must not report it as one of the lost ones.
+ *
+ * The schema normalizes the option to an array of strings, but the doctor also runs on configs
+ * that failed validation and were never normalized, so a bare string is read here too, and
+ * anything else is ignored — the schema reports it as a type error of its own.
+ */
+export function collectEnvPrefixes(config: Partial<Rsg.SanitizedStyleguidistConfig>): string[] {
+	const value: unknown = config.envPrefix;
+	if (typeof value === 'string') {
+		return value === '' ? [] : [value];
+	}
+	if (Array.isArray(value)) {
+		return value.filter((prefix): prefix is string => typeof prefix === 'string' && prefix !== '');
+	}
+	return [];
+}
+
 const WEBPACK_CONFIG_FILES = [
 	'webpack.config.js',
 	'webpack.config.mjs',
@@ -175,6 +195,7 @@ export default function checkProject(
 	const oldPackageFiles: string[] = [];
 	const envFiles: string[] = [];
 	const envNames = new Set<string>();
+	const envPrefixes = collectEnvPrefixes(config);
 
 	for (const file of scanned) {
 		if (!CODE_EXTENSIONS.includes(path.extname(file))) {
@@ -208,8 +229,11 @@ export default function checkProject(
 			regexp.lastIndex = 0;
 			let match = regexp.exec(code);
 			while (match) {
-				if (!REPLACED_ENV_VARS.includes(match[1])) {
-					envNames.add(match[1]);
+				const name = match[1];
+				const replaced =
+					REPLACED_ENV_VARS.includes(name) || envPrefixes.some((prefix) => name.startsWith(prefix));
+				if (!replaced) {
+					envNames.add(name);
 					found = true;
 				}
 				match = regexp.exec(code);
@@ -250,9 +274,15 @@ export default function checkProject(
 			id: 'project.process-env',
 			level: 'warning',
 			title: `process.env variables that are not replaced: ${listNames(names)}`,
-			detail: `Only ${REPLACED_ENV_VARS.join(' and ')} are replaced in your components’ code.`,
+			// The second sentence only appears when the option is set: with no envPrefix there is
+			// nothing to say about it here, and the fix line below already names it
+			detail:
+				`Only ${REPLACED_ENV_VARS.join(' and ')} are replaced in your components’ code.` +
+				(envPrefixes.length > 0
+					? ` Your envPrefix option adds ${listNames(envPrefixes)}, which these names do not start with.`
+					: ''),
 			files: envFiles,
-			fix: 'Add a define entry to viteConfig, or read import.meta.env instead.',
+			fix: 'Add their prefix to the envPrefix option, add a define entry to viteConfig, or read import.meta.env instead.',
 			docs: `${consts.DOCS_MIGRATION}#environment-variables`,
 			meta: { variables: names },
 		});

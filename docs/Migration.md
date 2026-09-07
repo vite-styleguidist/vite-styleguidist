@@ -43,7 +43,7 @@ Warnings (2)
   2. process.env variables that are not replaced: API_URL
      Only NODE_ENV and STYLEGUIDIST_ENV are replaced in your components’ code.
      Files: src/components/Chart.js
-     Fix:   Add a define entry to viteConfig, or read import.meta.env instead.
+     Fix:   Add their prefix to the envPrefix option, add a define entry to viteConfig, or read import.meta.env instead.
      Docs:  https://vite-styleguidist.github.io/vite-styleguidist/docs/migration/#environment-variables
 
 Info (7)

@@ -182,6 +182,35 @@ describe('process.env', () => {
 		});
 	});
 
+	it('should ignore the variables an envPrefix exposes', () => {
+		const dir = createProject({
+			'components/Button.js': 'const title = process.env.REACT_APP_TITLE\n',
+		});
+		expect(
+			ids(
+				checkProject(
+					config({ components: 'components/*.js', envPrefix: ['REACT_APP_'] } as any),
+					dir
+				)
+			)
+		).not.toContain('project.process-env');
+	});
+
+	it('should say what the configured envPrefix covers when it reports a name', () => {
+		const dir = createProject({
+			'components/Button.js': 'const url = process.env.API_URL\n',
+		});
+		const findings = checkProject(
+			config({ components: 'components/*.js', envPrefix: ['REACT_APP_'] } as any),
+			dir
+		);
+		expect(byId(findings, 'project.process-env')[0]).toMatchObject({
+			level: 'warning',
+			title: 'process.env variables that are not replaced: API_URL',
+			detail: expect.stringContaining('envPrefix option adds REACT_APP_'),
+		});
+	});
+
 	it('should ignore the two variables Styleguidist replaces', () => {
 		const dir = createProject({
 			'components/Button.js':

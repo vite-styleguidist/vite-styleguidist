@@ -79,21 +79,47 @@ test('emits index.html referencing the bundle and the stylesheet with relative U
 	expect(fs.existsSync(path.join(styleguideDir, stylesheet![1]))).toBe(true);
 });
 
+/** The entry chunk: the one script index.html loads. */
+const readEntryChunk = () => {
+	const dir = path.join(styleguideDir, 'build');
+	const name = fs.readdirSync(dir).find((file) => file.startsWith('bundle.'))!;
+	return fs.readFileSync(path.join(dir, name), 'utf8');
+};
+
+/** Every script of the build, entry chunk and on-demand chunks alike. */
+const readAllChunks = () => {
+	const dir = path.join(styleguideDir, 'build');
+	return fs
+		.readdirSync(dir)
+		.filter((file) => file.endsWith('.js'))
+		.map((file) => fs.readFileSync(path.join(dir, file), 'utf8'))
+		.join('\n');
+};
+
 test('bundles the components and the examples', () => {
-	const files = fs.readdirSync(path.join(styleguideDir, 'build'));
-	const bundle = fs.readFileSync(
-		path.join(
-			styleguideDir,
-			'build',
-			files.find((file) => file.startsWith('bundle.'))!
-		),
-		'utf8'
-	);
+	const bundle = readAllChunks();
 	// Component documentation and examples are inlined as data
 	expect(bundle).toContain('Placeholder');
 	expect(bundle).toContain('getImageUrl');
 	// Function names survive minification (Styled() and the `styles` option depend on them)
 	expect(bundle).toMatch(/\bStyleGuideRenderer\b/);
+});
+
+// `lazyDocs`, on by default (ADR 0019)
+test('keeps the component documentation out of the entry chunk', () => {
+	const entry = readEntryChunk();
+	// The style guide itself is there, and so is the section tree: the sidebar, the routes
+	// and the headings are drawn before anything is loaded
+	expect(entry).toMatch(/\bStyleGuideRenderer\b/);
+	expect(entry).toContain('Placeholder');
+	// …but not what react-docgen and the Markdown pipeline produced
+	expect(entry).not.toContain('getImageUrl');
+	// which the entry imports on demand instead
+	expect(entry).toMatch(/import\(/);
+	const chunks = fs
+		.readdirSync(path.join(styleguideDir, 'build'))
+		.filter((file) => file.endsWith('.js'));
+	expect(chunks.length).toBeGreaterThan(1);
 });
 
 test('only cleans the build/ folder', () => {

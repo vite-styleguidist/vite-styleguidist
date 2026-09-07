@@ -8,7 +8,8 @@ import type { StyleguideRoot } from './utils/reactRoot.js';
 import styleguide from 'virtual:rsg-styleguide';
 import renderStyleguide from './utils/renderStyleguide.js';
 import type { StyleguideObject } from './utils/renderStyleguide.js';
-import { getParameterByName, hasInHash, getHash } from './utils/handleHash.js';
+import { getOriginId } from './utils/handleHash.js';
+import { refreshLoadedDocs, subscribeToTree } from './utils/componentDocs.js';
 import { readStickyOffset } from './styles/styles.js';
 
 // Examples code revision to rerender only code examples (not the whole page) when code changes
@@ -16,16 +17,6 @@ let codeRevision = 0;
 
 // The latest style guide data; replaced on hot updates
 let currentStyleguide: StyleguideObject = styleguide;
-
-/**
- * The element id a fragment points at: the `?id=` parameter when the fragment is a route
- * (`#/Section/Name`, `#!/Button`), the fragment itself otherwise. Empty for a route with
- * no `?id=`, which means “the top of the page”.
- */
-const getOriginId = (hash: string): string | null =>
-	hasInHash(hash, '#/') || hasInHash(hash, '#!/')
-		? getParameterByName(hash, 'id')
-		: getHash(hash, '#');
 
 const scrollToElement = (element: HTMLElement) => {
 	// On small screens the sidebar is a sticky header that would cover the
@@ -112,6 +103,12 @@ const render = () => {
 window.addEventListener('hashchange', render);
 window.addEventListener('hashchange', scrollToOrigin);
 
+// On-demand documentation (`lazyDocs`, ADR 0019) is merged into the section tree while it
+// is being processed, so the guide is re-rendered when a loaded answer would change the
+// tree itself — the store coalesces those into one re-render per frame, and a component
+// that only fills in its own body never asks for one (see utils/componentDocs.ts).
+subscribeToTree(() => render());
+
 /* istanbul ignore if */
 if (import.meta.hot) {
 	// Re-render when components, examples, theme or styles change (see the
@@ -120,6 +117,10 @@ if (import.meta.hot) {
 		if (updated) {
 			currentStyleguide = updated.default;
 			codeRevision += 1;
+			// The loaders in the new module point at the new modules; whatever documentation
+			// is already on the page is re-imported through them, so an edited component or
+			// Readme updates the page with `lazyDocs` on exactly as it does without it
+			refreshLoadedDocs(currentStyleguide.sections);
 			render();
 		}
 	});

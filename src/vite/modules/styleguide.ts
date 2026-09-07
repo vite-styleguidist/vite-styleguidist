@@ -8,6 +8,7 @@ import getSections from '../../loaders/utils/getSections.js';
 import filterComponentsWithExample from '../../loaders/utils/filterComponentsWithExample.js';
 import commonDir from '../../loaders/utils/commonDir.js';
 import slugger from '../../loaders/utils/slugger.js';
+import getNameFromFilePath from '../../loaders/utils/getNameFromFilePath.js';
 import { importDefault } from '../../loaders/utils/importIt.js';
 import ModuleSerializer from '../serialize.js';
 import type * as Rsg from '../../typings/index.js';
@@ -66,6 +67,40 @@ export function collectSections(config: Rsg.SanitizedStyleguidistConfig): Rsg.Lo
 
 	const sections = getSections(config.sections, config);
 	return config.skipComponentsWithoutExample ? filterComponentsWithExample(sections) : sections;
+}
+
+/**
+ * The same section tree, with every component’s documentation behind a loader
+ * (`lazyDocs`, ADR 0019).
+ *
+ * What stays in the tree is everything the guide can know about a component without
+ * parsing it — its file, its slug, its path line, whether it has examples — plus the name
+ * derived from its file path, because the sidebar, the routes and the headings exist
+ * before any documentation is loaded. What leaves it is what react-docgen and the Markdown
+ * pipeline produced (`props`) and the component’s own module (`module`, which the props
+ * module already pulls in through the playgrounds): together they are 60% of the bytes of
+ * a large style guide, and none of them is needed to draw the page.
+ *
+ * `metadata` stays: it is a plain `.json` file next to the component, it is usually absent,
+ * and the component toolbar reads it on the first paint.
+ */
+function toLazyComponent(component: Rsg.LoaderComponent): Rsg.LazyLoaderComponent {
+	const { module, props, ...rest } = component;
+	return {
+		...rest,
+		// The absolute path the guide imports the component from, which is what
+		// processComponent() derives the slug from and getProps() falls back to
+		nameFromPath: getNameFromFilePath(module.__rsgImport),
+		loadDocs: { __rsgLazy: { props, module } },
+	};
+}
+
+function toLazySections(sections: Rsg.LoaderSection[]): Rsg.LazyLoaderSection[] {
+	return sections.map((section) => ({
+		...section,
+		components: section.components.map(toLazyComponent),
+		sections: toLazySections(section.sections),
+	}));
 }
 
 /**
@@ -135,7 +170,9 @@ export default function generateStyleguideModule(
 		config: clientConfig,
 		welcomeScreen,
 		patterns,
-		sections,
+		// `sections` itself is handed to the machine-readable docs, which read the import
+		// markers the loaders produced (machineReadable.ts), so the lazy tree is a copy
+		sections: config.lazyDocs ? toLazySections(sections) : sections,
 	});
 
 	const code = `${serializer.renderImports()}

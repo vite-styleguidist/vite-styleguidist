@@ -7,6 +7,7 @@ import Welcome from 'rsg-components/Welcome';
 import Error from 'rsg-components/Error';
 import NotFound from 'rsg-components/NotFound';
 import Context from 'rsg-components/Context';
+import { loadAllComponentDocs } from '../../utils/componentDocs.js';
 import { HOMEPAGE } from '../../../scripts/consts.js';
 import { DisplayModes, PAGE_NAV_TITLE } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
@@ -125,6 +126,31 @@ export default class StyleGuide extends Component<StyleGuideProps, StyleGuideSta
 			error,
 			info,
 		});
+	}
+
+	public componentDidMount() {
+		this.loadDocsBeforeGivingUp();
+	}
+
+	public componentDidUpdate() {
+		this.loadDocsBeforeGivingUp();
+	}
+
+	/**
+	 * A route that matches nothing may only be matching nothing *yet*.
+	 *
+	 * With `lazyDocs` on (ADR 0019) a component is known by the name its file path gave it
+	 * until its documentation is loaded, so a link written by hand to a component whose
+	 * documented `displayName` is a different word finds no component and would render “not
+	 * found” for good. Before showing that page, load the documentation that is still on
+	 * demand and route again. It costs a sweep of the guide on a page that has nothing to
+	 * show, once: when the sweep finds nothing left to load — a real 404 — nothing happens.
+	 */
+	private loadDocsBeforeGivingUp() {
+		const { sections, allSections, welcomeScreen } = this.props;
+		if (sections.length === 0 && !welcomeScreen && allSections) {
+			loadAllComponentDocs(allSections);
+		}
 	}
 
 	public render() {

@@ -30,7 +30,13 @@ let server: ViteDevServer | undefined;
 let socket: WebSocket | undefined;
 const payloads: any[] = [];
 
-/** Fetch a module and, recursively, every module it imports, like a browser would. */
+/**
+ * Fetch a module and, recursively, every module it imports, like a browser would.
+ *
+ * Dynamic imports count: with `lazyDocs` on (ADR 0019) a component’s documentation is
+ * behind `import()` in the style guide module, and a browser reaches it as soon as the
+ * component is on screen.
+ */
 async function crawl(url: string, seen = new Set<string>(), depth = 0): Promise<Set<string>> {
 	if (seen.has(url) || depth > 5) {
 		return seen;
@@ -39,9 +45,9 @@ async function crawl(url: string, seen = new Set<string>(), depth = 0): Promise<
 	const response = await fetch(BASE + url);
 	expect(response.status, `${url} should be served`).toBe(200);
 	const code = await response.text();
-	const imports = [...code.matchAll(/from\s+"([^"]+)"|import\s+"([^"]+)"/g)].map(
-		(match) => match[1] || match[2]
-	);
+	const imports = [
+		...code.matchAll(/from\s+"([^"]+)"|import\s+"([^"]+)"|import\("([^"]+)"\)/g),
+	].map((match) => match[1] || match[2] || match[3]);
 	for (const imported of imports) {
 		if (imported.startsWith('/')) {
 			await crawl(imported.split('?t=')[0], seen, depth + 1);

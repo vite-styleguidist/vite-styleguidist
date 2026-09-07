@@ -2,6 +2,7 @@ import React from 'react';
 import { render, within, fireEvent } from '@testing-library/react';
 import StyleGuide, { hasPageNav, StyleGuideProps } from './StyleGuide.js';
 import slots from '../slots/index.js';
+import { resetComponentDocs } from '../../utils/componentDocs.js';
 import { DisplayModes, PAGE_NAV_TITLE } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
@@ -381,4 +382,44 @@ test('should render the page navigation with the documented title prop', async (
 		vi.doUnmock('rsg-components/PageNav');
 		vi.resetModules();
 	}
+});
+
+// `lazyDocs` (ADR 0019): a route can miss because a component is known by the name its
+// file path gave it until its documentation is loaded
+describe('a route that matches nothing', () => {
+	afterEach(() => {
+		resetComponentDocs();
+	});
+
+	const lazySections = (loadDocs: () => Promise<any>): Rsg.Section[] => [
+		{
+			slug: 'section',
+			components: [
+				{ filepath: 'components/foo.js', slug: 'foo', nameFromPath: 'Foo', loadDocs },
+			],
+		},
+	];
+
+	it('should load the documentation that is still on demand before giving up', () => {
+		const loadDocs = vi.fn(() => Promise.resolve({ props: { displayName: 'FancyFoo' } }));
+		const { getByText } = render(
+			<StyleGuide {...defaultProps} sections={[]} allSections={lazySections(loadDocs)} />
+		);
+
+		expect(getByText(/Page not found/i)).toBeInTheDocument();
+		expect(loadDocs).toHaveBeenCalledTimes(1);
+	});
+
+	it('should not sweep the guide when the page is the welcome screen', () => {
+		const loadDocs = vi.fn(() => Promise.resolve({ props: {} }));
+		render(
+			<StyleGuide
+				{...defaultProps}
+				sections={[]}
+				allSections={lazySections(loadDocs)}
+				welcomeScreen
+			/>
+		);
+		expect(loadDocs).not.toHaveBeenCalled();
+	});
 });

@@ -103,6 +103,15 @@ interface BaseStyleguidistConfig {
 	getExampleFilename(componentPath: string): string | false;
 	handlers: (componentPath: string) => Handler[];
 	ignore: string[];
+	/**
+	 * Load each component’s documentation (its props, its examples and its own module) on
+	 * demand instead of putting all of it in the first script the browser downloads; see
+	 * docs/decisions/0019-on-demand-documentation.md.
+	 *
+	 * `true` by default. `false` puts every component’s documentation back in the entry
+	 * chunk, which is the shape style guides had before this option existed.
+	 */
+	lazyDocs: boolean;
 	logger: {
 		info(message: string): void;
 		warn(message: string): void;

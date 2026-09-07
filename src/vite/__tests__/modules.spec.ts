@@ -70,8 +70,9 @@ describe('generateStyleguideModule', () => {
 		expect(() => parseModule(code)).not.toThrow();
 	});
 
+	// `lazyDocs: false`: the shape the module had before on-demand documentation existed
 	it('should import components, their docs and metadata', () => {
-		const { code } = generateStyleguideModule(config);
+		const { code } = generateStyleguideModule({ ...config, lazyDocs: false });
 		const imports = importsOf(code);
 		expect(imports).toContain(component('Button/Button.js'));
 		expect(imports).toContain(propsId(component('Button/Button.js')));
@@ -81,6 +82,55 @@ describe('generateStyleguideModule', () => {
 		expect(code).toMatch(
 			/"props": \(__rsg_\d+\.default !== undefined \? __rsg_\d+\.default : __rsg_\d+\)/
 		);
+		// Nothing is deferred
+		expect(code).not.toMatch(/import\(/);
+		expect(code).not.toMatch('"loadDocs"');
+	});
+
+	// `lazyDocs`, on by default (ADR 0019)
+	describe('on-demand documentation', () => {
+		const buttonProps = `rsg-props:${component('Button/Button.js')}`;
+
+		it('should put the documentation of every component behind a loader', () => {
+			const { code } = generateStyleguideModule(config);
+			// Neither the documentation nor the component itself is imported statically
+			const imports = importsOf(code);
+			expect(imports).not.toContain(buttonProps);
+			expect(imports).not.toContain(component('Button/Button.js'));
+			// One loader per component, importing exactly those two modules
+			expect(code).toContain(
+				`"loadDocs": (() => Promise.all([import(${JSON.stringify(buttonProps)}), ` +
+					`import(${JSON.stringify(component('Button/Button.js'))})]).then(` +
+					'([__rsg_lazy_0, __rsg_lazy_1]) => ({ "props": (__rsg_lazy_0.default !== undefined ? ' +
+					'__rsg_lazy_0.default : __rsg_lazy_0), "module": __rsg_lazy_1 })))'
+			);
+			expect(() => parseModule(code)).not.toThrow();
+		});
+
+		it('should keep in the tree what the guide can know without parsing a component', () => {
+			const { code } = generateStyleguideModule(config);
+			// The name the sidebar, the routes and the headings are drawn from meanwhile
+			expect(code).toMatch('"nameFromPath": "Button"');
+			// …with the slug, the path line and whether there are examples, as before
+			expect(code).toMatch('"slug": "button"');
+			expect(code).toMatch('"pathLine": "components/Button/Button.js"');
+			expect(code).toMatch('"hasExamples": true');
+			// Metadata is a plain JSON file, small and read on the first paint: it stays
+			expect(importsOf(code)).toContain(component('Placeholder/Placeholder.json'));
+		});
+
+		it('should name a component after its directory when the file is an index', () => {
+			const withIndex = getConfig({ components: 'components/**/index.js' });
+			const { code } = generateStyleguideModule(withIndex);
+			expect(code).toMatch('"nameFromPath": "Label"');
+		});
+
+		it('should leave the section tree it hands to the machine-readable docs alone', () => {
+			const { sections } = generateStyleguideModule(config);
+			const [button] = sections[0].components;
+			expect(button.module.__rsgImport).toBe(component('Annotation/Annotation.js'));
+			expect(button.props.__rsgImport).toMatch(/^rsg-props:/);
+		});
 	});
 
 	it('should list component files and the directory to watch', () => {

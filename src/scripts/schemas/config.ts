@@ -234,6 +234,14 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 			}
 		},
 	},
+	// On-demand documentation (see src/vite/modules/styleguide.ts and ADR 0019). On by
+	// default: it is what keeps a large style guide’s first paint small, and the cost for a
+	// six-component guide is one extra chunk. `false` restores the shape the style guide
+	// module had before it existed, byte for byte.
+	lazyDocs: {
+		type: 'boolean',
+		default: true,
+	},
 	logger: {
 		type: 'object',
 	},

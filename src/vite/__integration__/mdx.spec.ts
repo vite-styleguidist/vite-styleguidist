@@ -69,10 +69,18 @@ afterAll(() => {
 	fs.rmSync(projectDir, { recursive: true, force: true });
 });
 
+/**
+ * Every script of the build, concatenated. With `lazyDocs` on (ADR 0019) a component’s
+ * documentation is in a chunk of its own rather than in the entry, so “is it in the
+ * bundle” is a question about the whole output folder.
+ */
 const readBundle = () => {
 	const dir = path.join(styleguideDir, 'build');
-	const name = fs.readdirSync(dir).find((file) => file.startsWith('bundle.'))!;
-	return fs.readFileSync(path.join(dir, name), 'utf8');
+	return fs
+		.readdirSync(dir)
+		.filter((file) => file.endsWith('.js'))
+		.map((file) => fs.readFileSync(path.join(dir, file), 'utf8'))
+		.join('\n');
 };
 
 test('bundles the compiled MDX page with its playgrounds', () => {

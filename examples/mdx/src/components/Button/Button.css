@@ -20,6 +20,26 @@
 }
 
 /*
+ * The pink of the `noeditor` example in Readme.mdx. It is the example's own colour, not a
+ * style guide token, so it gets one value per colour scheme in the shape Badge.css explains:
+ * `deeppink` was 3.5:1 on the light page, below the 4.5:1 WCAG AA asks for, and one literal
+ * cannot clear it on a near-white and a near-black page at once. These are 6.4:1 and 8.0:1.
+ */
+:root {
+	--button-pink: #b3125f;
+}
+
+[data-rsg-theme='dark'] {
+	--button-pink: #ff8ac0;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-rsg-theme='light']) {
+		--button-pink: #ff8ac0;
+	}
+}
+
+/*
  * Used by the ```js { "props": { "className": "checks" } } fence in Readme.mdx: a
  * transparency checkerboard. The squares are the guide's code surface, the gaps are the
  * page behind them, so the pattern stays a faint texture in both colour schemes.

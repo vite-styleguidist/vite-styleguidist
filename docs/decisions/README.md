@@ -20,6 +20,7 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0012](0012-ai-integration.md) | AI integration | accepted |
 | [0013](0013-react-16-support.md) | React 16.14 and 17 support | accepted |
 | [0014](0014-mdx-examples.md) | MDX examples and section pages | accepted |
+| [0015](0015-scroll-synced-selection.md) | Scroll-synced selection and hash | accepted |
 
 ## Convention
 

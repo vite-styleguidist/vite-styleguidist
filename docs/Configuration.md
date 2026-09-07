@@ -536,6 +536,24 @@ module.exports = {
 
 Use the [theme](#theme) config option to change ribbon style.
 
+## `scrollSync`
+
+Type: `String` or `false`, default: `selection`
+
+Keep the sidebar (and optionally the URL) on the section the reader has scrolled to, on a style guide that shows everything on one page:
+
+- `selection`: the highlighted sidebar entry follows the scroll; the URL is never touched.
+- `hash`: the same, and the fragment of the address is rewritten to the section on screen with `history.replaceState`, so a copied link points at what the reader was looking at.
+- `false`: the selection only changes when the reader clicks an entry or opens a link, which is what Styleguidist did before 1.0.
+
+```javascript
+module.exports = {
+  scrollSync: 'hash'
+}
+```
+
+Only the default one-page layout has anything to follow: with [pagePerSection](#pagepersection) the sidebar links are routes rather than anchors, and an isolated view has no sidebar, so the option has no effect in either. Nothing is ever pushed onto the history stack and no `hashchange` event is fired, so the back button and any code that listens for navigation behave exactly as before; code that _polls_ `location.hash` will see it change while the reader scrolls in `hash` mode.
+
 ## `sections`
 
 Type: `Array`, optional

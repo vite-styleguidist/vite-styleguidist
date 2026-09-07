@@ -82,12 +82,30 @@ Then remove the packages that were only there for Styleguidist: `webpack`, `babe
 
 ## Package name in imports
 
-Everything that referred to the package by name has to use the new name. Search your project for `react-styleguidist` and rename:
+Everything that referred to the package by name should use the new name. Search your project for `react-styleguidist` and rename:
 
 - Node.js API imports: `import styleguidist from 'vite-styleguidist'` or `require('vite-styleguidist')`.
-- Deep imports of Styleguidist internals, like the default renderers you wrap in [styleguideComponents](Configuration.md#styleguidecomponents): `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js` (note the `.js` extension, the package’s `exports` map doesn’t add it for you), `vite-styleguidist/lib/client/utils/compileCode.js`, and so on.
+- Deep imports of Styleguidist internals, like the default renderers you wrap in [styleguideComponents](Configuration.md#styleguidecomponents): `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer`, `vite-styleguidist/lib/client/utils/compileCode`, and so on. The `.js` extension is optional — both forms resolve, in the style guide, in Node.js and in TypeScript. Inside a style guide a folder that has an `index.js` resolves too (`vite-styleguidist/lib/client/rsg-components/Link`); name the file if the same import has to work in Node.js or TypeScript.
 - `tsconfig.json` `paths` entries pointing at `node_modules/react-styleguidist/lib/...`, see the [cookbook](Cookbook.md#how-to-re-use-the-types-in-styleguidist).
 - Bundler aliases or `moduleAliases` that mention the package.
+
+### You don’t have to rename them all at once
+
+As long as `react-styleguidist` isn’t installed in your project, Styleguidist serves imports of the old name from itself, so a custom component that still starts with
+
+```js
+import LinkRenderer from 'react-styleguidist/lib/client/rsg-components/Link/LinkRenderer'
+```
+
+keeps building and rendering, and you can move your files to the new name one at a time. The first time such an import is served, Styleguidist prints one line and then stays quiet:
+
+```
+react-styleguidist is not installed; imports of it are served by vite-styleguidist — see Migration.md
+```
+
+Two limits are worth knowing. This covers what Vite resolves for the style guide — your components, your examples, and config values that name a module, such as a `styleguideComponents` path — but not `import`/`require` of `react-styleguidist` at the top of `styleguide.config.js` or of a Node.js script: those are resolved by Node.js before Styleguidist sees them, and they fail. And if your project really does depend on `react-styleguidist` (say a webpack-based style guide you still build during the transition), nothing is rewritten and nothing is printed: a real dependency wins.
+
+It is a migration aid, not a second supported name for the package. Rename the imports.
 
 ## Config options
 

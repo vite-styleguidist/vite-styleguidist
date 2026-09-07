@@ -694,11 +694,13 @@ module.exports = {
 }
 ```
 
-Paths may omit the extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.), Vite resolves them like any import. Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
+Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
+
+Values are written like imports and Vite resolves them like imports: an absolute path, a path relative to the config file (`./styleguide/components/Wrapper`), or a module name from your dependencies. The extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.) may be omitted.
 
 See an example of [customized style guide](../examples/customised).
 
-To wrap, rather than replace a component, make sure to import the default implementation using the full path to `vite-styleguidist`, with the `.js` extension, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js`. (The package’s `exports` map doesn’t add extensions for you, so the extensionless form only works when a bundler happens to resolve it.) See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
+To wrap, rather than replace a component, import the default implementation by its full path inside `vite-styleguidist`, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer` — with or without the `.js` extension, both resolve. See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
 
 **Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates, except `Editor`, whose props are a stable contract (see below).
 

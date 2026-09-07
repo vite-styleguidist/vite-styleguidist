@@ -534,6 +534,8 @@ To use a CSS animation, you have to define its keyframe at the root of the rende
 
 You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
 
+Every path in the recipes below is written without a file extension, which is fine: a [styleguideComponents](Configuration.md#styleguidecomponents) value is resolved like any other import, so `path.join(__dirname, 'src/styleguide/Wrapper')`, `'./src/styleguide/Wrapper'` (relative to the config file) and the same paths with `.js` all work. The same goes for a component of Styleguidist’s own that you import to wrap it: `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer`, with or without the `.js`.
+
 If you replace `StyleGuideRenderer`, know that on small screens the table of contents collapses behind the menu button through `rsg-components/StyleGuide/SidebarContext` (the default renderer provides it); without the provider the navigation is simply always open, and the menu and search buttons of the small-screen header are the default renderer’s.
 
 There’s also a special wrapper component — `Wrapper` — that wraps every example component. By default, it renders `children` as is but you can use it to provide custom logic.
@@ -1001,6 +1003,8 @@ It also allows you to write customized style guide components using TypeScript T
   "exclude": ["node_modules"]
 }
 ```
+
+The alias is only needed for the short `rsg-components/...` form. A deep import that names the package — `vite-styleguidist/lib/client/rsg-components/Heading`, with or without the `.js` — resolves its own types, under both the `bundler` and the `node16` module resolution.
 
 This way when you write the following component, TypeScript will resolve typings for client components and help you type them properly.
 

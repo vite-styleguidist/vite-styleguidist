@@ -89,7 +89,7 @@ describe('generateStyleguideModule', () => {
 
 	// `lazyDocs`, on by default (ADR 0019)
 	describe('on-demand documentation', () => {
-		const buttonProps = `rsg-props:${component('Button/Button.js')}`;
+		const buttonProps = propsId(component('Button/Button.js'));
 
 		it('should put the documentation of every component behind a loader', () => {
 			const { code } = generateStyleguideModule(config);
@@ -129,7 +129,7 @@ describe('generateStyleguideModule', () => {
 			const { sections } = generateStyleguideModule(config);
 			const [button] = sections[0].components;
 			expect(button.module.__rsgImport).toBe(component('Annotation/Annotation.js'));
-			expect(button.props.__rsgImport).toMatch(/^rsg-props:/);
+			expect(button.props.__rsgImport).toBe(propsId(component('Annotation/Annotation.js')));
 		});
 	});
 

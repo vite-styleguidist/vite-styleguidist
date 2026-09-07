@@ -436,6 +436,94 @@ ${css
 }
 ```
 
+## How to make my components follow the style guide’s colour scheme?
+
+Your components are yours: Styleguidist renders them with their own CSS and never restyles them, so a library with a fixed palette is a perfectly good style guide. This recipe is optional, and it only changes how your components look **inside the style guide** — but a component that hard-codes `color: #333; background: #fff` is unreadable on the dark page, which is what every example in this repository used to do.
+
+Every colour of the style guide is a CSS custom property named after its [theme](Configuration.md#theme) token, `--rsg-color-<name>` with the token name in kebab-case, defined for both schemes on the page your components render in. Reading one is all it takes to follow the light/dark toggle:
+
+```css
+.button {
+  /* the value after the comma is the light-scheme fallback, used wherever the
+     style guide is not around: this component inside your app, or a unit test */
+  color: var(--rsg-color-light, #625d57);
+  background-color: var(--rsg-color-base-background, #fcfbf9);
+  border: 1px solid currentColor;
+}
+```
+
+It works in a CSS Module (custom properties are global, only the class name is scoped), in an inline style, and in any CSS-in-JS library, because a `var()` expression is a plain CSS value:
+
+```jsx
+<label style={{ color: 'var(--rsg-color-base, #262421)' }}>Hi</label>
+```
+
+These are the properties, with their light and dark values. Names are only ever added, never renamed or removed (see [ADR 0011](decisions/0011-facelift-and-dark-mode-contract.md)):
+
+| Custom property | Light | Dark | Role |
+| --- | --- | --- | --- |
+| `--rsg-color-base` | `#262421` | `#ece8e1` | body text |
+| `--rsg-color-light` | `#625d57` | `#a8a29a` | secondary text |
+| `--rsg-color-lightest` | `#a8a29a` | `#6b6660` | decorative: placeholders, disabled marks |
+| `--rsg-color-link` | `#0b7285` | `#5cc8d8` | links, the single accent |
+| `--rsg-color-link-hover` | `#095c6b` | `#8fdde8` | hovered links |
+| `--rsg-color-focus` | `rgba(11, 114, 133, 0.3)` | `rgba(92, 200, 216, 0.35)` | focus ring |
+| `--rsg-color-border` | `#e6e2da` | `#3a3631` | decorative: rules, boxes |
+| `--rsg-color-name` | `#4a6b1f` | `#a3d17a` | prop names |
+| `--rsg-color-type` | `#8c1f5a` | `#e59fc7` | prop types |
+| `--rsg-color-error` | `#b42318` | `#f28b82` | error text |
+| `--rsg-color-base-background` | `#fcfbf9` | `#1c1a17` | the page, and the example preview box |
+| `--rsg-color-code-background` | `#f3f1ec` | `#262320` | code blocks, a quiet raised surface |
+| `--rsg-color-sidebar-background` | `#f4f2ee` | `#221f1b` | the sidebar |
+| `--rsg-color-selected-background` | `#e3f1f3` | `#1f3236` | the selected sidebar item, the active tab |
+| `--rsg-color-error-background` | `#fdf3f1` | `#2b1f1d` | the playground error panel |
+| `--rsg-color-ribbon-background` | `#0b7285` | `#5cc8d8` | the corner ribbon |
+| `--rsg-color-ribbon-text` | `#ffffff` | `#1c1a17` | the corner ribbon’s text |
+| `--rsg-color-code-base` | `#262421` | `#ece8e1` | syntax highlighting: plain code |
+| `--rsg-color-code-comment` | `#6b6660` | `#948d84` | syntax highlighting: comments |
+| `--rsg-color-code-punctuation` | `#6f6961` | `#a8a29a` | syntax highlighting: punctuation |
+| `--rsg-color-code-property` | `#8c1f5a` | `#e59fc7` | syntax highlighting: properties |
+| `--rsg-color-code-deleted` | `#8c1f5a` | `#e59fc7` | syntax highlighting: deletions |
+| `--rsg-color-code-string` | `#4a6b1f` | `#a3d17a` | syntax highlighting: strings |
+| `--rsg-color-code-inserted` | `#4a6b1f` | `#a3d17a` | syntax highlighting: insertions |
+| `--rsg-color-code-operator` | `#8a5a2b` | `#d9a66b` | syntax highlighting: operators |
+| `--rsg-color-code-keyword` | `#0b7285` | `#5cc8d8` | syntax highlighting: keywords |
+| `--rsg-color-code-function` | `#b3365f` | `#f28fb1` | syntax highlighting: functions |
+| `--rsg-color-code-variable` | `#a15c00` | `#e8b04a` | syntax highlighting: variables |
+
+### Colours of your own
+
+A brand colour is not a style guide token and should not be replaced by one. Give it a value per scheme instead, in the same three places Styleguidist declares its own — `:root`, the attribute the toggle sets, and the media query for visitors who have made no choice:
+
+```css
+:root {
+  --badge-success-ink: #1c6b30;
+  --badge-success-surface: #e2f5e6;
+}
+[data-rsg-theme='dark'] {
+  --badge-success-ink: #8fd8a0;
+  --badge-success-surface: #16301d;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-rsg-theme='light']) {
+    --badge-success-ink: #8fd8a0;
+    --badge-success-surface: #16301d;
+  }
+}
+```
+
+Use a prefix of your own, as above: `--rsg-color-*` are Styleguidist’s tokens and it sets them.
+
+You often need neither. A colour that comes with its own background — a filled button, a badge, a banner — is a **self-contained pair**: it does not depend on the page behind it, so one value works in both schemes. Only a colour that sits directly on the page needs two.
+
+> **Info:** A colour that has to clear [WCAG AA](https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html) (4.5:1 for text, 3:1 for large text and UI boundaries) on both `#fcfbf9` and `#1c1a17` does not exist: the two requirements have no overlap. One literal on a surface that switches is always wrong in one of the schemes — that is the whole reason for the two values above.
+
+### If you do not want two schemes
+
+Set [colorScheme](Configuration.md#colorscheme) to `light` or `dark`. The toggle disappears, the page stays in that scheme, and literals in your components are then correct by construction. `examples/customised` in this repository does exactly that; `examples/themed` takes the other road and gives its palette a value per scheme.
+
+Note that overriding a colour through the [theme](Configuration.md#theme) option (`theme: { color: { link: '#f50' } }`) replaces the custom property with a literal for the style guide’s own UI, but does **not** change `--rsg-color-link` — a component of yours reading that property still gets Styleguidist’s value. Set both, or set the property alone and leave `theme.color` untouched; [How to customize dark mode?](#how-to-customize-dark-mode) has the details.
+
 ## How to use CSS animations in your style guide?
 
 As seen in the `@keyframes` animation examples above, the animation property in CSS rules do not directly use the name of their keyframe animations because of internal keyframe scoping.

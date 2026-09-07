@@ -102,11 +102,31 @@ export const mq = {
 	// Used by StyleGuideRenderer to tighten the page paddings: sidebar (232) + content
 	// (960) + paddings no longer fit side by side around this width.
 	medium: '@media (max-width: 1024px)',
+	// The width at which the “on this page” rail (`pageNav`, ADR 0016) fits *beside* the
+	// content column without narrowing it. The arithmetic, in the tokens below:
+	//
+	//   sidebarWidth                232   the fixed sidebar
+	// + maxWidth + 2 × space[6]    1056   the content column, page gutters included
+	// + space[3]                     24   the gutter between the column and the rail
+	// + pageNavWidth                168   the rail itself
+	// = 1480
+	//
+	// Below this the rail is not squeezed in, it changes shape: PageNav renders the same
+	// list as a collapsible block above the content (ADR 0016), so laptops keep the
+	// feature and the 960 px column keeps its width everywhere.
+	//
+	// A `theme` override has to keep the two in step: change `pageNavWidth` or `maxWidth`
+	// and this query is the other half of the change.
+	large: '@media (min-width: 1480px)',
 };
 
 export const borderRadius = 6;
 export const maxWidth = 960;
 export const sidebarWidth = 232;
+// Width of the “on this page” rail (`pageNav`, ADR 0016), a sibling of `sidebarWidth`:
+// what the column beside the content is worth. It is only used above `mq.large`, whose
+// value is computed from this one — see the comment there.
+export const pageNavWidth = 168;
 
 // Tab and toggle labels are set in sentence case since 1.0 (they were uppercase before)
 export const buttonTextTransform = 'none';

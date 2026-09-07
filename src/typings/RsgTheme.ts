@@ -85,10 +85,18 @@ export interface Theme {
 	mq: {
 		small: string;
 		medium: string;
+		/**
+		 * From this width up the `pageNav` rail fits beside the content column (since 1.0,
+		 * ADR 0016); below it PageNav renders as a collapsible block. Computed from
+		 * `sidebarWidth`, `maxWidth`, `space[6]`, `space[3]` and `pageNavWidth`.
+		 */
+		large: string;
 	};
 	borderRadius: number;
 	maxWidth: number;
 	sidebarWidth: number;
+	/** Width of the `pageNav` rail (since 1.0); see `mq.large`. */
+	pageNavWidth: number;
 	buttonTextTransform: string;
 }
 

@@ -1,5 +1,14 @@
 import type { ScrollSync } from '../typings/RsgStyleguidistConfig.js';
 
+/**
+ * Element id of the page's content region: the `<main>` StyleGuideRenderer renders, the
+ * target of the skip link and of every `?id=` link (src/client/index.ts). It lives here,
+ * and not in StyleGuideRenderer, because PageNav reads the rendered headings out of that
+ * element and StyleGuideRenderer is a component users replace — an id both sides have to
+ * agree on cannot be owned by the replaceable half.
+ */
+export const CONTENT_ID = 'rsg-content';
+
 export const DisplayModes = Object.freeze({
 	// Show all sections and components (default)
 	all: 'all',

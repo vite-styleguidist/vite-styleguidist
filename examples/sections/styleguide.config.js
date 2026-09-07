@@ -3,6 +3,10 @@ const path = require('path');
 module.exports = {
 	title: 'Vite Styleguidist Sections Example',
 	pagePerSection: true,
+	// Each page here is one section or one component, which is exactly where a list of the
+	// page's own headings helps (docs/decisions/0016-table-of-contents.md). It is a rail
+	// beside the content from 1480 px up and a collapsible block above it below that.
+	pageNav: true,
 	// tocMode: 'collapse',
 	sections: [
 		{

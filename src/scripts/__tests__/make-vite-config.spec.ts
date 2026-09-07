@@ -95,6 +95,25 @@ describe('getAliases', () => {
 		expect(aliases[1].replacement).toBe('/project/styleguide/Wrapper.js');
 	});
 
+	// The two halves of PageNav (ADR 0016) are replaceable like any other component, and the
+	// aliases have to match the specifiers the code imports: `rsg-components/PageNav` in
+	// StyleGuide, `rsg-components/PageNav/PageNavRenderer` in PageNav itself.
+	it('should alias both halves of PageNav', () => {
+		const [nav, renderer] = getAliases(
+			loadConfig('defaults', {
+				styleguideComponents: {
+					PageNav: '/project/styleguide/PageNav.js',
+					PageNavRenderer: '/project/styleguide/PageNavRenderer.js',
+				},
+			})
+		);
+		expect((nav.find as RegExp).test('rsg-components/PageNav')).toBe(true);
+		expect((nav.find as RegExp).test('rsg-components/PageNav/PageNav')).toBe(false);
+		expect(nav.replacement).toBe('/project/styleguide/PageNav.js');
+		expect((renderer.find as RegExp).test('rsg-components/PageNav/PageNavRenderer')).toBe(true);
+		expect(renderer.replacement).toBe('/project/styleguide/PageNavRenderer.js');
+	});
+
 	// A custom Wrapper typically imports the default one from `rsg-components/Wrapper/Wrapper`:
 	// the alias must match the exact module only, not everything under it
 	it('should match custom style guide components exactly', () => {

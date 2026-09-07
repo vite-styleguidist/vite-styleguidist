@@ -77,6 +77,21 @@ describe('theme', () => {
 		expect(theme.mq).toEqual({
 			small: '@media (max-width: 600px)',
 			medium: '@media (max-width: 1024px)',
+			large: '@media (min-width: 1480px)',
 		});
+		// `mq.large` is computed from the other tokens (ADR 0016): the sidebar, the content
+		// column with its page gutters, the rail's gutter and the rail. Pinning the arithmetic
+		// here is what makes a change to any of them show up as a decision rather than as a
+		// silently moved breakpoint.
+		expect(theme.mq.large).toBe(
+			`@media (min-width: ${
+				theme.sidebarWidth +
+				theme.maxWidth +
+				2 * theme.space[6] +
+				theme.space[3] +
+				theme.pageNavWidth
+			}px)`
+		);
+		expect(theme.pageNavWidth).toBe(168);
 	});
 });

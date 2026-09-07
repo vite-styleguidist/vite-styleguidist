@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, within, fireEvent } from '@testing-library/react';
-import StyleGuide, { StyleGuideProps } from './StyleGuide.js';
+import StyleGuide, { hasPageNav, StyleGuideProps } from './StyleGuide.js';
 import slots from '../slots/index.js';
 import { DisplayModes } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
@@ -261,4 +261,76 @@ test('should render the colour-scheme control inside the small-screen header', (
 	} finally {
 		window.matchMedia = originalMatchMedia;
 	}
+});
+
+/**
+ * Where an “on this page” list appears (`pageNav`, ADR 0016). The rule is “this page shows a
+ * single component or section”, which is not one `displayMode` check: `pagePerSection` pages
+ * keep `displayMode: 'all'` even though each of them shows one section.
+ */
+describe('hasPageNav', () => {
+	const on = { ...config, pageNav: true } as Rsg.ProcessedStyleguidistConfig;
+	const off = { ...config, pageNav: false } as Rsg.ProcessedStyleguidistConfig;
+
+	it('should be off unless the option is on', () => {
+		expect(hasPageNav(DisplayModes.component, off, false)).toBe(false);
+		expect(hasPageNav(DisplayModes.all, off, true)).toBe(false);
+	});
+
+	it('should be off on the default all-in-one page, where the sidebar is the page nav', () => {
+		expect(hasPageNav(DisplayModes.all, on, false)).toBe(false);
+		expect(hasPageNav(undefined, on, false)).toBe(false);
+	});
+
+	it('should be on for a pagePerSection page, including its implicit landing page', () => {
+		expect(hasPageNav(DisplayModes.all, on, true)).toBe(true);
+		expect(hasPageNav(DisplayModes.section, on, true)).toBe(true);
+	});
+
+	it('should be on for a single section, a single component and an isolated example', () => {
+		expect(hasPageNav(DisplayModes.section, on, false)).toBe(true);
+		expect(hasPageNav(DisplayModes.component, on, false)).toBe(true);
+		expect(hasPageNav(DisplayModes.example, on, false)).toBe(true);
+	});
+
+	it('should be off when there is no page to describe', () => {
+		expect(hasPageNav(DisplayModes.notFound, on, false)).toBe(false);
+		expect(hasPageNav(DisplayModes.notFound, on, true)).toBe(false);
+	});
+});
+
+test('should mount the page navigation where the fence allows it', () => {
+	const { getByTestId, getAllByTestId } = render(
+		<StyleGuide
+			{...defaultProps}
+			config={{ ...config, pageNav: true } as Rsg.ProcessedStyleguidistConfig}
+			sections={sections}
+			allSections={sections}
+			displayMode={DisplayModes.component}
+		/>
+	);
+
+	// The two component headings of the page, collected from the DOM they rendered into
+	expect(getAllByTestId('rsg-pagenav-link').map((link) => link.textContent)).toEqual([
+		'Foo',
+		'Bar',
+	]);
+	// Inside <main>, before the content it describes
+	const main = getByTestId('rsg-pagenav').closest('main') as HTMLElement;
+	expect(main.id).toBe('rsg-content');
+	expect(main.firstElementChild?.firstElementChild).toBe(getByTestId('rsg-pagenav'));
+});
+
+test('should not mount the page navigation on the all-in-one page', () => {
+	const { queryByTestId } = render(
+		<StyleGuide
+			{...defaultProps}
+			config={{ ...config, pageNav: true } as Rsg.ProcessedStyleguidistConfig}
+			sections={sections}
+			allSections={sections}
+		/>
+	);
+	expect(queryByTestId('rsg-pagenav')).toBeNull();
+	// and the layout is the one every style guide without the option has
+	expect(document.querySelector('#rsg-content > section')).not.toBeNull();
 });

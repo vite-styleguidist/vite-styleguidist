@@ -22,15 +22,13 @@ import {
 	STICKY_OFFSET_FALLBACK_NO_TOC,
 	STICKY_OFFSET_PROPERTY,
 } from '../../styles/styles.js';
+import { CONTENT_ID } from '../../consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
 // Small-screen header: the sidebar collapses into this bar (Mobile artboard), and every
 // control in it is a 44 px touch target
 const MOBILE_HEADER_HEIGHT = 56;
 const TOUCH_TARGET = 44;
-
-/** Element id of the content region: the target of the skip link and of `?id=` links */
-const CONTENT_ID = 'rsg-content';
 
 const styles = ({
 	color,
@@ -41,6 +39,7 @@ const styles = ({
 	mq,
 	space,
 	maxWidth,
+	pageNavWidth,
 	borderRadius,
 	transition,
 }: Rsg.Theme): Styles => ({
@@ -72,6 +71,65 @@ const styles = ({
 			gap: space[3],
 			minHeight: 0,
 			padding: [[space[3], space[2], space[4]]],
+		},
+	},
+	// `content` when a PageNav is mounted (the `pageNav` option, ADR 0016). Two children
+	// then: the nav slot and the column that used to be the content of `<main>` itself.
+	hasPageNav: {
+		[mq.large]: {
+			// Wide enough for the rail beside the column; the arithmetic is in theme.ts
+			maxWidth: maxWidth + 2 * space[6] + space[3] + pageNavWidth,
+			display: 'grid',
+			// The column keeps its 960 px. The rail's track is `auto`, not a fixed width, so
+			// that a page with nothing to list (PageNav renders nothing, $pageNav collapses)
+			// leaves the column centred exactly where it is without the option.
+			gridTemplateColumns: `minmax(0, ${maxWidth}px) auto`,
+			justifyContent: 'center',
+			// $content's flex gap would become a grid gap between the two columns, which the
+			// width arithmetic does not include (the rail brings its own gutter)
+			gap: 0,
+		},
+	},
+	// Everything that used to be a direct child of `<main>`; it keeps the column layout so
+	// that only the outer element changes when the rail appears beside it
+	contentColumn: {
+		display: 'flex',
+		flexDirection: 'column',
+		gap: space[4],
+		// Below mq.large `<main>` is still a flex column, and the footer's `margin-top: auto`
+		// needs a column that fills the page to push against
+		flex: [[1, 1, 'auto']],
+		[mq.large]: {
+			gridColumn: 1,
+			gridRow: 1,
+		},
+		[mq.small]: {
+			gap: space[3],
+		},
+	},
+	// The slot PageNav renders into: above mq.large the sticky rail beside the column, below
+	// it the full-width block above the content (PageNav picks which; see ADR 0016)
+	pageNav: {
+		// PageNav renders nothing on a page with fewer than two headings, and an empty box
+		// would still claim its grid track and the flex gap above the content
+		'&:empty': {
+			isolate: false,
+			display: 'none',
+		},
+		[mq.large]: {
+			gridColumn: 2,
+			gridRow: 1,
+			// The gutter between the column and the rail belongs to the rail, so that an empty
+			// rail takes no width at all (see $hasPageNav)
+			width: pageNavWidth + space[3],
+			paddingLeft: space[3],
+			alignSelf: 'start',
+			position: 'sticky',
+			// Below whatever sticks above (0 on wide screens, where the property is removed),
+			// with the same air above the first entry as between the page blocks
+			top: `calc(var(${STICKY_OFFSET_PROPERTY}, 0px) + ${space[4]}px)`,
+			maxHeight: `calc(100vh - var(${STICKY_OFFSET_PROPERTY}, 0px) - ${2 * space[4]}px)`,
+			overflow: 'auto',
 		},
 	},
 	sidebar: {
@@ -264,6 +322,12 @@ interface StyleGuideRendererProps extends JssInjectedProps {
 	homepageUrl: string;
 	children: React.ReactNode;
 	toc?: React.ReactNode;
+	/**
+	 * The “on this page” navigation, when the `pageNav` option puts one on this page. A
+	 * custom StyleGuideRenderer has to place it itself, as it does with the table of
+	 * contents (docs/Cookbook.md).
+	 */
+	pageNav?: React.ReactNode;
 	hasSidebar?: boolean;
 }
 
@@ -274,6 +338,7 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 	homepageUrl,
 	children,
 	toc,
+	pageNav,
 	hasSidebar,
 }) => {
 	const { config } = useStyleGuideContext();
@@ -418,6 +483,15 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 		}
 	};
 
+	const content = (
+		<>
+			{children}
+			<footer className={classes.footer}>
+				<Markdown text={`Created with [Vite Styleguidist](${homepageUrl})`} />
+			</footer>
+		</>
+	);
+
 	return (
 		<div className={cx(classes.root, hasSidebar && classes.hasSidebar)}>
 			{hasSidebar && (
@@ -485,11 +559,23 @@ export const StyleGuideRenderer: React.FunctionComponent<StyleGuideRendererProps
 				</div>
 			)}
 			{/* tabIndex: the skip link above moves the focus here */}
-			<main id={CONTENT_ID} className={classes.content} tabIndex={-1}>
-				{children}
-				<footer className={classes.footer}>
-					<Markdown text={`Created with [Vite Styleguidist](${homepageUrl})`} />
-				</footer>
+			<main
+				id={CONTENT_ID}
+				className={cx(classes.content, pageNav && classes.hasPageNav)}
+				tabIndex={-1}
+			>
+				{/* The nav comes before the content it describes, which is its reading order in
+				    the collapsible presentation and its landmark order in the rail one. Without a
+				    PageNav the children stay direct children of <main>, byte for byte the markup
+				    every existing style guide has. */}
+				{pageNav ? (
+					<>
+						<div className={classes.pageNav}>{pageNav}</div>
+						<div className={classes.contentColumn}>{content}</div>
+					</>
+				) : (
+					content
+				)}
 			</main>
 			{!hasSidebar && <Ribbon />}
 		</div>
@@ -503,6 +589,7 @@ StyleGuideRenderer.propTypes = {
 	homepageUrl: PropTypes.string.isRequired,
 	children: PropTypes.any.isRequired,
 	toc: PropTypes.any.isRequired,
+	pageNav: PropTypes.any,
 	hasSidebar: PropTypes.bool,
 };
 

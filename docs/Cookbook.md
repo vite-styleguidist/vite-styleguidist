@@ -1358,23 +1358,25 @@ The two lines to look for are `Parse cache:` and `Parallel parsing:`. On a 350-c
 
 | | wall | peak memory |
 | --- | --- | --- |
-| Neither (`cache: false, parallel: false`) | 2570 ms | 818 MB |
-| Defaults, first build (cache empty) | 1770 ms | 1360 MB |
-| Defaults, nothing changed since | 940 ms | 770 MB |
-| Defaults, five components changed since | 1000 ms | 781 MB |
+| Neither (`cache: false, parallel: false`) | 2460 ms | 751 MB |
+| Defaults, first build (cache empty) | 1860 ms | 1356 MB |
+| Defaults, nothing changed since | 1080 ms | 741 MB |
+| Defaults, five components changed since | 1140 ms | 763 MB |
+
+Every row is measured with the defaults as shipped, so every row also pays for [lazyDocs](Configuration.md#lazydocs): one emitted chunk per component instead of one for the whole guide, which is about 160 ms of the first build and 180 ms of the warm ones at this size (`lazyDocs: false` measures 1700 ms and 900 ms). It buys a first paint four times smaller, and it is the reason these numbers are a little above the ones in [ADR 0018](decisions/0018-parse-cache-and-parallel-parsing.md), which isolates the cache and the pool from it.
 
 If yours is slower than that shape, work down this list.
 
-- **Is the [cache](Configuration.md#cache) doing anything?** A rebuild in which nothing changed should be roughly a third of a first build. If it is not, the doctor says why — most often a `propsParser` written as a function, which cannot be identified across runs and therefore turns off caching of component documentation. Write it as a module and point the option at its path; see the [recipe](#components-re-exported-from-another-package). Also check that `node_modules/.vite/` survives between runs: a CI job that does not cache it starts cold every time, which is what the “first build” row costs.
+- **Is the [cache](Configuration.md#cache) doing anything?** A rebuild in which nothing changed should be well under half of a build that starts with an empty cache. If it is not, the doctor says why — most often a `propsParser` written as a function, which cannot be identified across runs and therefore turns off caching of component documentation. Write it as a module and point the option at its path; see the [recipe](#components-re-exported-from-another-package). Also check that `node_modules/.vite/` survives between runs: a CI job that does not cache it starts cold every time, which is what the “first build” row costs.
 - **Is the guide big enough for [parallel](Configuration.md#parallel) parsing?** `'auto'` starts workers from 150 components. Below that they cost more memory than they save time (at 50 components: 7% faster, 379 MB more), which is why it does not. Above it, check the doctor’s line for a config function keeping parses on the main thread — `sortProps`, `updateDocs`, `resolver`, `handlers`, `getExampleFilename` or `propsParser` for component documentation, `updateExample` for examples. Dropping the one you do not need is often the whole fix.
 - **Using `react-docgen-typescript`?** Its `parse()` creates a fresh TypeScript program for every file it is given, which re-reads and re-binds `lib.dom.d.ts`, React’s typings and your whole project once per component. Share a single program instead — see the [recipe](#components-re-exported-from-another-package). On a 50-component design system this is the difference between a 7.3 s build peaking at 912 MB and a 1.3 s one peaking at 617 MB, and between a 157 ms and a 17 ms refresh after saving a component in the dev server.
 - **Mixing `.js` and `.tsx` components?** `react-docgen-typescript` documents nothing for plain JavaScript but still pays the full TypeScript cost for it. Send each file to the parser that understands it, see the same recipe.
 - **Anything expensive in a custom `propsParser`?** Build it once, at the top of the parser module, not inside the function: the function runs once per component.
 - **A very large guide?** [`skipComponentsWithoutExample`](Configuration.md#skipcomponentswithoutexample) keeps undocumented components out of the guide, and out of the parser.
 
-The dev server benefits from the same two options. On the same 350-component guide, the time from `styleguidist server` to every component’s documentation having been served is 2819 ms with both off, 1373 ms on a cold cache, and 1185 ms once the cache is warm — at 371 MB, because a dev server that has nothing to parse never starts a worker.
+**In the dev server it is mostly the cache.** On the same 350-component guide, the time from `styleguidist server` to every component having been parsed once is 2850 ms with both options off, 2770 ms on a cold cache and 1290 ms once the cache is warm. The pool does much less here than in a build, and [lazyDocs](Configuration.md#lazydocs) is why: the browser asks for one component’s documentation at a time, as the reader reaches it, so there is rarely more than one parse to overlap — where a build hands rolldown all 350 at once. (Forcing `parallel: 4` on a cold dev server takes those 2770 ms to 2480 ms, and that is the whole of it.) What the reader actually waits for is much less than either number: a first load fetches 81 requests and renders in about 360 ms, because it only asks for the components it shows.
 
-> **Memory, not just time.** Workers are the one thing here that costs more than it saves if you let them: each is a separate JavaScript heap, and four of them add about 500 MB to a build’s peak. On a memory-capped CI runner, `parallel: false` with the cache on is a perfectly good trade — it is the 940 ms row above at 770 MB.
+> **Memory, not just time.** Workers are the one thing here that costs more than it saves if you let them: each is a separate JavaScript heap, and four of them add about 500 MB to a build’s peak. On a memory-capped CI runner, `parallel: false` with the cache on is a perfectly good trade — it is the 1080 ms row above at 741 MB.
 
 ## How to work with on-demand documentation?
 

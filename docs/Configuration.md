@@ -69,7 +69,7 @@ Type: `Boolean`, default: `true`
 
 Reuse the component and example parses of previous runs.
 
-Parsing is the expensive half of building a style guide — react-docgen for every component, remark plus a JavaScript parse for every Markdown example — and almost none of it changes between two runs. With this option on, each parse is written to a cache inside Vite's `cacheDir`, keyed by the SHA-256 of the file's own content, and the next run reads it back instead of parsing again. On a 350-component design system, a rebuild in which nothing changed goes from 2570 ms to 940 ms.
+Parsing is the expensive half of building a style guide — react-docgen for every component, remark plus a JavaScript parse for every Markdown example — and almost none of it changes between two runs. With this option on, each parse is written to a cache inside Vite's `cacheDir`, keyed by the SHA-256 of the file's own content, and the next run reads it back instead of parsing again. On a 350-component design system, a rebuild in which nothing changed goes from 2460 ms to 1080 ms.
 
 The cache is shared by `styleguidist build` and `styleguidist server`, so a build right after a dev-server session starts warm, and it is content-addressed rather than timestamp-addressed, so switching branches or re-cloning the project still hits it.
 

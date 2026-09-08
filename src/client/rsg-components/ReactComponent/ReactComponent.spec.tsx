@@ -1,6 +1,9 @@
 import React from 'react';
-import { render } from '@testing-library/react';
-import ReactComponent from './ReactComponent.js';
+import { act, render } from '@testing-library/react';
+import ReactComponent, { DOCS_ROOT_MARGIN } from './ReactComponent.js';
+import { DOCS_LOADING_GRACE } from '../DocsLoading/DocsLoading.js';
+import { DOCS_LOADING_LABEL, DOCS_LOADING_RELOAD } from '../DocsLoading/strings.js';
+import { placeholderDocs, resetComponentDocs } from '../../utils/componentDocs.js';
 import slots from '../slots/index.js';
 import Context from '../Context/index.js';
 import { DisplayModes } from '../../consts.js';
@@ -210,4 +213,276 @@ test('should prefix description with deprecated label when @deprecated is presen
 		</Provider>
 	);
 	expect(getByText(/deprecated:/i)).toBeInTheDocument();
+});
+
+// `lazyDocs` (ADR 0019): the component is in the tree, its documentation is one import away
+describe('on-demand documentation', () => {
+	const lazyComponent = (docs: Rsg.ComponentDocs = { displayName: 'Foo', description: 'Bar' }) => {
+		const loaded: Rsg.Component = {
+			filepath: 'components/Foo/Foo.js',
+			slug: 'foo',
+			nameFromPath: 'Foo',
+			name: 'Foo',
+			visibleName: 'Foo',
+			href: '#foo',
+			pathLine: 'components/Foo/Foo.js',
+			docsLoaded: false,
+			props: placeholderDocs('Foo'),
+			loadDocs: vi.fn(() => Promise.resolve({ props: docs })),
+		};
+		return loaded;
+	};
+
+	/** IntersectionObserver, with the callbacks the components registered under our control. */
+	const observed: {
+		element: Element;
+		options?: IntersectionObserverInit;
+		fire: () => void;
+		disconnected: boolean;
+	}[] = [];
+
+	beforeEach(() => {
+		resetComponentDocs();
+		observed.splice(0);
+		vi.stubGlobal(
+			'IntersectionObserver',
+			class {
+				constructor(
+					private callback: IntersectionObserverCallback,
+					private options?: IntersectionObserverInit
+				) {}
+				private record?: (typeof observed)[number];
+				observe(element: Element) {
+					this.record = {
+						element,
+						options: this.options,
+						disconnected: false,
+						fire: () =>
+							this.callback(
+								[{ isIntersecting: true, target: element } as IntersectionObserverEntry],
+								this as unknown as IntersectionObserver
+							),
+					};
+					observed.push(this.record);
+				}
+				disconnect() {
+					if (this.record) {
+						this.record.disconnected = true;
+					}
+				}
+				unobserve() {}
+			}
+		);
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		window.location.hash = '';
+	});
+
+	const renderComponent = (component: Rsg.Component, displayMode: string = DisplayModes.all) =>
+		render(
+			<Provider value={{ ...context, displayMode }}>
+				<ReactComponent
+					component={component}
+					depth={3}
+					exampleMode="collapse"
+					usageMode="collapse"
+				/>
+			</Provider>
+		);
+
+	it('should render the heading and the container before anything is loaded', () => {
+		const component = lazyComponent();
+		const { getByTestId, getByRole, queryByText } = renderComponent(component);
+
+		expect(getByTestId('Foo-container')).toBeInTheDocument();
+		expect(getByRole('heading', { level: 3 })).toHaveTextContent('Foo');
+		// No description, no examples, and not the “add examples” placeholder either: the
+		// component has documentation, it is simply not here yet
+		expect(queryByText('Bar')).not.toBeInTheDocument();
+		expect(queryByText(/add examples to this component/i)).not.toBeInTheDocument();
+	});
+
+	it('should wait for the container to come near the viewport in the default mode', async () => {
+		const component = lazyComponent();
+		const { queryByText, findByText } = renderComponent(component);
+
+		expect(component.loadDocs).not.toHaveBeenCalled();
+		expect(queryByText('Bar')).not.toBeInTheDocument();
+		// The heading of this very component is what is watched, from well below the fold
+		expect(observed).toHaveLength(1);
+		expect(observed[0].element).toBe(document.getElementById('foo'));
+		expect(observed[0].options).toEqual({ rootMargin: DOCS_ROOT_MARGIN });
+
+		observed[0].fire();
+
+		expect(component.loadDocs).toHaveBeenCalledTimes(1);
+		expect(await findByText('Bar')).toBeInTheDocument();
+	});
+
+	it('should load the documentation at once on a page that is one component', async () => {
+		const component = lazyComponent();
+		const { findByText } = renderComponent(component, DisplayModes.component);
+
+		expect(observed).toHaveLength(0);
+		expect(component.loadDocs).toHaveBeenCalledTimes(1);
+		expect(await findByText('Bar')).toBeInTheDocument();
+	});
+
+	it('should load the documentation at once when a deep link points at it', async () => {
+		window.location.hash = '#foo';
+		const component = lazyComponent();
+		const { findByText } = renderComponent(component);
+
+		expect(observed).toHaveLength(0);
+		expect(component.loadDocs).toHaveBeenCalledTimes(1);
+		expect(await findByText('Bar')).toBeInTheDocument();
+	});
+
+	it('should show the “add examples” placeholder once a component is known to have none', async () => {
+		const component = lazyComponent({ displayName: 'Foo', examples: [] });
+		const { queryByText, findByText } = renderComponent(component, DisplayModes.component);
+
+		expect(queryByText(/add examples to this component/i)).not.toBeInTheDocument();
+		expect(await findByText(/add examples to this component/i)).toBeInTheDocument();
+	});
+
+	// React 19 remounts every component under StrictMode (mount, unmount, mount again), which
+	// is the same shape as the double-invoked effects of a function component: the observer
+	// has to be disconnected and set up again, and nothing may be loaded twice.
+	it('should load once under StrictMode, which mounts everything twice', async () => {
+		const component = lazyComponent();
+		const { findByText } = render(
+			<React.StrictMode>
+				<Provider value={{ ...context, displayMode: DisplayModes.component }}>
+					<ReactComponent
+						component={component}
+						depth={3}
+						exampleMode="collapse"
+						usageMode="collapse"
+					/>
+				</Provider>
+			</React.StrictMode>
+		);
+
+		expect(component.loadDocs).toHaveBeenCalledTimes(1);
+		expect(await findByText('Bar')).toBeInTheDocument();
+	});
+
+	it('should render a component whose documentation is in the tree without loading anything', () => {
+		const { getByText } = renderComponent({ ...component, docsLoaded: true } as Rsg.Component);
+		expect(observed).toHaveLength(0);
+		expect(getByText('Bar')).toBeInTheDocument();
+	});
+
+	// ADR 0019: “A failed import is reported to the console and retried the next time
+	// something asks for that component (scrolling past it again…)”. The observer used to be
+	// disconnected the moment a load *started*, so a component whose chunk failed to arrive
+	// stayed empty for the life of the page and nothing tried again.
+	it('should try again when the reader scrolls past a component whose load failed', async () => {
+		const failing = lazyComponent();
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		failing.loadDocs = vi
+			.fn()
+			.mockRejectedValueOnce(new Error('Failed to fetch dynamically imported module'))
+			.mockResolvedValue({ props: { displayName: 'Foo', description: 'Bar' } });
+
+		const { findByText, queryByText } = renderComponent(failing);
+		observed[0].fire();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(failing.loadDocs).toHaveBeenCalledTimes(1);
+		expect(queryByText('Bar')).not.toBeInTheDocument();
+		expect(error).toHaveBeenCalled();
+
+		// Still watching, so scrolling past it again is a second attempt
+		observed[0].fire();
+
+		expect(failing.loadDocs).toHaveBeenCalledTimes(2);
+		expect(await findByText('Bar')).toBeInTheDocument();
+		error.mockRestore();
+	});
+
+	// What the reader sees meanwhile, and what a replaced `ReactComponentRenderer` is told
+	// about it (DocsLoading, ADR 0019)
+	describe('what the reader sees meanwhile', () => {
+		/** A component whose documentation never arrives, so the pending state can be looked at. */
+		const neverArrives = () => {
+			const component = lazyComponent();
+			component.loadDocs = vi.fn(() => new Promise<never>(() => undefined));
+			return component;
+		};
+
+		it('should mark the container busy until the documentation is there', async () => {
+			const component = lazyComponent();
+			const { getByTestId, findByText } = renderComponent(component, DisplayModes.component);
+
+			expect(getByTestId('Foo-container')).toHaveAttribute('aria-busy', 'true');
+
+			expect(await findByText('Bar')).toBeInTheDocument();
+			expect(getByTestId('Foo-container')).not.toHaveAttribute('aria-busy');
+		});
+
+		it('should show a spinner once a load has taken long enough to be worth saying so', () => {
+			vi.useFakeTimers();
+			const { getByTestId, queryByTestId } = renderComponent(
+				neverArrives(),
+				DisplayModes.component
+			);
+
+			expect(queryByTestId('docs-loading')).not.toBeInTheDocument();
+			act(() => {
+				vi.advanceTimersByTime(DOCS_LOADING_GRACE);
+			});
+			expect(getByTestId('docs-loading')).toHaveTextContent(DOCS_LOADING_LABEL);
+			vi.useRealTimers();
+		});
+
+		// `hasExamples` is in the section tree from the start: this is the one thing about a
+		// component that does not have to wait for its documentation
+		it('should show the “add examples” hint at once for a component known to have none', () => {
+			const component = neverArrives();
+			component.hasExamples = false;
+			const { getByText } = renderComponent(component, DisplayModes.component);
+
+			expect(getByText(/add examples to this component/i)).toBeInTheDocument();
+		});
+
+		it('should show the failure of a load, and not retry it on every render', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			const failing = lazyComponent();
+			failing.loadDocs = vi
+				.fn()
+				.mockRejectedValue(new Error('Failed to fetch dynamically imported module'));
+
+			const { findByText, getByRole, getByTestId } = renderComponent(
+				failing,
+				DisplayModes.component
+			);
+
+			expect(
+				await findByText('The documentation of Foo could not be loaded.')
+			).toBeInTheDocument();
+			expect(getByRole('button', { name: DOCS_LOADING_RELOAD })).toBeInTheDocument();
+			// Not busy any more: it is finished, and wrong
+			expect(getByTestId('Foo-container')).not.toHaveAttribute('aria-busy');
+			// A failure re-renders this component, and this component is what asks for the
+			// load on a page that *is* the component: retrying from there would be a loop
+			expect(failing.loadDocs).toHaveBeenCalledTimes(1);
+			consoleError.mockRestore();
+		});
+	});
+
+	it('should stop watching the viewport once the documentation is there', async () => {
+		const loaded = lazyComponent();
+		const { findByText } = renderComponent(loaded);
+		expect(observed[0].disconnected).toBe(false);
+
+		observed[0].fire();
+		expect(await findByText('Bar')).toBeInTheDocument();
+
+		expect(observed[0].disconnected).toBe(true);
+	});
 });

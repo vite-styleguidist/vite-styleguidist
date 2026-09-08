@@ -176,9 +176,9 @@ describe('import markers', () => {
 
 	it('should escape module ids in import statements', () => {
 		const serializer = new ModuleSerializer();
-		serializer.serialize(importIt('\0rsg-props:/path/with "quotes".js'));
+		serializer.serialize(importIt('\0virtual:rsg-props?file=/path/with "quotes".js&rsg'));
 		expect(serializer.renderImports()).toBe(
-			'import * as __rsg_0 from "\\u0000rsg-props:/path/with \\"quotes\\".js";'
+			'import * as __rsg_0 from "\\u0000virtual:rsg-props?file=/path/with \\"quotes\\".js&rsg";'
 		);
 	});
 
@@ -202,5 +202,71 @@ describe('identifier markers', () => {
 	it('should emit the identifier verbatim', () => {
 		const code = serialize({ evalInContext: { __rsgIdentifier: 'evalInContext' } });
 		expect(code).toBe('{\n\t"evalInContext": evalInContext\n}');
+	});
+});
+
+// On-demand documentation (`lazyDocs`, ADR 0019)
+describe('lazy markers', () => {
+	// Evaluate a loader with `import()` replaced by a stub: the generated code is what a
+	// bundler follows, so the shape of the call matters as much as what it resolves to
+	const evaluateLoader = (code: string, modules: Record<string, unknown>) =>
+		new Function('__import', `return (${code.replace(/\bimport\(/g, '__import(')});`)(
+			(id: string) => Promise.resolve(modules[id])
+		);
+
+	it('should emit a function importing one module', async () => {
+		const code = serialize({ __rsgLazy: { props: importDefault('rsg-props:/a/B.js') } });
+		expect(code).toBe(
+			'(() => import("rsg-props:/a/B.js").then((__rsg_lazy_0) => ' +
+				'({ "props": (__rsg_lazy_0.default !== undefined ? __rsg_lazy_0.default : __rsg_lazy_0) })))'
+		);
+		await expect(
+			evaluateLoader(code, { 'rsg-props:/a/B.js': { default: { displayName: 'B' } } })()
+		).resolves.toEqual({ props: { displayName: 'B' } });
+	});
+
+	it('should emit a function importing several modules at once', async () => {
+		const code = serialize({
+			__rsgLazy: { props: importDefault('rsg-props:/a/B.js'), module: importIt('/a/B.js') },
+		});
+		expect(code).toContain('Promise.all([import("rsg-props:/a/B.js"), import("/a/B.js")])');
+		expect(code).toContain('([__rsg_lazy_0, __rsg_lazy_1])');
+		await expect(
+			evaluateLoader(code, {
+				'rsg-props:/a/B.js': { default: { displayName: 'B' } },
+				'/a/B.js': { default: 'the component' },
+			})()
+		).resolves.toEqual({
+			props: { displayName: 'B' },
+			module: { default: 'the component' },
+		});
+	});
+
+	it('should fall back to the namespace of a module without a default export', async () => {
+		const code = serialize({ __rsgLazy: { props: importDefault('rsg-props:/a/B.js') } });
+		await expect(
+			evaluateLoader(code, { 'rsg-props:/a/B.js': { displayName: 'B' } })()
+		).resolves.toEqual({ props: { displayName: 'B' } });
+	});
+
+	it('should not add a static import for what it loads on demand', () => {
+		const serializer = new ModuleSerializer();
+		serializer.serialize({ load: { __rsgLazy: { props: importDefault('rsg-props:/a/B.js') } } });
+		expect(serializer.renderImports()).toBe('');
+	});
+
+	it('should keep the local names of two loaders apart from the static imports', () => {
+		const serializer = new ModuleSerializer();
+		const code = serializer.serialize([
+			importIt('react'),
+			{ __rsgLazy: { props: importIt('a') } },
+			{ __rsgLazy: { props: importIt('b') } },
+		]);
+		expect(serializer.renderImports()).toBe('import * as __rsg_0 from "react";');
+		// Both loaders bind their own `__rsg_lazy_0`, inside their own arrow function
+		expect(code.match(/__rsg_lazy_0/g)).toHaveLength(4);
+		expect(() =>
+			new Function(`return (${code.replace(/\bimport\(/g, 'Promise.resolve(')});`)
+		).not.toThrow();
 	});
 });

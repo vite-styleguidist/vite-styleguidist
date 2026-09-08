@@ -1,4 +1,4 @@
-import parseExample from '../parseExample.js';
+import parseExample, { isExampleError, parseModifiers } from '../parseExample.js';
 
 const content = '<h1>Hello Markdown!</h1>';
 
@@ -68,5 +68,23 @@ it('should return an error when JSON is invalid', () => {
 	const actual = parseExample(content, 'js', '{ nope }');
 	expect(actual).toEqual({
 		error: expect.stringMatching('Cannot parse modifiers'),
+	});
+});
+
+describe('parseModifiers', () => {
+	it('should turn space-separated words into flags', () => {
+		expect(parseModifiers('padded noeditor')).toEqual({ padded: true, noeditor: true });
+	});
+
+	it('should parse JSON modifiers', () => {
+		expect(parseModifiers('{ "props": { "className": "checks" } }')).toEqual({
+			props: { className: 'checks' },
+		});
+	});
+
+	it('should return an error for anything else', () => {
+		const result = parseModifiers('{oops}');
+		expect(isExampleError(result)).toBe(true);
+		expect((result as { error: string }).error).toMatch('Cannot parse modifiers for "{oops}"');
 	});
 });

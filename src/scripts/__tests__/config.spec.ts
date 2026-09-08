@@ -1,6 +1,7 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import getConfig from '../config.js';
+import getConfig, { getConfigFilepath, reloadConfig } from '../config.js';
 
 const testComponent = (name: string) =>
 	path.resolve(import.meta.dirname, '../../../test/components', name);
@@ -9,11 +10,26 @@ const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../te
 const cwd = process.cwd();
 const configDir = testApp('defaults');
 
+// Config files that are written, and sometimes rewritten, by a test. They live outside the
+// repository so that a leftover one can never be picked up as a fixture.
+const tempDirs: string[] = [];
+function writeTempConfig(name: string, source: string): string {
+	const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'rsg-config-'));
+	tempDirs.push(dir);
+	// The package the config file belongs to decides whether a `.js` or `.ts` file is an ES
+	// module, and a folder in the system temp directory belongs to none
+	fs.writeFileSync(path.join(dir, 'package.json'), '{ "name": "rsg-temp", "type": "module" }');
+	const file = path.join(dir, name);
+	fs.writeFileSync(file, source);
+	return file;
+}
+
 beforeEach(() => {
 	process.chdir(configDir);
 });
 afterAll(() => {
 	process.chdir(cwd);
+	tempDirs.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true }));
 });
 
 it('should read a config file', () => {
@@ -63,7 +79,119 @@ describe('config file formats', () => {
 
 	it('should explain how to fix CommonJS syntax in an ES module package', () => {
 		process.chdir(testApp('cjs-in-esm'));
-		expect(() => getConfig()).toThrow(/uses CommonJS \(module\.exports\)[\s\S]*\.cjs extension/);
+		expect(() => getConfig()).toThrow(
+			/uses the CommonJS `module`[\s\S]*"type": "module"[\s\S]*styleguide\.config\.cjs/
+		);
+	});
+
+	// A `require()` on line 1 (the shape the Cookbook recipes use) throws before
+	// `module.exports` is reached, so the message has to name the global that actually failed
+	it('should explain how to fix a CommonJS require() in an ES module package', () => {
+		process.chdir(testApp('require-in-esm'));
+		expect(() => getConfig()).toThrow(
+			/uses the CommonJS `require`[\s\S]*export default[\s\S]*import\.meta\.url[\s\S]*styleguide\.config\.cjs/
+		);
+	});
+
+	// TypeScript configs are compiled with Sucrase before Node loads them (see
+	// utils/loadConfigFile.ts); each fixture pins one thing the compiled file has to keep.
+	it('should load a styleguide.config.ts file, keeping import.meta.url', () => {
+		process.chdir(testApp('ts'));
+		expect(getConfig()).toMatchObject({
+			title: 'TS Style Guide',
+			assetsDir: testApp('ts'),
+		});
+	});
+
+	it('should load a styleguide.config.mts file as an ES module in a CommonJS package', () => {
+		process.chdir(testApp('mts'));
+		expect(getConfig()).toMatchObject({
+			title: 'MTS Style Guide',
+			assetsDir: testApp('mts'),
+		});
+	});
+
+	it('should load a styleguide.config.cts file as CommonJS in an ES module package', () => {
+		process.chdir(testApp('cts'));
+		expect(getConfig()).toMatchObject({
+			title: 'CTS Style Guide',
+			assetsDir: testApp('cts'),
+		});
+	});
+
+	it('should load a styleguide.config.ts file as CommonJS in a CommonJS package', () => {
+		process.chdir(testApp('ts-cjs'));
+		expect(getConfig()).toMatchObject({
+			title: 'TS CommonJS Style Guide',
+			assetsDir: testApp('ts-cjs'),
+		});
+	});
+
+	// The TypeScript names were added after the JavaScript ones and come last in
+	// CONFIG_FILENAMES, so a project that has both keeps loading the file it always loaded
+	it('should prefer a JavaScript config file over a TypeScript one', () => {
+		process.chdir(testApp('js-and-ts'));
+		expect(getConfig()).toMatchObject({ title: 'JS Style Guide' });
+	});
+
+	it('should not leave the compiled TypeScript config behind', () => {
+		process.chdir(testApp('ts'));
+		getConfig();
+		expect(fs.readdirSync(testApp('ts'))).toEqual(['package.json', 'styleguide.config.ts']);
+	});
+
+	it('should report a syntax error in a TypeScript config', () => {
+		const file = writeTempConfig('styleguide.config.ts', 'export default { title: ;');
+		expect(() => getConfig(file)).toThrow(`Cannot compile ${file}`);
+	});
+
+	it('should reject a TypeScript config that exports a function', () => {
+		const file = writeTempConfig('styleguide.config.ts', 'export default () => ({});');
+		expect(() => getConfig(file)).toThrow('must export a plain object');
+	});
+});
+
+describe('reloading a config file', () => {
+	it('should read the config file again', () => {
+		const file = writeTempConfig(
+			'styleguide.config.mjs',
+			`export default { title: 'Before' };`
+		);
+		const config = getConfig(file);
+		expect(config).toMatchObject({ title: 'Before' });
+
+		fs.writeFileSync(file, `export default { title: 'After' };`);
+		expect(reloadConfig(config)).toMatchObject({ title: 'After' });
+		// The config that is still in use has to be left alone
+		expect(config).toMatchObject({ title: 'Before' });
+	});
+
+	it('should replay the update callback', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default { title: 'Before' };`);
+		const config = getConfig(file, (conf) => ({ ...conf, serverPort: 6199 }));
+
+		fs.writeFileSync(file, `export default { title: 'After' };`);
+		expect(reloadConfig(config)).toMatchObject({ title: 'After', serverPort: 6199 });
+	});
+
+	it('should throw the usual error when the config file has become invalid', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default { title: 'Before' };`);
+		const config = getConfig(file);
+
+		fs.writeFileSync(file, `export default { components: 42 };`);
+		expect(() => reloadConfig(config)).toThrow('Something is wrong with your style guide config');
+	});
+
+	it('should throw for a config that wasn’t read from a file', () => {
+		expect(() => reloadConfig(getConfig({ title: 'Style guide' }))).toThrow(
+			'wasn’t read from a config file'
+		);
+	});
+
+	it('should expose the config file path of a config read from a file', () => {
+		const file = writeTempConfig('styleguide.config.js', `export default {};`);
+		expect(getConfigFilepath(getConfig(file))).toBe(file);
+		expect(getConfigFilepath(getConfig({}))).toBeUndefined();
 	});
 });
 
@@ -323,4 +451,33 @@ it('should set the usageMode to collapse if the flag showUsage is off', () => {
 		showUsage: false,
 	});
 	expect(result.usageMode).toBe('collapse');
+});
+
+describe('mdxComponents', () => {
+	// The values become imports of a virtual module with no directory of its own, so a
+	// relative path only works if it is resolved here, against the config file (C2/C3)
+	it('should resolve a relative module path against the config directory', () => {
+		const result = getConfig({
+			mdxComponents: { Callout: 'src/docs/Callout' },
+		});
+		expect(result.mdxComponents).toEqual({
+			Callout: path.join(configDir, 'src/docs/Callout'),
+		});
+	});
+
+	it('should leave an absolute module path alone', () => {
+		const absolute = path.join(configDir, 'src/docs/Callout');
+		const result = getConfig({ mdxComponents: { Callout: absolute } });
+		expect(result.mdxComponents).toEqual({ Callout: absolute });
+	});
+
+	it('should pass a component value through untouched', () => {
+		const Callout = () => null;
+		const result = getConfig({ mdxComponents: { Callout } });
+		expect(result.mdxComponents).toEqual({ Callout });
+	});
+
+	it('should default to an empty map', () => {
+		expect(getConfig().mdxComponents).toEqual({});
+	});
 });

@@ -11,7 +11,7 @@ exports[`processComponent() should return an object for section with content 1`]
   "pathLine": "../../../../pizza.js",
   "props": {
     "__rsgDefault": true,
-    "__rsgImport": "rsg-props:pizza.js",
+    "__rsgImport": "virtual:rsg-props?file=pizza.js&rsg",
   },
   "slug": "pizza",
 }

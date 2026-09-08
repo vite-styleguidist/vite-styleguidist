@@ -4,14 +4,25 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../../typings/index.js';
 
-const styles = ({ space, color, fontSize, fontFamily }: Rsg.Theme) => ({
+const styles = ({ space, color, fontSize, fontFamily, lineHeight }: Rsg.Theme) => ({
 	blockquote: {
-		margin: [[space[2], space[4]]],
-		padding: 0,
-		color: color.base,
+		margin: [[0, 0, space[2]]],
+		padding: [[0, space[2]]],
+		borderLeft: [[3, 'solid', color.border]],
+		color: color.light,
 		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
-		lineHeight: 1.5,
+		fontSize: fontSize.text,
+		lineHeight: lineHeight.base,
+		// Markdown wraps quoted text in paragraphs, and Para sets the base colour itself,
+		// so the secondary colour has to be re-applied to them from here
+		'& p': {
+			isolate: false,
+			color: color.light,
+		},
+		'& p:last-child': {
+			isolate: false,
+			marginBottom: 0,
+		},
 	},
 });
 

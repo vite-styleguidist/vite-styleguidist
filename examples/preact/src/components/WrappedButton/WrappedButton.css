@@ -1,7 +1,8 @@
+/* Same colour tokens as Button.css — see the comment there for what they are and why. */
 .wrapped-button {
 	padding: 0.5em 1.5em;
-	color: #666;
-	background-color: #fff;
+	color: var(--rsg-color-light, #625d57);
+	background-color: var(--rsg-color-base-background, #fcfbf9);
 	border: 1px solid currentColor;
 	border-radius: 0.3em;
 	text-align: center;

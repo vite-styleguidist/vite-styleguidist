@@ -2,15 +2,125 @@
 
 By default, Styleguidist will look for `styleguide.config.js` file in your project’s root folder. You can change the location of the config file using `--config` [CLI](CLI.md) option.
 
-The config file may be a CommonJS module (`module.exports = {…}`) or an ES module (`export default {…}`), named `styleguide.config.js`, `styleguide.config.mjs` or `styleguide.config.cjs`.
+## Config file formats
+
+The config file may be a CommonJS module (`module.exports = {…}`) or an ES module (`export default {…}`), written in JavaScript or TypeScript. Styleguidist looks for these names, in this order, in the current folder and its parents:
+
+1. `styleguide.config.js`
+2. `styleguide.config.mjs`
+3. `styleguide.config.cjs`
+4. `styleguide.config.ts`
+5. `styleguide.config.mts`
+6. `styleguide.config.cts`
+
+Which module system a file is written in follows Node’s own rules: `.mjs` and `.mts` are always ES modules, `.cjs` and `.cts` are always CommonJS, and a `.js` or `.ts` file is an ES module when the nearest `package.json` has `"type": "module"`.
 
 > **Caution:** Config files are loaded synchronously, top-level `await` isn’t supported in them.
+
+TypeScript config files need no `ts-node`, `tsx` or any other loader: Styleguidist strips the types itself with [Sucrase](https://github.com/alangpierce/sucrase), the same compiler it uses for examples in the browser. Two things follow from that:
+
+- only the config file itself is compiled, so a TypeScript module it imports is left to Node.js, which can strip types from version 22.18 on. Import a JavaScript module instead if you support older versions;
+- the types are stripped, not checked. Nothing at load time reads an annotation, so `tsc` and your editor are the only things that check one. Styleguidist still validates the resulting object against its own schema, so a wrong type is caught either way — later, and with a different message.
+
+Sucrase has no type information, so it decides what to erase by use: an import whose bindings never appear in a value position is dropped together with its `import` statement, whether or not it says `import type`. Write `import type` anyway — it states the intent, `tsc` enforces it under `verbatimModuleSyntax`, and it does not depend on a heuristic. Side-effect imports (`import './setup.js'`) have no bindings to judge and are always kept.
+
+The compiled file is written next to the original one, loaded, and deleted again, so the folder holding your config file has to be writable. Because it is a *sibling* of your config, it belongs to the same `package.json` and the same module system — `__dirname` and `import.meta.dirname` are the folder you expect. The file name is not: `__filename`, `import.meta.filename` and `import.meta.url` name the temporary file. Most configs need neither, because Styleguidist resolves the relative paths in a config against the folder the config file is in.
+
+> **Tip:** [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) is the worked example: a `styleguide.config.ts` with `defineConfig`, a `sections` tree typed as `ConfigSection[]` in a module of its own, and a [walkthrough](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/examples/typescript/Readme.md#a-typescript-config-file) of the discovery order, the loading, what exists inside the file, and the JavaScript alternative.
+
+## Type checking your config
+
+`defineConfig` types a TypeScript config file. It returns the object untouched — the point is that a mistyped option is an error in your editor instead of one the next time you start the style guide:
+
+```typescript
+// styleguide.config.ts
+import { defineConfig } from 'vite-styleguidist'
+
+export default defineConfig({
+  title: 'My Style Guide',
+  components: 'src/components/**/*.tsx'
+})
+```
+
+A JavaScript config file gets the same checking from a type comment, with no import and nothing to run:
+
+```javascript
+// styleguide.config.js
+/** @type {import('vite-styleguidist').StyleguidistConfig} */
+export default {
+  title: 'My Style Guide',
+  components: 'src/components/**/*.js'
+}
+```
+
+Every type a config file needs is exported from the package: `StyleguidistConfig` for the config itself, `ConfigSection` for a [section](#sections), `Theme` and `RecursivePartial` for a [theme](#theme) of your own, `Styles` for [styles](#styles). See the [Node.js API](API.md#types) for the whole list, and [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) for both forms side by side — including what to annotate once a `sections` array moves out of `defineConfig` into a module of its own, where the type no longer flows in from the parameter.
+
+## Restarting on a change
+
+The dev server watches the config file it was started from. When you save it, the style guide reloads the config and restarts itself; when the config you saved has a mistake in it, the error is printed and the style guide keeps running with the last config that worked. See [CLI commands](CLI.md#restarting-on-a-config-change).
+
+What is watched is that one file, not the modules it imports: a config split across several files restarts when the config file itself is saved.
+
+The rest of this page is the config options, in alphabetical order.
 
 ## `assetsDir`
 
 Type: `String` or `Array`, optional
 
 Your application static assets folder will be accessible as `/` in the style guide dev server, and its files are copied into the [styleguideDir](#styleguidedir) folder by `styleguidist build`.
+
+## `cache`
+
+Type: `Boolean`, default: `true`
+
+Reuse the component and example parses of previous runs.
+
+Parsing is the expensive half of building a style guide — react-docgen for every component, remark plus a JavaScript parse for every Markdown example — and almost none of it changes between two runs. With this option on, each parse is written to a cache inside Vite's `cacheDir`, keyed by the SHA-256 of the file's own content, and the next run reads it back instead of parsing again. On a 350-component design system, a rebuild in which nothing changed goes from 2460 ms to 1080 ms.
+
+The cache is shared by `styleguidist build` and `styleguidist server`, so a build right after a dev-server session starts warm, and it is content-addressed rather than timestamp-addressed, so switching branches or re-cloning the project still hits it.
+
+An entry is only used when everything it could depend on is unchanged: the file's content, the version of Vite Styleguidist and of the packages that do the parsing (`react-docgen`, `@mdx-js/mdx`, `remark-gfm`), and every config option a parse can read — [context](#context), [defaultExample](#defaultexample), [getExampleFilename](#getexamplefilename), [handlers](#handlers), [mdx](#mdx), [propsParser](#propsparser), [resolver](#resolver), [sortProps](#sortprops), [updateDocs](#updatedocs) and [updateExample](#updateexample), functions included, by their source text. Change any of them and the cache starts empty. Options that cannot affect a parse — [theme](#theme), [serverPort](#serverport), [styleguideDir](#styleguidedir) and the rest — deliberately do not invalidate it.
+
+“The file's content” means more than the component's own file. Documenting a component reads the files it imports — the module its `propTypes` come from, the file its props interface is declared in — so each entry also remembers those files and the content each had, and is thrown away as soon as one of them differs. The dev server watches them too: editing a shared `types.ts` updates the props table of every component that reads it, without a restart.
+
+```javascript
+module.exports = {
+  cache: false
+}
+```
+
+**Where it lives, and how to delete it.** `node_modules/.vite/vite-styleguidist/parse-cache.json`, next to Vite's own caches; a project that moves Vite's [cacheDir](https://vite.dev/config/shared-options.html#cachedir) moves this with it. Deleting that folder, or `node_modules`, clears it — Vite's own `--force` does not, because that only clears its dependency optimizer. `styleguidist build --no-cache` and `styleguidist server --no-cache` ignore it (and write nothing) for one run. Entries that no run has touched for five runs are dropped, and the file is capped at 96 MB; it is about 8 MB for 350 components.
+
+Nothing in it is secret that the style guide does not already publish, but it is a build artefact: keep it out of version control, like the rest of `node_modules`.
+
+> **Note:** A [propsParser](#propsparser) written as a *function* turns off caching of component documentation (examples are still cached). A function has no identity across processes — two runs can pass different closures with the same source — so a cached answer could not be trusted. Write the parser as a module and point the option at its path instead; that form is cacheable, and it is what the [cookbook recipe](Cookbook.md#components-re-exported-from-another-package) uses.
+
+> **Note:** With a [propsParser](#propsparser) of your own, in either form, Styleguidist cannot observe which files the parser read, so it follows the component's own relative imports instead — transitively, type-only imports included. That covers the ordinary shape (`import type { CardProps } from './types'`), and it does not cover a type reached through a path alias such as `@/types`, or one that lives in an installed package. Run `styleguidist build --no-cache` once after editing a file in that last group.
+
+> **Note:** `styleguidist doctor` prints where the cache is, how large it is, and whether component documentation is being cached.
+
+> **Note:** The location follows Vite's root, which is the folder your config file is in — so two style guide configs sitting side by side in the same folder share one cache file. If they differ in one of the options listed above, each run empties what the other one wrote: correct, but never warm. Give one of them its own `viteConfig.cacheDir` if that is your layout.
+
+## `colorScheme`
+
+Type: `String`, default: `system`
+
+Colour scheme of the style guide UI (not of your components):
+
+- `system`: follow the visitor’s operating system (`prefers-color-scheme`) and show a system / light / dark toggle in the sidebar header. The visitor’s choice is remembered in `localStorage`.
+- `light` or `dark`: always use that scheme and hide the toggle.
+
+```javascript
+module.exports = {
+  colorScheme: 'dark'
+}
+```
+
+The scheme is applied to the `<html>` element as the `data-rsg-theme` attribute (`light`, `dark`, or absent for `system`) by an inline script in the generated page, before the first paint, so there is no flash of the wrong scheme. See [dark mode](Cookbook.md#how-to-customize-dark-mode) in the cookbook for how the colours work, and [theme](#theme) for the rule about overridden colours.
+
+> **Note:** A custom [template](#template) function receives `colorScheme` in its context and has to include the `<meta name="color-scheme">` tag and the inline script itself; `colorSchemeScript(colorScheme)` from `vite-styleguidist/lib/vite/html.js` returns the script.
+
+> **Note:** The inline script needs `'unsafe-inline'` in a Content-Security-Policy `script-src`, or a nonce that a custom template adds to the `<script>` tag. When the policy blocks it the page still works: it renders in the light scheme first and switches to the stored or forced scheme once the bundle runs.
 
 ## `compilerConfig`
 
@@ -134,6 +244,42 @@ For components that do not have an example, a default one can be used. When set 
 
 When writing your own default example file, `__COMPONENT__` will be replaced by the actual component name at compile time.
 
+## `envPrefix`
+
+Type: `String` or `Array`, default: `[]` (nothing is exposed)
+
+Prefixes of the environment variable names your components and examples may read as `process.env.NAME`. This is the option that makes code brought over from webpack or Create React App work as it did:
+
+```javascript
+module.exports = {
+  envPrefix: ['REACT_APP_']
+}
+```
+
+```jsx
+// in a component or an example
+export default function Header() {
+  return <h1>{process.env.REACT_APP_TITLE}</h1>
+}
+```
+
+A single prefix may be written as a string, `envPrefix: 'REACT_APP_'`.
+
+The values are read with Vite’s own loader, so they come from two places at once:
+
+- the environment of the command, `REACT_APP_TITLE='Pizza' npx styleguidist build`;
+- the project’s `.env`, `.env.local`, `.env.development` / `.env.production` and `.env.<mode>.local` files, read from the folder of the config file (or from `viteConfig.envDir` when you moved them). The mode is `development` for the dev server and `production` for a build.
+
+The environment of the command wins over the files, exactly as in a Vite application.
+
+> **Danger:** every matching value is inlined, in clear, into the JavaScript bundle of the style guide, which is usually deployed publicly. Expose the variables you would be happy to print on the page, never an API key or a token. This is why nothing is exposed by default, why an empty prefix (`''`) is refused, and why Styleguidist prints the names it inlines when it starts or builds.
+
+`NODE_ENV` and `STYLEGUIDIST_ENV` are never taken from the environment, whatever the prefixes match: Styleguidist and Vite define those two themselves.
+
+This option is about `process.env`. Vite’s own [envPrefix](https://vite.dev/config/shared-options#envprefix) is a different setting with the same name: it governs `import.meta.env` and is untouched here — set it in [viteConfig](#viteconfig) as well if your examples read `import.meta.env.REACT_APP_TITLE` too.
+
+Without the option, a `process.env.SOMETHING` in a component isn’t an error in the browser: Vite replaces `process.env` with an empty object, so the value is silently `undefined` and the page renders a blank spot. If a variable doesn’t appear where you expect it, check the prefix first.
+
 ## `exampleMode`
 
 Type: `String`, default: `collapse`
@@ -165,9 +311,9 @@ module.exports = {
 
 ## `getExampleFilename`
 
-Type: `Function`, default: finds `Readme.md` or `ComponentName.md` in the component folder
+Type: `Function`, default: finds `Readme.md`, `Readme.mdx`, `ComponentName.md` or `ComponentName.mdx` in the component folder
 
-Function that returns examples file path for a given component path.
+Function that returns examples file path for a given component path. The extension of the path you return selects the pipeline: `.md` is Markdown, `.mdx` is [MDX](Documenting.md#mdx).
 
 For example, instead of `Readme.md` you can use `ComponentName.examples.md`:
 
@@ -210,6 +356,24 @@ Array of [glob pattern](https://github.com/isaacs/node-glob#glob-primer) that sh
 
 > **Caution:** You should pass glob patterns, for example, use `**/components/Button.js` instead of `components/Button.js`.
 
+## `lazyDocs`
+
+Type: `Boolean`, default: `true`
+
+Load each component’s documentation when the page needs it, instead of putting all of it in the first script the browser downloads.
+
+```javascript
+module.exports = {
+  lazyDocs: false
+}
+```
+
+With this on — it is on by default — the style guide’s entry script carries the section tree: every component’s name, slug, path line and anchor, which is what the sidebar, the routes, the headings and the deep links are drawn from. The documentation itself — the props table, the JSDoc description, the examples, and the component’s own module — is imported per component, when that component is what the page shows (an isolated `#!/Button` view, a [pagePerSection](#pagepersection) page, the target of a deep link) or when it comes near the viewport on the all-in-one page. On a style guide of 350 components this takes the entry chunk from 4.7 MB to 1.2 MB and the number of modules the dev server serves before the first render from 1130 to 67.
+
+A component whose documentation has not arrived yet renders its container and its heading, and — once the wait has lasted more than 200 ms — a small spinner labelled “Loading documentation…” where its body will be. It shows no props table and no examples, and the “add examples to this component” hint only for a component the style guide already knows has none. A component whose documentation could not be fetched says so in the same place, with a button that reloads the page. Both are the `DocsLoading` component, which [styleguideComponents](#styleguidecomponents) can replace like any other.
+
+Turn it off to put every component’s documentation back into the entry chunk, which is how style guides were built before this option existed. Two reasons to: a deployment that would rather serve one big file than many small ones, and a replaced `ReactComponent` (see [styleguideComponents](#styleguidecomponents)) that cannot cope with a component whose documentation is not there yet — see [the Cookbook](Cookbook.md#how-to-work-with-on-demand-documentation) for what a replaced component sees and how to group the chunks differently.
+
 ## `logger`
 
 Type: `Object`, by default will use `console.*` in CLI or nothing in Node.js API
@@ -227,6 +391,75 @@ module.exports = {
   }
 }
 ```
+
+## `machineReadable`
+
+Type: `Boolean`, default: `true`
+
+Emit a machine-readable copy of the style guide next to `index.html`, for AI assistants, editor integrations and scripts:
+
+- `docs.json`: every section and component with its description, props (name, type, required, default value, description, JSDoc tags), public methods and usage examples, as JSON;
+- `llms.txt`: an index in the [llms.txt](https://llmstxt.org/) format, one line per component with a link to it in the style guide;
+- `llms-full.txt`: the whole style guide as one Markdown document.
+
+The files are generated from the same sources as the style guide itself (react-docgen output, Markdown examples), in the order of the sidebar. `styleguidist build` writes them into [styleguideDir](#styleguidedir); the dev server serves them at `/docs.json`, `/llms.txt` and `/llms-full.txt`, regenerated on every request. Set the option to `false` to skip them. `docs.json` carries a `generatedAt` timestamp; set the `SOURCE_DATE_EPOCH` environment variable (seconds since the Unix epoch) to pin it for reproducible builds.
+
+```javascript
+module.exports = {
+  machineReadable: false
+}
+```
+
+> **Caution:** The files are plain, unprotected downloads: when the style guide is deployed, everything in them (descriptions, examples, file paths relative to the project) is public, exactly like the style guide page is. Turn the option off if the style guide is served from somewhere you don’t want to expose that way.
+
+See [How do I make my style guide readable by AI tools?](Cookbook.md#how-do-i-make-my-style-guide-readable-by-ai-tools) for the details of each file.
+
+## `mdx`
+
+Type: `Object`, optional
+
+Options for the [MDX](Documenting.md#mdx) pipeline, passed to `@mdx-js/mdx`’s `compile()`:
+
+- `remarkPlugins`: remark plugins, default `[remarkGfm]`;
+- `rehypePlugins`: rehype plugins, default none;
+- `recmaPlugins`: recma plugins, default none.
+
+Each is a [unified plugin list](https://github.com/unifiedjs/unified#plugin): a plugin, or a `[plugin, options]` pair, per entry. Setting `remarkPlugins` **replaces** the default, so keep [remark-gfm](https://github.com/remarkjs/remark-gfm) in the list if you still want GFM tables, task lists and strikethrough:
+
+```javascript
+// styleguide.config.mjs — remark plugins are ES modules
+import remarkGfm from 'remark-gfm'
+import remarkFrontmatter from 'remark-frontmatter'
+
+export default {
+  mdx: {
+    remarkPlugins: [remarkGfm, remarkFrontmatter]
+  }
+}
+```
+
+The option has no effect on `.md` files, which are parsed by the Markdown pipeline and are not affected by MDX plugins.
+
+## `mdxComponents`
+
+Type: `Object`, optional
+
+Extra components available to every [MDX](Documenting.md#mdx) page, as a map of name to the module that default-exports the component. They are merged over the default element map, so an entry can either add a shortcode that any `.mdx` file may use without importing it, or replace how an HTML element of the prose is rendered:
+
+```javascript
+module.exports = {
+  mdxComponents: {
+    // Usable as <Callout kind="info"> in any .mdx file, no import needed
+    Callout: 'styleguide/components/Callout',
+    // Every table of every MDX page is rendered by this component
+    table: 'styleguide/components/Table'
+  }
+}
+```
+
+Each value is a module path and is resolved like a [styles](#styles) or [theme](#theme) path: relative to the style guide config file, so the entries above are `styleguide/components/Callout` and `styleguide/components/Table` next to the config. An absolute path (`path.join(__dirname, 'styleguide/components/Callout')`) works too, and the extension may be omitted — Vite resolves the rest like any import. The module is imported into the style guide’s browser bundle and must default-export the component.
+
+Lowercase keys are HTML element names; capitalised keys are components an `.mdx` file can use as JSX elements. Without this option a page imports what it needs itself, which is the usual way — reach for `mdxComponents` when the same component belongs on many pages.
 
 ## `minimize`
 
@@ -264,6 +497,27 @@ Type: `string`, default: `rsg-root`
 
 The ID of a DOM element where Styleguidist mounts.
 
+## `pageNav`
+
+Type: `Boolean`, default: `false`
+
+Add an “on this page” list of the current page’s own headings.
+
+```javascript
+module.exports = {
+  pagePerSection: true,
+  pageNav: true
+}
+```
+
+The list is built from the headings the page actually renders — every `h2` and `h3` that has an id, in document order — so it works the same for Markdown and MDX documentation and for a custom `Heading` component. A page with fewer than two of them gets no list at all.
+
+Where it appears depends on the width of the window: from 1480 px up it is a rail beside the content column, which sticks below the header as you scroll and highlights the heading you are reading; below that the same list is a collapsible block above the content, closed until you open it. The content column keeps its width and its position either way — the space the rail takes is reserved on every page of the style guide, so the text does not move sideways when you open a page that has no list. The breakpoint is the `mq.large` [theme](#theme) key, and the width of the rail is `pageNavWidth`.
+
+**It only appears on pages that show a single component or section**: the [pagePerSection](#pagepersection) pages, the `#/Section` routes and the isolated `#!/Component` view. On the default all-in-one page, where every component of the style guide is on one page, the sidebar is the page navigation — it already follows the scroll, see [scrollSync](#scrollsync) — and a list of every heading of every component would only repeat it.
+
+If you replace `StyleGuideRenderer` through [styleguideComponents](#styleguidecomponents), render the `pageNav` prop it receives where you want the list; without that the option does nothing for your style guide. The list itself is `PageNav` / `PageNavRenderer` and can be replaced the same way, see [the Cookbook](Cookbook.md#how-to-change-the-on-this-page-navigation).
+
 ## `pagePerSection`
 
 Type: `Boolean`, default: `false`
@@ -271,6 +525,8 @@ Type: `Boolean`, default: `false`
 Render one section or component per page.
 
 If `true`, each section will be a single page.
+
+The style guide needs named [sections](#sections) to page by: a configuration that only lists [components](#components) has a single unnamed root section, so there is nothing to split and every component stays on one page whatever this option says.
 
 The value may depend on a current environment:
 
@@ -371,6 +627,31 @@ module.exports = {
 }
 ```
 
+## `parallel`
+
+Type: `Boolean`, `Number` or `'auto'`, default: `'auto'`
+
+Parse components and examples in worker threads.
+
+react-docgen and the Markdown pipeline are synchronous CPU work, so without this they run one after another on the main thread while the rest of the machine idles. With four workers, a 350-component design system builds in 1610 ms instead of 2570 ms — at the price of about 500 MB more peak memory, which is why the default is a decision rather than “on”.
+
+- `'auto'` (default): use workers when the style guide resolved **150 components or more** and there is real parsing to do — at least 25 files the [cache](#cache) could not answer. Two to four workers, never more (measured: six is the same speed, eight is slower, and each one costs about 100 MB).
+- `true`: always use workers, whatever the size of the guide.
+- A number: that many workers.
+- `false`: parse everything on the main thread, as Styleguidist always did.
+
+```javascript
+module.exports = {
+  parallel: 4
+}
+```
+
+**What cannot go to a worker.** A worker thread receives a copy of plain data, and a function is not copyable — so a parse that has to call one of your config functions runs on the main thread instead, whatever this option says. For component documentation that is [propsParser](#propsparser) (in either form), [resolver](#resolver), [handlers](#handlers), [sortProps](#sortprops), [updateDocs](#updatedocs) and [getExampleFilename](#getexamplefilename); for examples it is [updateExample](#updateexample). The two halves are decided separately, so a custom `sortProps` still leaves your Markdown examples parsed in parallel. `styleguidist doctor` names whichever of them applies to your config.
+
+Everything a worker produces is byte-for-byte what the main thread would have produced; the option changes when the work happens, never what comes out of it.
+
+> **Note:** Workers are started on demand and stopped when the build finishes or the dev server closes. A guide below the threshold, or a rebuild in which almost nothing changed, never starts one and never pays for one.
+
 ## `previewDelay`
 
 Type: `Number`, default: 500
@@ -379,9 +660,11 @@ Debounce time in milliseconds used before rendering the changes from the editor.
 
 ## `propsParser`
 
-Type: `Function`, optional
+Type: `Function` or `String`, optional
 
-Function that allows you to override the mechanism used to parse props from a source file. The default mechanism is using [react-docgen](https://github.com/reactjs/react-docgen) to parse props. The function receives the file path, its source code, and the [resolver](#resolver) and [handlers](#handlers) from the config, and returns a react-docgen documentation object or an array of them (only the first one is used).
+Override the mechanism used to parse props from a source file. The default mechanism is [react-docgen](https://github.com/reactjs/react-docgen). The parser receives the file path, its source code, and the [resolver](#resolver) and [handlers](#handlers) from the config, and returns a react-docgen documentation object or an array of them (only the first one is used).
+
+It can be the function itself:
 
 ```javascript
 const { parse } = require('react-docgen')
@@ -391,6 +674,40 @@ module.exports = {
   }
 }
 ```
+
+or — **recommended** — the path of a module whose default export is that function, resolved from the config file's folder (a package name works too):
+
+```javascript
+// styleguide.config.js
+module.exports = {
+  propsParser: './styleguide.parser.js'
+}
+```
+
+```javascript
+// styleguide.parser.js
+const { parse } = require('react-docgen')
+
+module.exports = function propsParser(filePath, source, resolver, handlers) {
+  return parse(source, { resolver, handlers, filename: filePath })
+}
+```
+
+The two forms call exactly the same parser; the difference is what Styleguidist can say about it. A module has an identity — its resolved path plus its content, or its package's version — so the [parse cache](#cache) can tell one run's parser from another's and skip components that have not changed. A function has no identity across processes, so a function parser turns component-documentation caching off, which is a shame precisely where it costs most: a `react-docgen-typescript` parser is the slowest thing a style guide does. The [cookbook recipe](Cookbook.md#components-re-exported-from-another-package) is written in the module form for that reason.
+
+> **Note:** The module is loaded once per process, so anything expensive it sets up at module scope — a TypeScript program, a compiler host — is set up once, exactly as it would be at the top of your config file.
+
+> **Note:** Only that one file's content is part of the cache key. If your parser module imports helpers of its own, changing a helper does not invalidate the cache: run `styleguidist build --no-cache` once, or delete `node_modules/.vite/vite-styleguidist/`.
+
+> **Note:** What your parser *reads* cannot be observed either — the parsers this option exists for resolve types through a TypeScript program of their own. The [cache](#cache) therefore assumes a parse depends on the component and on the files the component imports relatively, transitively; a type reached through a path alias or from an installed package is outside that assumption, and `--no-cache` is the answer after such an edit. The default parser has no such limit: react-docgen is given an importer Styleguidist owns, so the files it follows are known exactly.
+
+> **Note:** Either form always runs on the main thread, never in a [parallel](#parallel) worker. Four workers would build four copies of whatever the parser sets up — for `react-docgen-typescript`, four TypeScript programs of about a gigabyte each. See [decision 0018](decisions/0018-parse-cache-and-parallel-parsing.md).
+
+> **TypeScript: you probably don’t need this option.** The default parser reads TypeScript type annotations, so `.tsx` components are documented with no configuration at all — types, required flags, default values and JSDoc descriptions, including prop types imported from a neighbouring module. It documents the props a component _declares_, so a component whose props extend `React.ButtonHTMLAttributes` gets a table of its own props rather than the ~290 attributes the DOM interface adds. See the [TypeScript example](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) and the [cookbook recipe](Cookbook.md#how-to-document-typescript-components).
+>
+> Reach for `propsParser` when a component is resolved through the type system instead of written in the file being parsed — above all one re-exported from another package, which the default parser cannot follow. The cookbook has a verified [react-docgen-typescript recipe](Cookbook.md#components-re-exported-from-another-package) for exactly that case, and [decision 0017](decisions/0017-typescript-props.md) has the measurements behind the split.
+
+> **Note:** the function is called once per component and per build, so whatever it sets up should be set up outside of it. This matters most with `react-docgen-typescript`, whose `parse()` creates a new TypeScript program on every call: the cookbook recipe shares one program instead, which builds a 50-component style guide more than five times faster.
 
 ## `require`
 
@@ -431,7 +748,7 @@ The default is a `ChainResolver` of Styleguidist’s own `FindAnnotatedExportsRe
 
 Type: `Object`, optional
 
-Show “Fork Me” ribbon in the top right corner.
+Show a link to your repository: in the sidebar footer, next to the colour-scheme toggle, or as a small pill in the top-right corner when the style guide has no sidebar (`showSidebar: false`, isolated views). The default text is “GitHub”.
 
 ```javascript
 module.exports = {
@@ -446,11 +763,29 @@ module.exports = {
 
 Use the [theme](#theme) config option to change ribbon style.
 
+## `scrollSync`
+
+Type: `String` or `false`, default: `selection`
+
+Keep the sidebar (and optionally the URL) on the section the reader has scrolled to, on a style guide that shows everything on one page:
+
+- `selection`: the highlighted sidebar entry follows the scroll; the URL is never touched.
+- `hash`: the same, and the fragment of the address is rewritten to the section on screen with `history.replaceState`, so a copied link points at what the reader was looking at.
+- `false`: the selection only changes when the reader clicks an entry or opens a link, which is what Styleguidist did before 1.0.
+
+```javascript
+module.exports = {
+  scrollSync: 'hash'
+}
+```
+
+Only the default one-page layout has anything to follow: with [pagePerSection](#pagepersection) the sidebar links are routes rather than anchors, and an isolated view has no sidebar, so the option has no effect in either. Nothing is ever pushed onto the history stack and no `hashchange` event is fired, so the back button and any code that listens for navigation behave exactly as before; code that _polls_ `location.hash` will see it change while the reader scrolls in `hash` mode.
+
 ## `sections`
 
 Type: `Array`, optional
 
-Allows components to be grouped into sections with a title and overview content. Sections can also be content only, with no associated components (for example, a textual introduction). Sections can be nested.
+Allows components to be grouped into sections with a title and overview content. Sections can also be content only, with no associated components (for example, a textual introduction). Sections can be nested. A section’s `content` may be a `.md` or an `.mdx` file, see [MDX](Documenting.md#mdx).
 
 See examples of [sections configuration](Components.md#sections).
 
@@ -512,13 +847,57 @@ module.exports = {
 }
 ```
 
-Paths may omit the extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.), Vite resolves them like any import. Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
+Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`, `DocsLoadingRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
+
+Values are written like imports and Vite resolves them like imports: an absolute path, a path relative to the config file (`./styleguide/components/Wrapper`), or a module name from your dependencies. The extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.) may be omitted.
 
 See an example of [customized style guide](../examples/customised).
 
-To wrap, rather than replace a component, make sure to import the default implementation using the full path to `vite-styleguidist`, with the `.js` extension, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js`. (The package’s `exports` map doesn’t add extensions for you, so the extensionless form only works when a bundler happens to resolve it.) See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
+To wrap, rather than replace a component, import the default implementation by its full path inside `vite-styleguidist`, for example `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer` — with or without the `.js` extension, both resolve. See an example of [wrapping a Styleguidist component](../examples/customised/styleguide/components/SectionsRenderer.js).
 
-**Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates.
+**Note**: these components are not guaranteed to be safe from breaking changes in Styleguidist updates, except `Editor`, whose props are a stable contract (see below).
+
+### `Editor`
+
+The code editor shown under an example when you click “View Code” is [CodeMirror 6](https://codemirror.net/) with JavaScript, JSX and TypeScript highlighting, undo history, bracket matching and closing, basic autocompletion and search (Ctrl/Cmd+F inside the editor). It has no line numbers. Its chunk is loaded on demand: a style guide page fetches CodeMirror only the first time an editor opens, and shows the code as plain text meanwhile.
+
+Keyboard: Tab indents the current line, Shift+Tab outdents. To move the focus out of the editor with the keyboard, press Escape and then Tab (or Shift+Tab): after Escape, Tab moves the focus like anywhere else on the page for two seconds. For assistive technology the editor is labelled with the component’s name and the example’s index, “Code editor for Button example 2” (a custom editor receives them as `exampleName` and `exampleIndex`, see the table below).
+
+Colors follow the [`theme`](#theme) option: the same `theme.color.code*` keys that style static code blocks style the editor, see [How to change syntax highlighting colors?](Cookbook.md#how-to-change-syntax-highlighting-colors) in the cookbook.
+
+You can replace the editor with your own component:
+
+```javascript
+// styleguide.config.js
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+export default {
+  styleguideComponents: {
+    Editor: path.join(dirname, 'src/styleguide/Editor')
+  }
+}
+```
+
+The CommonJS form (`require`, `__dirname`, `module.exports`) works in a project without `"type": "module"`, and in a `styleguide.config.cjs` file in any project.
+
+When you do, CodeMirror is not part of your bundle at all. The component receives these props (the `EditorProps` type exported from `vite-styleguidist/lib/typings/index.d.ts`), and this list is a public contract: keys are only ever added, never removed or renamed:
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `code` | `string` | Current source of the example. Controlled: Styleguidist owns it and passes it back after `onChange` (debounced) and when the Markdown file changes on hot reload. |
+| `onChange` | `(code: string) => void` | Call it with the whole source after every change. Calls are debounced by the [`previewDelay`](#previewdelay) option (500 ms by default) before the preview re-renders. |
+| `evalInContext` | `(code: string) => () => any`, optional | Compiles and runs example code the way the preview does. The built-in editor doesn’t use it. |
+| `name` | `string`, optional | Id of the slot fill, `rsg-code-editor` for the built-in code tab. Not the example name. |
+| `active` | `boolean`, optional | Whether the tab is the active one; always `true` when the editor is rendered, since only the active tab is. |
+| `onClick` | `function`, optional | Tab click handler of the slot (its id is bound already). Not needed by an editor. |
+| `exampleName` | `string`, optional | Name of the component or section the example belongs to. The built-in editor uses it, with `exampleIndex`, for its accessible label. |
+| `exampleIndex` | `number`, optional | Index of the example in its Markdown file, the same number the isolated example URL uses. |
+| `lang` | `string`, optional | Fence language of the example (`jsx`, `tsx`, …), absent for a bare fence. The built-in editor shows it as the badge in the corner of the code area, and labels a bare fence `JSX`, since every playground example is compiled with the JSX and TypeScript transforms. |
+
+See [How to replace the code editor?](Cookbook.md#how-to-replace-the-code-editor) in the cookbook for a minimal implementation.
 
 ## `styleguideDir`
 
@@ -534,7 +913,7 @@ Customize styles of any Styleguidist’s component using an object, a function r
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](../src/client/styles/theme.ts). The returned object folows the same format as when configured as a litteral.
+> **Tip:** Using a function allows access to theme variables like in the example below. See available [theme variables](../src/client/styles/theme.ts) and the [theme](#theme) option for what the colour tokens contain. The returned object follows the same format as when configured as a literal.
 
 ```javascript
 module.exports = {
@@ -552,6 +931,8 @@ module.exports = {
 ```
 
 **Note:** If using a file path, it has to be absolute or relative to the config file. The file is bundled for the browser and must be an ES module (`export default {…}` or `export default theme => ({…})`).
+
+**Note:** Component names and the keys inside them (`Logo`, `logo`) are part of the public contract: keys are only ever added, never renamed, so a `styles` config keeps working across minor releases. The generated class names look like `rsg--logo-1234567890`; the number is derived from the component and its keys, it is not something to target.
 
 ## `template`
 
@@ -632,11 +1013,37 @@ The path is relative to the config file or absolute. The file is bundled for the
 
 See examples in the [cookbook](Cookbook.md#how-to-change-styles-of-a-style-guide).
 
-> **Info:** See available [theme variables](../src/client/styles/theme.ts).
+> **Info:** See available [theme variables](../src/client/styles/theme.ts). The light and dark values of the colour tokens live in [colorSchemes.ts](../src/client/styles/colorSchemes.ts).
+
+### Colour tokens and dark mode
+
+Every `theme.color.*` token is a CSS custom property with the light value as fallback, `var(--rsg-color-<name>, <light value>)`, where `<name>` is the token name in kebab-case: `color.baseBackground` is `--rsg-color-base-background`. The style guide defines the light values on `:root`, the dark values on `[data-rsg-theme="dark"]` and, for the `system` [colorScheme](#colorscheme), inside `@media (prefers-color-scheme: dark)`. Its own definitions are wrapped in `:where()`, which has no specificity, so a rule of yours with the same selectors wins wherever it is loaded, even though the style guide attaches its variables last.
+
+This has one consequence for the `theme` option: **overriding a colour token opts that token out of dark mode**. `theme: { color: { link: 'firebrick' } }` replaces the whole `var()` expression with a literal that no longer switches, so you own both schemes for that token. To change a colour in both schemes, override the custom property instead of the token, for example with [template](#template) `head.raw` or a stylesheet listed in [require](#require):
+
+```css
+:root {
+  --rsg-color-link: firebrick;
+}
+[data-rsg-theme='dark'] {
+  --rsg-color-link: salmon;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-rsg-theme='light']) {
+    --rsg-color-link: salmon;
+  }
+}
+```
+
+Or set [colorScheme](#colorscheme) to `light` if your theme only has one scheme. Numeric tokens (`space`, `fontSize`, `borderRadius`, `maxWidth`, `sidebarWidth`) stay numbers and are the same in both schemes.
+
+Besides the text and code colours there are two surface tokens added with the 1.0 design, both with a light and a dark value: `selectedBackground` (the selected sidebar item and the active tab; `base` and `link` sit on it) and `errorBackground` (the playground error panel; `error` is the text on it). Every text colour clears WCAG AA (4.5:1) on the surface it is used on in both schemes, and a unit test keeps it that way, so if you override one side of a pair, check the other.
+
+Tokens that components used to hard-code and that you can now override: `lineHeight.base` (1.55), `lineHeight.heading` (1.2) and `lineHeight.code` (1.6, the editor and static code blocks); `fontWeight.normal` (400) and `fontWeight.bold` (600; numbers, but the `normal` / `bold` keywords work too); `transition.fast` (`150ms ease-in`) and `transition.slow` (`750ms ease-out`, duration and easing only); `shadow.tooltip` and `shadow.ribbon` (complete `box-shadow` / `text-shadow` values); `mq.small` (`@media (max-width: 600px)`) and `mq.medium` (`@media (max-width: 1024px)`). Token names are only ever added, never renamed.
 
 > **Info:** Styles use [JSS](https://github.com/cssinjs/jss/blob/master/docs/jss-syntax.md) with these plugins: [jss-plugin-isolate](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-isolate), [jss-plugin-nested](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-nested), [jss-plugin-camel-case](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-camel-case), [jss-plugin-default-unit](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-default-unit), [jss-plugin-compose](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-compose) and [jss-plugin-global](https://github.com/cssinjs/jss/tree/master/packages/jss-plugin-global).
 
-> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-53">` corresponds to an example above.
+> **Tip:** Use [React Developer Tools](https://github.com/facebook/react) to find component and style names. For example a component `<LogoRenderer><h1 className="rsg--logo-1234567890">` corresponds to the `Logo` / `logo` example above; the number is derived from the component and is the same for all its classes.
 
 ## `title`
 
@@ -654,6 +1061,8 @@ Defines if the table of contents sections will behave like an accordion:
 - `expand`: Sections cannot be collapsed in the Table Of Contents
 
 Collapse the sections created in the sidebar to reduce the height of the sidebar. This can be useful in large codebases with lots of components to avoid having to scroll too far.
+
+With `collapse`, a section whose contents are hidden is highlighted itself while you are reading something inside it, so the sidebar still says where you are — see [scrollSync](#scrollsync).
 
 ## `updateDocs`
 
@@ -698,7 +1107,7 @@ export default
 
 Type: `Function`, optional
 
-Function that modifies code example (Markdown fenced code block). For example, you can use it to load examples from files:
+Function that modifies code example (a fenced code block of a `.md` or `.mdx` file — it runs for both, before the block is classified as a playground or as static code). For example, you can use it to load examples from files:
 
 ```javascript
 module.exports = {
@@ -809,6 +1218,8 @@ module.exports = {
 > **Danger:** These options will be ignored because Styleguidist controls them: `root`, `base`, `appType`, `configFile`, `build.outDir`, `build.emptyOutDir`, `build.lib`, `build.ssr`, `build.manifest`, `build.ssrManifest`, `server.host`, `server.port`, `server.strictPort`, `server.middlewareMode`, and — under both `build.rolldownOptions` and `build.rollupOptions` — `input`, `external`, `output` and `preserveEntrySignatures`. Styleguidist owns the entry, the output location and the dev server address, and your library-build settings (like `external: ['react']`) would make the style guide bundle unloadable. Run with `--verbose` to see which options were dropped. (The list is `IGNORED_OPTIONS` in [src/vite/mergeViteConfig.ts](../src/vite/mergeViteConfig.ts).)
 
 > **Note:** Styleguidist adds [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) unless your `plugins` already include it.
+
+> **Note:** The modules Styleguidist generates for your components (`virtual:rsg-props?…`, `virtual:rsg-examples?…`, `virtual:rsg-mdx?…`) hold no user code, and their ids are shaped so that plugins filtering by file extension skip them. Should a plugin of yours process them anyway, exclude every virtual module with `/^\0/` — see [the cookbook](Cookbook.md#how-to-keep-a-vite-plugin-from-processing-styleguidists-own-modules).
 
 > **Tip:** Run style guide in verbose mode to see the actual Vite config used by Styleguidist: `npx styleguidist server --verbose`.
 

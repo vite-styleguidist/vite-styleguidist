@@ -4,10 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import _ from 'lodash';
 import { importDefault } from './importIt.js';
+import { isMdxFile, isMdxAvailable, MissingMdxError } from './mdx.js';
 import getComponentFiles from './getComponentFiles.js';
 import getComponents from './getComponents.js';
 import slugger from './slugger.js';
-import { examplesId } from '../../vite/ids.js';
+import { examplesId, mdxId } from '../../vite/ids.js';
 import type * as Rsg from '../../typings/index.js';
 
 function processSectionContent(
@@ -31,6 +32,13 @@ function processSectionContent(
 	const contentAbsolutePath = path.resolve(config.configDir, contentRelativePath);
 	if (!fs.existsSync(contentAbsolutePath)) {
 		throw new Error(`Styleguidist: Section content file not found: ${contentAbsolutePath}`);
+	}
+	if (isMdxFile(contentAbsolutePath)) {
+		// Named explicitly in the config, so a missing @mdx-js/mdx is an error, not a warning
+		if (!isMdxAvailable(config.configDir)) {
+			throw new MissingMdxError(contentAbsolutePath);
+		}
+		return importDefault(mdxId({ file: contentAbsolutePath }));
 	}
 	return importDefault(examplesId({ file: contentAbsolutePath }));
 }

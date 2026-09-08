@@ -4,9 +4,9 @@ import Arguments from 'rsg-components/Arguments';
 import Argument from 'rsg-components/Argument';
 import JsDoc from 'rsg-components/JsDoc';
 import Markdown from 'rsg-components/Markdown';
-import Name from 'rsg-components/Name';
 import Para from 'rsg-components/Para';
 import Table from 'rsg-components/Table';
+import PropName from './PropNameRenderer.js';
 import renderTypeColumn from './renderType.js';
 import renderExtra from './renderExtra.js';
 import renderDefault from './renderDefault.js';
@@ -30,8 +30,14 @@ function renderDescription(prop: PropDescriptor) {
 }
 
 function renderName(prop: PropDescriptor) {
-	const { name, tags = {} } = prop;
-	return <Name deprecated={!!tags.deprecated}>{name}</Name>;
+	const { name, required, defaultValue, tags = {} } = prop;
+	// Same rule as renderDefault: react-docgen may flag a prop with a default value as
+	// required (facebook/react-docgen#221), and such a prop is not required in practice
+	return (
+		<PropName deprecated={!!tags.deprecated} required={!!required && !defaultValue}>
+			{name}
+		</PropName>
+	);
 }
 
 export function getRowKey(row: { name: string }) {

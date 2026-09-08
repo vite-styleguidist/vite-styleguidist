@@ -90,3 +90,60 @@ describe('createStyleSheet', () => {
 		expect(style['border-color']).toBe(customThemeLinkColor);
 	});
 });
+
+describe('class names', () => {
+	const stylesA = () => ({ root: { color: 'red' }, child: { color: 'blue' } });
+	const stylesB = () => ({ root: { color: 'green' } });
+	const emptyConfig = { theme: {}, styles: {} };
+
+	it('should give every rule of a component the same suffix', () => {
+		const { classes } = createStyleSheet(stylesA, emptyConfig, 'Alpha', '1');
+		const suffix = classes.root.replace(/^rsg--root-/, '');
+		expect(suffix).toMatch(/^\d+$/);
+		expect(classes.child).toBe(`rsg--child-${suffix}`);
+	});
+
+	it('should generate the same class names regardless of creation order', () => {
+		// Two independent factories: the memoize cache must not short-circuit this
+		const stylesAgain = () => ({ root: { color: 'red' }, child: { color: 'blue' } });
+		const first = createStyleSheet(stylesA, emptyConfig, 'Beta', '1').classes;
+		createStyleSheet(stylesB, emptyConfig, 'Gamma', '1');
+		createStyleSheet(stylesB, emptyConfig, 'Delta', '1');
+		const second = createStyleSheet(stylesAgain, emptyConfig, 'Beta', '2').classes;
+		expect(second).toEqual(first);
+	});
+
+	it('should not share a sheet between two components with the same name', () => {
+		// The props TableRenderer and the Markdown TableRenderer are both named `Table`
+		const propsTable = () => ({ table: { width: '100%' }, cell: { padding: 1 } });
+		const markdownTable = () => ({ table: { marginTop: 0 } });
+		const first = createStyleSheet(propsTable, emptyConfig, 'Table', '1');
+		const second = createStyleSheet(markdownTable, emptyConfig, 'Table', '1');
+		expect(second).not.toBe(first);
+		expect(second.classes.table).not.toBe(first.classes.table);
+		expect(first.classes.cell).toMatch(/^rsg--cell-\d+$/);
+		expect((second.getRule('table') as any).style['margin-top']).toBe('0');
+		expect((first.getRule('table') as any).style.width).toBe('100%');
+	});
+
+	it('should apply `styles` overrides to every component with that name', () => {
+		const propsTable = () => ({ table: { width: '100%' } });
+		const markdownTable = () => ({ table: { marginTop: 0 } });
+		const tableConfig = { theme: {}, styles: { Table: { table: { color: 'pink' } } } };
+		const first = createStyleSheet(propsTable, tableConfig, 'Table', '1');
+		const second = createStyleSheet(markdownTable, tableConfig, 'Table', '1');
+		expect((first.getRule('table') as any).style.color).toBe('pink');
+		expect((second.getRule('table') as any).style.color).toBe('pink');
+	});
+
+	it('should detach the sheet of the previous revision of a component', () => {
+		const first = createStyleSheet(stylesA, emptyConfig, 'Epsilon', '1');
+		first.attach();
+		expect(first.attached).toBe(true);
+		const second = createStyleSheet(stylesA, emptyConfig, 'Epsilon', '2');
+		expect(second).not.toBe(first);
+		expect(first.attached).toBe(false);
+		// Same class names across revisions, which is why the previous sheet had to go
+		expect(second.classes).toEqual(first.classes);
+	});
+});

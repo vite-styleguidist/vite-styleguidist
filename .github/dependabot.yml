@@ -6,25 +6,49 @@
 # Only minor + patch bumps are grouped; majors arrive as individual PRs because each one
 # deserves its own review (and, for the package itself, may be a breaking change for users).
 version: 2
+
+# While 1.0 is in beta every change lands on `next` (main only moves by fast-forward, see
+# docs/Maintenance.md#promoting-next-to-main), so the pull requests target `next` and each
+# bump ships as a prerelease. Drop the `target-branch` lines once 1.0.0 is on main.
+# The commit-message prefix makes the titles Conventional Commits (`build(deps): bump …`),
+# which the "PR title is a Conventional Commit" check requires.
 updates:
   # The package itself (dependencies, devDependencies, and the release/lint tooling).
   - package-ecosystem: npm
     directory: /
+    target-branch: next
+    commit-message:
+      prefix: build
+      include: scope
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      # Pinned to ^9 on purpose: 10.x needs conventional-changelog-writer 9 while
+      # @semantic-release/release-notes-generator still bundles 8 (see release.config.js).
+      - dependency-name: conventional-changelog-conventionalcommits
+        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
         update-types:
           - minor
           - patch
 
-  # The documentation site is its own npm project.
+  # The documentation site is its own npm project. Nothing here is published to
+  # npm, so its advisories only ever affect a build on our own CI runners; the
+  # site therefore gets one grouped security PR rather than one per alert, which
+  # is what a Docusaurus dependency tree would otherwise produce. (Security PRs
+  # come from the separate "Dependabot security updates" setting, and `groups`
+  # only applies to them when `applies-to: security-updates` is set.)
   - package-ecosystem: npm
     directory: /site
+    target-branch: next
+    commit-message:
+      prefix: build
+      include: scope
     schedule:
       interval: weekly
       day: monday
@@ -36,6 +60,10 @@ updates:
         update-types:
           - minor
           - patch
+      site-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
 
   # The eight examples built in CI. Listing them under one entry lets Dependabot open a
   # single PR that bumps the same dependency across all of them (e.g. a new React major),
@@ -52,6 +80,10 @@ updates:
       - /examples/styled-components
       - /examples/themed
       - /examples/vite
+    target-branch: next
+    commit-message:
+      prefix: build
+      include: scope
     schedule:
       interval: weekly
       day: monday
@@ -67,6 +99,10 @@ updates:
   # The actions used by .github/workflows/*.yml (actions/checkout, actions/setup-node, ...).
   - package-ecosystem: github-actions
     directory: /
+    target-branch: next
+    commit-message:
+      prefix: build
+      include: scope
     schedule:
       interval: weekly
       day: monday

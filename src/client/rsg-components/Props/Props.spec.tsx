@@ -163,11 +163,11 @@ describe('props columns', () => {
 		const { container } = renderJs(['color: PropTypes.string.isRequired']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`
-		"Prop name: color 
-		Type: string 
-		Default: Required 
-		Description:"
-	`);
+			"Prop name: color * 
+			Type: string 
+			Default: Required 
+			Description:"
+		`);
 	});
 
 	test('should render PropTypes.arrayOf', () => {
@@ -425,6 +425,24 @@ describe('props columns', () => {
 	`);
 	});
 
+	// The Default column and enum literals are table fields, not prose: they are plain
+	// monospace (PropDefault / Type) rather than the inline-code chip Code renders, so that
+	// the type colour set on the literals is the colour that shows (ADR 0011)
+	test('should render enum values and default values without a code chip', () => {
+		const { container } = renderJs(
+			['size: PropTypes.oneOf(["small", "normal", "large"])'],
+			['size: "normal"']
+		);
+
+		// PropName renders a <code> of its own, so this looks for the Code component's chip
+		expect(container.querySelector('[class^="rsg--code-"]')).toBe(null);
+		const literals = [...container.querySelectorAll('span')].filter(
+			(node) => node.textContent === 'small'
+		);
+		expect(literals).toHaveLength(1);
+		expect(literals[0].className).toMatch(/^rsg--type-\d+$/);
+	});
+
 	test('should render PropTypes.oneOfType', () => {
 		const { container } = renderJs([
 			'union: PropTypes.oneOfType([PropTypes.string, PropTypes.number])',
@@ -468,7 +486,7 @@ describe('props columns', () => {
 		expect(getByText('Function').title).toMatchInlineSnapshot(`"(e) => console.log(e)"`);
 	});
 
-	test('should render function defaultValue as code when undefined', () => {
+	test('should render function defaultValue as plain text when undefined', () => {
 		const { container } = renderJs(['fn: PropTypes.func'], ['fn: undefined']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`
@@ -479,7 +497,7 @@ describe('props columns', () => {
 	`);
 	});
 
-	test('should render function defaultValue as code when null', () => {
+	test('should render function defaultValue as plain text when null', () => {
 		const { container } = renderJs(['fn: PropTypes.func'], ['fn: null']);
 
 		expect(getText(container)).toMatchInlineSnapshot(`
@@ -619,11 +637,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: string']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: string 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: string 
+				Default: Required 
+				Description:"
+			`);
 		});
 
 		test('should render optional type string', () => {
@@ -676,16 +694,16 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: MyEnum'], [], [options.enum.declaration]);
 			if (options.enum.expect.type === 'enum') {
 				expect(getText(container)).toMatchInlineSnapshot(`
-					"Prop name: foo 
-					Type: ${options.enum.expect.type} 
+					"Prop name: foo * 
+					Type: enum 
 					Default: Required 
 					Description: 
 					 One of: One , Two"
 				`);
 			} else {
 				expect(getText(container)).toMatchInlineSnapshot(`
-					"Prop name: foo 
-					Type: ${options.enum.expect.type} 
+					"Prop name: foo * 
+					Type: MyEnum 
 					Default: Required 
 					Description:"
 				`);
@@ -705,11 +723,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: React.ReactNode']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: React.ReactNode 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: React.ReactNode 
+				Default: Required 
+				Description:"
+			`);
 		});
 
 		test('should render unknown when a relevant prop type is not assigned', () => {
@@ -727,11 +745,11 @@ describe('props columns', () => {
 			const { container } = renderFn(['foo: 1']);
 
 			expect(getText(container)).toMatchInlineSnapshot(`
-			"Prop name: foo 
-			Type: 1 
-			Default: Required 
-			Description:"
-		`);
+				"Prop name: foo * 
+				Type: 1 
+				Default: Required 
+				Description:"
+			`);
 		});
 	});
 });

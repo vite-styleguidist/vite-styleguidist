@@ -6,7 +6,18 @@ import './Button.css';
 /**
  * The only true button.
  */
-export default function Button({ color, size, onClick, disabled, children }) {
+// No default for `color`: an unset inline colour lets Button.css decide, and that
+// stylesheet reads the label colour from the style guide's colour scheme. The literal
+// default this used to carry (`#333`) was unreadable once dark mode arrived.
+export default function Button({
+	color,
+	size = 'normal',
+	onClick = (event) => {
+		console.log('You have clicked me!', event.target);
+	},
+	disabled,
+	children,
+}) {
 	const styles = {
 		color,
 		fontSize: Button.sizes[size],
@@ -21,7 +32,7 @@ export default function Button({ color, size, onClick, disabled, children }) {
 Button.propTypes = {
 	/** Button label */
 	children: PropTypes.node.isRequired,
-	/** The color for the button */
+	/** The color for the button. Defaults to the muted text colour of the colour scheme. */
 	color: PropTypes.string,
 	/** The size of the button */
 	size: PropTypes.oneOf(['small', 'normal', 'large']),
@@ -29,13 +40,6 @@ Button.propTypes = {
 	disabled: PropTypes.bool,
 	/** Gets called when the user clicks on the button */
 	onClick: PropTypes.func,
-};
-Button.defaultProps = {
-	color: '#333',
-	size: 'normal',
-	onClick: (event) => {
-		console.log('You have clicked me!', event.target);
-	},
 };
 Button.sizes = {
 	small: '10px',

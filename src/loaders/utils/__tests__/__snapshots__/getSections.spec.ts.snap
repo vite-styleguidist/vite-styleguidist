@@ -6,7 +6,7 @@ exports[`getSections() should return an array 1`] = `
     "components": [],
     "content": {
       "__rsgDefault": true,
-      "__rsgImport": "rsg-examples:~/test/components/Button/Readme.md",
+      "__rsgImport": "virtual:rsg-examples?file=~/test/components/Button/Readme.md&rsg",
     },
     "exampleMode": "collapse",
     "href": undefined,
@@ -28,7 +28,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Annotation/Annotation.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Annotation/Annotation.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Annotation/Annotation.js&rsg",
         },
         "slug": "annotation-1",
       },
@@ -42,7 +42,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Button/Button.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Button/Button.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Button/Button.js&rsg",
         },
         "slug": "button-2",
       },
@@ -59,7 +59,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Placeholder/Placeholder.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Placeholder/Placeholder.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Placeholder/Placeholder.js&rsg",
         },
         "slug": "placeholder-2",
       },
@@ -73,7 +73,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Price/Price.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Price/Price.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Price/Price.js&rsg",
         },
         "slug": "price-2",
       },
@@ -87,7 +87,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/RandomButton/RandomButton.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/RandomButton/RandomButton.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/RandomButton/RandomButton.js&rsg",
         },
         "slug": "randombutton-2",
       },
@@ -113,7 +113,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Button/Button.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Button/Button.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Button/Button.js&rsg",
         },
         "slug": "button-3",
       },
@@ -127,7 +127,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Label/index.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Label/index.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Label/index.js&rsg",
         },
         "slug": "label-1",
       },
@@ -144,7 +144,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Placeholder/Placeholder.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Placeholder/Placeholder.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Placeholder/Placeholder.js&rsg",
         },
         "slug": "placeholder-3",
       },
@@ -158,7 +158,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/Price/Price.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/Price/Price.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/Price/Price.js&rsg",
         },
         "slug": "price-3",
       },
@@ -172,7 +172,7 @@ exports[`getSections() should return an array 1`] = `
         "pathLine": "components/RandomButton/RandomButton.js",
         "props": {
           "__rsgDefault": true,
-          "__rsgImport": "rsg-props:~/test/components/RandomButton/RandomButton.js",
+          "__rsgImport": "virtual:rsg-props?file=~/test/components/RandomButton/RandomButton.js&rsg",
         },
         "slug": "randombutton-3",
       },
@@ -217,7 +217,7 @@ exports[`processSection() should return an object for section with components 1`
       "pathLine": "components/Annotation/Annotation.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Annotation/Annotation.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Annotation/Annotation.js&rsg",
       },
       "slug": "annotation",
     },
@@ -231,7 +231,7 @@ exports[`processSection() should return an object for section with components 1`
       "pathLine": "components/Button/Button.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Button/Button.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Button/Button.js&rsg",
       },
       "slug": "button",
     },
@@ -248,7 +248,7 @@ exports[`processSection() should return an object for section with components 1`
       "pathLine": "components/Placeholder/Placeholder.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Placeholder/Placeholder.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Placeholder/Placeholder.js&rsg",
       },
       "slug": "placeholder",
     },
@@ -262,7 +262,7 @@ exports[`processSection() should return an object for section with components 1`
       "pathLine": "components/Price/Price.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Price/Price.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Price/Price.js&rsg",
       },
       "slug": "price",
     },
@@ -276,7 +276,7 @@ exports[`processSection() should return an object for section with components 1`
       "pathLine": "components/RandomButton/RandomButton.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/RandomButton/RandomButton.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/RandomButton/RandomButton.js&rsg",
       },
       "slug": "randombutton",
     },
@@ -297,7 +297,7 @@ exports[`processSection() should return an object for section with content 1`] =
   "components": [],
   "content": {
     "__rsgDefault": true,
-    "__rsgImport": "rsg-examples:~/test/components/Button/Readme.md",
+    "__rsgImport": "virtual:rsg-examples?file=~/test/components/Button/Readme.md&rsg",
   },
   "exampleMode": "collapse",
   "href": undefined,
@@ -339,7 +339,7 @@ exports[`processSection() should return an object for section without ignored co
       "pathLine": "components/Button/Button.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Button/Button.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Button/Button.js&rsg",
       },
       "slug": "button-1",
     },
@@ -353,7 +353,7 @@ exports[`processSection() should return an object for section without ignored co
       "pathLine": "components/Label/index.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Label/index.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Label/index.js&rsg",
       },
       "slug": "label",
     },
@@ -370,7 +370,7 @@ exports[`processSection() should return an object for section without ignored co
       "pathLine": "components/Placeholder/Placeholder.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Placeholder/Placeholder.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Placeholder/Placeholder.js&rsg",
       },
       "slug": "placeholder-1",
     },
@@ -384,7 +384,7 @@ exports[`processSection() should return an object for section without ignored co
       "pathLine": "components/Price/Price.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/Price/Price.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/Price/Price.js&rsg",
       },
       "slug": "price-1",
     },
@@ -398,7 +398,7 @@ exports[`processSection() should return an object for section without ignored co
       "pathLine": "components/RandomButton/RandomButton.js",
       "props": {
         "__rsgDefault": true,
-        "__rsgImport": "rsg-props:~/test/components/RandomButton/RandomButton.js",
+        "__rsgImport": "virtual:rsg-props?file=~/test/components/RandomButton/RandomButton.js&rsg",
       },
       "slug": "randombutton-1",
     },

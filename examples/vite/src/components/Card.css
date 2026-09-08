@@ -1,6 +1,13 @@
+/*
+ * The card's rule and surface come from the style guide's colour tokens (see Button.css), so
+ * the card is a quiet box on the light page and on the dark one; a literal `#e8e8e8` border
+ * was a bright line in dark mode. The shadow is deliberately kept: it is invisible on a dark
+ * background, which is what a raised-paper shadow should be.
+ */
 .card {
 	padding: 16px 24px;
-	border: 1px solid #e8e8e8;
+	color: var(--rsg-color-base, #262421);
+	border: 1px solid var(--rsg-color-border, #e6e2da);
 	border-radius: 6px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }

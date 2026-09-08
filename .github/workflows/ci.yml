@@ -94,10 +94,12 @@ jobs:
       - run: npm run test:unit
 
   integration:
-    name: Examples, browser smoke test and Cypress
+    name: Examples and end-to-end tests
     if: github.event_name != 'pull_request' || github.event.action != 'edited'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The ten example builds dominate now that the browser is a cached ~0.5 GB download
+    # instead of ~1.7 GB of Cypress plus puppeteer binaries fetched on every run.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -121,25 +123,148 @@ jobs:
           npm run build:preact
           npm run build:styled-components
           npm run build:vite
+          npm run build:mdx
+          npm run build:typescript
 
-      - name: Check that examples really work - no JS errors on load
-        run: |
-          npm run test:browser:pre
-          npm run test:browser:basic
-          npm run test:browser:customised
-          npm run test:browser:sections
-          npm run test:browser:themed
-          npm run test:browser:express
-          npm run test:browser:preact
-          npm run test:browser:styled-components
-          npm run test:browser:vite
+      # Playwright's browser builds are coupled to the installed @playwright/test version, so
+      # the cache key is derived from the version `npm ci` resolved from package-lock.json,
+      # not from the range in package.json; a Dependabot bump invalidates the cache by itself.
+      - name: Read the installed Playwright version
+        id: playwright
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # Idempotent: on a cache hit the download is skipped and only the OS packages that
+      # headless Chromium needs are installed (via passwordless sudo on the hosted runners).
+      - run: npx playwright install --with-deps chromium
 
-      - name: Run Cypress tests
+      # The dev-server suite (test/e2e/core.spec.ts, component.spec.ts), the smoke test of the
+      # ten builds above (test/e2e/examples.spec.ts) and the MDX checks against the mdx build
+      # (test/e2e/mdx.spec.ts); playwright.config.ts starts and stops the dev server itself.
+      - run: npm run test:e2e
+
+      # Screenshots, traces and the HTML report of a failed run, so a red job can be diagnosed
+      # without reproducing it locally. Green runs upload nothing.
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  react-compat:
+    name: React compatibility (React ${{ matrix.react }})
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
+    # The style guide mounts through one of two React root implementations chosen from the
+    # project's react-dom (createRoot on 18+, ReactDOM.render on 16.14 and 17; see
+    # docs/decisions/0013-react-16-support.md). This job swaps React for an exact version and
+    # repeats the compile, the ten example builds and the browser tests on it. The unit tests
+    # are not run here: @testing-library/react 16 needs React 18 or 19.
+    #
+    # One entry per supported React major, which is what docs/Compatibility.md promises:
+    # 16.14.0 is the floor (the automatic JSX runtime first shipped there), 17.0.2 takes the
+    # same legacy branch as 16.14.0 and has never behaved differently in it but is a supported
+    # version with its own event system, and 18 and 19 take the modern branch. The 19 entry
+    # overlaps with `integration`, which builds on the lockfile's React — deliberately: this
+    # one pins an exact version, so a lockfile that drifts off the latest 19 cannot silently
+    # take React 19 out of the matrix, and a red square here names the React version outright.
+    # The entries run in parallel, so the overlap costs runner minutes, not wall time.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # A failure on one React version must not hide the result on the others.
+      fail-fast: false
+      matrix:
+        react:
+          - '16.14.0'
+          - '17.0.2'
+          - '18.3.1'
+          - '19.2.8'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # No job in this workflow pushes; keep the token out of the checkout so untrusted
+          # install scripts and tests cannot read it.
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # `--no-save` keeps package.json and the lockfile untouched; `--legacy-peer-deps` makes
+      # the swap deterministic across npm versions, because @testing-library/react's peer range
+      # (^18 || ^19) conflicts with anything older (npm 11 only warns, npm 7 would refuse).
+      - name: Install React ${{ matrix.react }}
+        env:
+          REACT_VERSION: ${{ matrix.react }}
+        run: npm install --no-save --no-audit --no-fund --legacy-peer-deps "react@$REACT_VERSION" "react-dom@$REACT_VERSION"
+
+      # Everything below resolves react-dom from the repo root (the examples have no
+      # node_modules of their own, and `resolve.dedupe` pins the style guide to the same copy),
+      # so the version there must be the matrix one and there must be no stray nested copy.
+      # `npm ls` cannot be the gate: it exits non-zero because the root devDependency range
+      # still says ^19.
+      - name: Check the installed React
+        env:
+          REACT_VERSION: ${{ matrix.react }}
         run: |
-          npm run test:cypress:pre
-          npm run test:cypress:startServer &
-          npm run test:cypress:startServer:post
-          npm run test:cypress:run
+          set -euo pipefail
+          actual="$(node -p 'require("react-dom/package.json").version')"
+          if [ "$actual" != "$REACT_VERSION" ]; then
+            echo "react-dom is $actual, expected $REACT_VERSION"
+            exit 1
+          fi
+          # Matches node_modules/react and any nested node_modules/*/node_modules/react, but
+          # not node_modules/@types/react or node_modules/preact.
+          copies="$(find node_modules -type d \( -path '*node_modules/react' -o -path '*node_modules/react-dom' \) | sort)"
+          echo "$copies"
+          if [ "$(printf '%s\n' "$copies" | wc -l)" -ne 2 ]; then
+            echo "Expected exactly one copy each of react and react-dom in node_modules"
+            exit 1
+          fi
+
+      - run: npm run compile
+
+      - name: Build all examples
+        run: |
+          npm run build:basic
+          npm run build:customised
+          npm run build:sections
+          npm run build:themed
+          npm run build:express
+          npm run build:preact
+          npm run build:styled-components
+          npm run build:vite
+          npm run build:mdx
+          npm run build:typescript
+
+      # Same browser cache as `integration`, see the comments there.
+      - name: Read the installed Playwright version
+        id: playwright
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: npx playwright install --with-deps chromium
+
+      # The dev-server suite runs against the swapped React (the legacy root on 16 and 17),
+      # the examples smoke test against the builds above.
+      - run: npm run test:e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-react-${{ matrix.react }}
+          path: playwright-report/
+          retention-days: 7
 
   tarball:
     name: Install from the packed tarball
@@ -148,7 +273,11 @@ jobs:
     # bypass the `exports` map entirely. This job installs the real tarball into a scratch
     # project and builds a style guide whose `styleguideComponents` override deep-imports a
     # renderer from `vite-styleguidist/lib/...`: the exact resolution path a user takes and
-    # the one nothing else tests. To reproduce locally, run the two `run:` blocks below with
+    # the one nothing else tests. Three forms have to keep working, all of them in the one
+    # build below: an override pointed at a file without an extension, a deep import of the
+    # package without the `.js` the `exports` map now appends, and a deep import still
+    # written as `react-styleguidist/...` in a project that does not have the old package
+    # (see docs/Migration.md). To reproduce locally, run the two `run:` blocks below with
     # RUNNER_TEMP set to a temporary directory.
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -190,20 +319,24 @@ jobs:
           module.exports = {
           	components: 'src/components/**/[A-Z]*.js',
           	styleguideComponents: {
-          		SectionsRenderer: path.join(__dirname, 'src/SectionsRenderer.js'),
+          		// Without an extension, the way the option is documented
+          		SectionsRenderer: path.join(__dirname, 'src/SectionsRenderer'),
           	},
           };
           EOF
 
-          # The override wraps the default renderer, imported through the package's `exports` map.
+          # The override wraps the default renderer and renders a link from the old package
+          # name, both imported through the `exports` map and both without the `.js`.
           cat > src/SectionsRenderer.js <<'EOF'
           import React from 'react';
-          import DefaultSectionsRenderer from 'vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer.js';
+          import DefaultSectionsRenderer from 'vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer';
+          import LinkRenderer from 'react-styleguidist/lib/client/rsg-components/Link/LinkRenderer';
 
           export default function SectionsRenderer({ children }) {
           	return (
           		<div>
           			<h1>Tarball smoke test</h1>
+          			<LinkRenderer href="#/">Old package name</LinkRenderer>
           			<DefaultSectionsRenderer>{children}</DefaultSectionsRenderer>
           		</div>
           	);
@@ -230,11 +363,15 @@ jobs:
           ```
           EOF
 
-          npx --no-install styleguidist build
+          npx --no-install styleguidist build | tee build.log
 
-          # The build must exist and must contain the override (its heading text survives minification).
+          # The build must exist and must contain the override and the component it imported
+          # from the old package name (their text survives minification).
           test -f styleguide/index.html
           grep -rq 'Tarball smoke test' styleguide/
+          grep -rq 'Old package name' styleguide/
+          # And the user must have been told once why an import of a package they don't have worked
+          test "$(grep -c 'react-styleguidist is not installed' build.log)" -eq 1
 
   site:
     # The docs site is strict (`onBrokenLinks: throw`) and every docs/*.md edit can break it, but the

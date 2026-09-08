@@ -147,6 +147,17 @@ and this is _emphasized_
 `);
 	});
 
+	// Explicit assertions rather than a snapshot: what matters is that the element goes
+	// through the Styled renderer (and so is isolated from the host page's `img` rules)
+	it('should render an image through the styled renderer', () => {
+		const { getByAltText } = render(<Markdown text="![Pizza](pizza.png)" />);
+
+		const img = getByAltText('Pizza');
+		expect(img.tagName).toBe('IMG');
+		expect(img.getAttribute('src')).toBe('pizza.png');
+		expect(img.className).toMatch(/^rsg--img-\d+$/);
+	});
+
 	it('should ignore single line comments', () => {
 		const markdown = `Hello World
 <!-- This is a single line comment -->

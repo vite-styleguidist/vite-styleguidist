@@ -1,53 +1,132 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import { FiExternalLink } from 'react-icons/fi';
+import { Styles } from 'jss';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ color, space, fontSize, fontFamily }: Rsg.Theme) => ({
+export const styles = ({
+	color,
+	space,
+	fontSize,
+	fontFamily,
+	lineHeight,
+	borderRadius,
+	transition,
+	mq,
+}: Rsg.Theme): Styles => ({
+	// The corner pill: shown when there is no sidebar (isolated views, `showSidebar: false`).
+	// Bottom-right, because the top-right corner belongs to the isolated view's exit
+	// button; hidden on small screens, where the Mobile artboard shows no ribbon at all.
 	root: {
 		position: 'fixed',
-		top: 0,
-		right: 0,
-		width: 149,
-		height: 149,
+		bottom: space[2],
+		right: space[2],
 		zIndex: 999,
+		[mq.small]: {
+			display: 'none',
+		},
 	},
 	link: {
+		display: 'inline-flex',
+		alignItems: 'center',
+		gap: 6,
+		padding: [[space[0], 10]],
+		borderRadius,
 		fontFamily: fontFamily.base,
-		position: 'relative',
-		right: -37,
-		top: -22,
-		display: 'block',
-		width: 190,
-		padding: [[space[0], space[2]]],
-		textAlign: 'center',
+		fontSize: fontSize.small,
+		lineHeight: lineHeight.base,
 		color: color.ribbonText,
-		fontSize: fontSize.base,
 		background: color.ribbonBackground,
 		textDecoration: 'none',
-		textShadow: [[0, '-1px', 0, 'rgba(0,0,0,.15)']],
-		transformOrigin: [[0, 0]],
-		transform: 'rotate(45deg)',
 		cursor: 'pointer',
+		transition: `background-color ${transition.fast}`,
+		'&:hover': {
+			isolate: false,
+			color: color.ribbonText,
+			background: color.linkHover,
+		},
+		'&:focus-visible': {
+			isolate: false,
+			outline: 0,
+			boxShadow: [[0, 0, 0, 3, color.focus]],
+		},
+	},
+	// The sidebar-footer variant: a quiet text link next to the theme toggle
+	inlineLink: {
+		display: 'inline-flex',
+		alignItems: 'center',
+		gap: 6,
+		maxWidth: '100%',
+		borderRadius,
+		fontFamily: fontFamily.base,
+		fontSize: fontSize.small,
+		lineHeight: lineHeight.base,
+		color: color.light,
+		textDecoration: 'none',
+		cursor: 'pointer',
+		transition: `color ${transition.fast}`,
+		'&:hover': {
+			isolate: false,
+			color: color.link,
+		},
+		'&:focus-visible': {
+			isolate: false,
+			outline: 0,
+			boxShadow: [[0, 0, 0, 3, color.focus]],
+		},
+	},
+	text: {
+		overflow: 'hidden',
+		textOverflow: 'ellipsis',
+		whiteSpace: 'nowrap',
+	},
+	icon: {
+		flexShrink: 0,
+		width: 14,
+		height: 14,
 	},
 });
 
 interface RibbonProps extends JssInjectedProps {
 	url: string;
 	text?: string;
+	inline?: boolean;
 }
 
 export const RibbonRenderer: React.FunctionComponent<RibbonProps> = ({
 	classes,
 	url,
-	text = 'Fork me on GitHub',
+	text = 'GitHub',
+	inline,
 }) => {
-	return (
-		<footer className={classes.root}>
-			<a href={url} className={classes.link}>
-				{text}
-			</a>
-		</footer>
+	const content = (
+		<>
+			<FiExternalLink className={classes.icon} aria-hidden="true" />
+			<span className={classes.text}>{text}</span>
+		</>
 	);
+	if (inline) {
+		return (
+			<a href={url} className={classes.inlineLink}>
+				{content}
+			</a>
+		);
+	}
+	return (
+		<div className={classes.root}>
+			<a href={url} className={classes.link}>
+				{content}
+			</a>
+		</div>
+	);
+};
+
+RibbonRenderer.propTypes = {
+	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
+	url: PropTypes.string.isRequired,
+	text: PropTypes.string,
+	inline: PropTypes.bool,
 };
 
 export default Styled<RibbonProps>(styles)(RibbonRenderer);

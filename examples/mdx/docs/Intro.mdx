@@ -1,0 +1,35 @@
+This section page is an `.mdx` file, pointed at by `sections[].content` in `styleguide.config.js`. Everything a `.md` section page can do it can do too, plus components.
+
+The callout below is a `Callout` component used with no import: this style guide registers it
+through the `mdxComponents` config option, which makes it available to every `.mdx` page. The
+two component pages import the same component themselves — both ways work.
+
+<Callout kind="info">
+  The three components of this style guide document themselves in three different ways: `Button` and `Card` in MDX, `Badge` in plain Markdown. Nothing about the Markdown page changes because the other two are MDX.
+</Callout>
+
+## Playgrounds work here too
+
+A section page has no component in scope, so a playground imports what it renders, exactly as in Markdown:
+
+```jsx
+import Button from 'rsg-example/components/Button'
+;<Button size="large">Push Me</Button>
+```
+
+## What to look at
+
+| Page     | File         | Shows                                                     |
+| -------- | ------------ | --------------------------------------------------------- |
+| `Button` | `Readme.mdx` | Every fence modifier, a `tsx` fence, a table, a task list |
+| `Card`   | `Readme.mdx` | An imported component used as page furniture              |
+| `Badge`  | `Readme.md`  | A Markdown page in the same style guide                   |
+
+## MDX is not Markdown
+
+Four things behave differently from a `.md` page, and the first one is the trap:
+
+- [x] An indented block is **not** a code block: MDX reads it as prose or as JSX, so an indented `<Button />` becomes a live component instead of a playground. Always use fences.
+- [x] HTML comments are a syntax error; use a JSX expression comment instead.
+- [x] Void elements must be self-closing: `<br />`, not the bare HTML form.
+- [x] An autolink written with angle brackets is read as a JSX tag; write a normal Markdown link.

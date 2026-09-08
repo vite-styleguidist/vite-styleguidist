@@ -23,7 +23,7 @@ STATIC_EXAMPLES_DIR="$SITE_DIR/static/examples"
 
 # Keep in sync with the "Build all examples" step of .github/workflows/ci.yml and
 # the `build:<name>` scripts in the root package.json.
-EXAMPLES=(basic customised sections themed express preact styled-components vite)
+EXAMPLES=(basic customised sections themed express preact styled-components vite mdx typescript)
 
 echo "Node $(node -v)"
 echo "npm $(npm -v)"

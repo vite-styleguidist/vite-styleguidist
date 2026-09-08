@@ -1,7 +1,6 @@
 import React from 'react';
-import Group from 'react-group';
+import Group from 'rsg-components/Group';
 import Type from 'rsg-components/Type';
-import Code from 'rsg-components/Code';
 import Name from 'rsg-components/Name';
 import Markdown from 'rsg-components/Markdown';
 import type { PropTypeDescriptor } from '../../../typings/index.js';
@@ -10,13 +9,23 @@ import { unquote, getType, showSpaces, PropDescriptor, TypeDescriptor } from './
 import renderDefault from './renderDefault.js';
 import { renderType } from './renderType.js';
 
+// A `value` that is not a list is a computed expression (`PropTypes.oneOf(list)`) and is
+// shown as is; TypeScript and Flow unions carry `elements` instead and have no `value`,
+// and returning null keeps renderDescription from wrapping nothing in a paragraph
+function renderPlainValue(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
+	return type.value ? <span>{type.value}</span> : null;
+}
+
 function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
 	if (!Array.isArray(type.value)) {
-		return <span>{type.value}</span>;
+		return renderPlainValue(type);
 	}
 
+	// Literal values read as types in the description: Type is already monospace 13 in the
+	// type colour, and rendering them through it directly (rather than nesting a Code chip,
+	// which sets its own colour and background) is what makes that colour visible
 	const values = type.value.map(({ value }) => (
-		<Code key={value}>{showSpaces(unquote(value))}</Code>
+		<Type key={value}>{showSpaces(unquote(value))}</Type>
 	));
 	return (
 		<span>
@@ -27,7 +36,7 @@ function renderEnum(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode 
 
 function renderUnion(type: PropTypeDescriptor | TypeDescriptor): React.ReactNode {
 	if (!Array.isArray(type.value)) {
-		return <span>{type.value}</span>;
+		return renderPlainValue(type);
 	}
 
 	const values = type.value.map((value, index) => (

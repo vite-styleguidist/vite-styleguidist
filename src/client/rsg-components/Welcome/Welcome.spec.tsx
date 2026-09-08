@@ -8,17 +8,23 @@ it('renderer should render welcome screen', () => {
 		<WelcomeRenderer classes={{}} patterns={['foo/*.js', 'bar/*.js']} />
 	);
 
-	expect(getByRole('heading', { name: 'Welcome to Vite Styleguidist!' })).toBeInTheDocument();
-	expect(getByText(/we couldn’t find any components/i)).toBeInTheDocument();
+	expect(getByRole('heading', { name: 'No components found yet' })).toBeInTheDocument();
+	expect(getByText(/looked for components matching these patterns/i)).toBeInTheDocument();
 
 	// Each pattern is listed as inline code
 	const patterns = getByRole('list');
 	expect(patterns).toHaveTextContent('foo/*.js');
 	expect(patterns).toHaveTextContent('bar/*.js');
 
-	expect(getByText(/module\.exports = \{/)).toBeInTheDocument();
-	expect(getByRole('link', { name: 'locating components guide' })).toHaveAttribute(
-		'href',
-		DOCS_COMPONENTS
+	expect(getByText(/point it at yours with the/i)).toHaveTextContent(
+		'Point it at yours with the components option in styleguide.config.js.'
 	);
+	expect(getByRole('link', { name: 'Read the guide' })).toHaveAttribute('href', DOCS_COMPONENTS);
+});
+
+it('renderer should not list patterns when there are none', () => {
+	const { queryByRole, getByText } = render(<WelcomeRenderer classes={{}} patterns={[]} />);
+
+	expect(queryByRole('list')).not.toBeInTheDocument();
+	expect(getByText(/looked for components in your project and found none\./i)).toBeInTheDocument();
 });

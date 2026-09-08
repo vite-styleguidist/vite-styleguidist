@@ -12,7 +12,7 @@ exports[`getComponents() should return an object for components 1`] = `
     "pathLine": "../../Foo.js",
     "props": {
       "__rsgDefault": true,
-      "__rsgImport": "rsg-props:Foo.js",
+      "__rsgImport": "virtual:rsg-props?file=Foo.js&rsg",
     },
     "slug": "foo",
   },
@@ -26,7 +26,7 @@ exports[`getComponents() should return an object for components 1`] = `
     "pathLine": "../../Bar.js",
     "props": {
       "__rsgDefault": true,
-      "__rsgImport": "rsg-props:Bar.js",
+      "__rsgImport": "virtual:rsg-props?file=Bar.js&rsg",
     },
     "slug": "bar",
   },

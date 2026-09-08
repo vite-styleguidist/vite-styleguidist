@@ -1,3 +1,4 @@
+import filterExamplesByIndex from './filterExamplesByIndex.js';
 import type * as Rsg from '../../typings/index.js';
 
 /**
@@ -13,12 +14,22 @@ export default function filterComponentExamples(
 	component: Rsg.Component,
 	index: number
 ): Rsg.Component {
+	// Nothing to pick from yet: with `lazyDocs` on (ADR 0019) a component whose documentation
+	// is still on its way has an empty list of examples, and every index is out of range for
+	// it. Filtering it would hand the renderer the “example not found” entry rather than the
+	// empty list the component draws while it waits, and the route is evaluated again as soon
+	// as the documentation arrives (see componentDocs.ts).
+	if (component.loadDocs && !component.docsLoaded) {
+		return component;
+	}
 	return {
 		...component,
 		props: {
 			...component.props,
 			examples:
-				component.props && component.props.examples ? [component.props.examples[index]] : [],
+				component.props && component.props.examples
+					? filterExamplesByIndex(component.props.examples, index)
+					: [],
 		},
 	};
 }

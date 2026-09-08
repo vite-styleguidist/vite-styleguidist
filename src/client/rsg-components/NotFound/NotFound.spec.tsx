@@ -9,4 +9,7 @@ it('renderer should render not found message', () => {
 	expect(
 		getByText('The link you followed may be broken, or the page may have been removed.')
 	).toBeInTheDocument();
+
+	// The way back is the root of the hash router
+	expect(getByRole('link', { name: 'Go to the start page' })).toHaveAttribute('href', '#/');
 });

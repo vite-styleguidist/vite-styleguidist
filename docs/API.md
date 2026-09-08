@@ -121,3 +121,46 @@ await server.listen()
 ### `config`
 
 (_Object_): the normalized style guide config, with defaults applied and paths resolved.
+
+## `defineConfig(config)`
+
+An identity function that types a config file: it returns `config` untouched, and TypeScript checks it against `StyleguidistConfig` on the way through. Use it in a TypeScript config file, where the object has no type of its own to be checked against:
+
+```typescript
+// styleguide.config.ts
+import { defineConfig } from 'vite-styleguidist'
+
+export default defineConfig({
+  title: 'My Style Guide',
+  components: 'src/components/**/*.tsx'
+})
+```
+
+A JavaScript config file gets the same checking from a type comment instead, with no import at all — see [type checking your config](Configuration.md#type-checking-your-config).
+
+## Types
+
+The package ships its own TypeScript declarations; these are the ones a config file or a script around the Node.js API is likely to name:
+
+| Type | What it is |
+| --- | --- |
+| `StyleguidistConfig` | A config file: every [option](Configuration.md), all of them optional |
+| `SanitizedStyleguidistConfig` | The normalized config: what the `config` property above, and every callback, receives |
+| `ConfigSection` | One entry of the [sections](Configuration.md#sections) option |
+| `Theme` | Every [theme](Configuration.md#theme) token, all of them set |
+| `RecursivePartial<T>` | The same with everything optional, which is what the `theme` option takes |
+| `Styles` | The [styles](Configuration.md#styles) option (JSS’s own type) |
+| `ColorScheme` | The [colorScheme](Configuration.md#colorscheme) option |
+| `StyleguidistEnv` | `development` or `production`, the argument of `viteConfig` and `makeViteConfig` |
+
+```typescript
+import type {
+  RecursivePartial,
+  StyleguidistConfig,
+  Theme
+} from 'vite-styleguidist'
+
+const theme: RecursivePartial<Theme> = { color: { link: 'tomato' } }
+
+export const config: StyleguidistConfig = { theme }
+```

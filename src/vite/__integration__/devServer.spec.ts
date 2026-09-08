@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
 import styleguidist from '../../scripts/index.esm.js';
-import { RESOLVED_STYLEGUIDE_ID } from '../ids.js';
+import { RESOLVED_STYLEGUIDE_ID, propsId } from '../ids.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
 const FIXTURES = path.join(REPO_ROOT, 'test/components');
@@ -23,6 +23,9 @@ const FIXTURES = path.join(REPO_ROOT, 'test/components');
 let BASE = '';
 const STYLEGUIDE_URL = `/@id/${RESOLVED_STYLEGUIDE_ID.replace('\0', '__x00__')}`;
 
+/** The URL the browser fetches one component’s documentation module from. */
+const propsUrl = (componentPath: string) => `/@id/__x00__${propsId(componentPath)}`;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let projectDir: string;
@@ -30,7 +33,13 @@ let server: ViteDevServer | undefined;
 let socket: WebSocket | undefined;
 const payloads: any[] = [];
 
-/** Fetch a module and, recursively, every module it imports, like a browser would. */
+/**
+ * Fetch a module and, recursively, every module it imports, like a browser would.
+ *
+ * Dynamic imports count: with `lazyDocs` on (ADR 0019) a component’s documentation is
+ * behind `import()` in the style guide module, and a browser reaches it as soon as the
+ * component is on screen.
+ */
 async function crawl(url: string, seen = new Set<string>(), depth = 0): Promise<Set<string>> {
 	if (seen.has(url) || depth > 5) {
 		return seen;
@@ -39,9 +48,9 @@ async function crawl(url: string, seen = new Set<string>(), depth = 0): Promise<
 	const response = await fetch(BASE + url);
 	expect(response.status, `${url} should be served`).toBe(200);
 	const code = await response.text();
-	const imports = [...code.matchAll(/from\s+"([^"]+)"|import\s+"([^"]+)"/g)].map(
-		(match) => match[1] || match[2]
-	);
+	const imports = [
+		...code.matchAll(/from\s+"([^"]+)"|import\s+"([^"]+)"|import\("([^"]+)"\)/g),
+	].map((match) => match[1] || match[2] || match[3]);
 	for (const imported of imports) {
 		if (imported.startsWith('/')) {
 			await crawl(imported.split('?t=')[0], seen, depth + 1);
@@ -65,7 +74,11 @@ async function collectUpdates(): Promise<string[]> {
 }
 
 beforeAll(async () => {
-	projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-devserver-'));
+	// realpath: on macOS `os.tmpdir()` is a symlink (`/var` -> `/private/var`) and the file
+	// watcher reports resolved paths, so a fixture built on the unresolved one would compare
+	// unequal to every path the plugin sees — and the hot-update assertions below would pass
+	// or fail for reasons that have nothing to do with the plugin.
+	projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-devserver-')));
 	fs.cpSync(FIXTURES, path.join(projectDir, 'components'), { recursive: true });
 	fs.mkdirSync(path.join(projectDir, 'assets'));
 	fs.writeFileSync(path.join(projectDir, 'assets/hello.txt'), 'hello assets');
@@ -143,13 +156,37 @@ test('serves static assets and custom middlewares', async () => {
 	});
 });
 
+test('serves the machine-readable docs, regenerated from the sources', async () => {
+	const response = await fetch(BASE + '/docs.json');
+	expect(response.status).toBe(200);
+	expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
+	const manifest = await response.json();
+	expect(manifest).toMatchObject({ source: 'vite-styleguidist', name: 'Integration test' });
+	const names = manifest.sections[0].components.map((component: any) => component.name);
+	expect(names).toContain('Button');
+
+	const llms = await fetch(BASE + '/llms.txt');
+	expect(llms.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+	expect(await llms.text()).toContain('- [Button](index.html#button)');
+
+	// An edit shows up on the next request, no restart needed
+	const readme = path.join(projectDir, 'components/Button/Readme.md');
+	fs.appendFileSync(readme, '\nA fresh example:\n\n```jsx\n<Button>Fresh</Button>\n```\n');
+	const updated = await (await fetch(BASE + '/docs.json')).json();
+	const button = updated.sections[0].components.find((c: any) => c.name === 'Button');
+	expect(button.examples.at(-1)).toMatchObject({
+		code: '<Button>Fresh</Button>',
+		description: 'A fresh example:',
+	});
+});
+
 test('serves the whole module graph', async () => {
 	const urls = await crawl('/@id/__x00__virtual:rsg-entry');
 	const list = [...urls];
 	expect(list).toContain(STYLEGUIDE_URL);
 	expect(list.some((url) => url.includes('/components/Button/Button.js'))).toBe(true);
-	expect(list.some((url) => url.includes('__x00__rsg-props:'))).toBe(true);
-	expect(list.some((url) => url.includes('__x00__rsg-examples:'))).toBe(true);
+	expect(list.some((url) => url.includes('__x00__virtual:rsg-props?'))).toBe(true);
+	expect(list.some((url) => url.includes('__x00__virtual:rsg-examples?'))).toBe(true);
 	expect(list.some((url) => url.endsWith('/theme.js'))).toBe(true);
 	expect(list.some((url) => url.includes('global.css'))).toBe(true);
 	payloads.splice(0);
@@ -196,3 +233,71 @@ test('hot updates the style guide when the theme file changes', async () => {
 		true
 	);
 });
+
+// A component can get its first examples file while the server is running — writing the
+// Readme.md of a component you have just started documenting is the ordinary way to use
+// the dev server. The answer to “which file is this component’s examples file” comes from a
+// memoized directory listing, which is why this needs a hot update of its own.
+test('hot updates a component’s documentation when its first examples file appears', async () => {
+	const component = path.join(projectDir, 'components/Price/Price.js');
+	const url = propsUrl(component);
+
+	const before = await (await fetch(BASE + url)).text();
+	expect(before).not.toContain('rsg-examples');
+
+	const readme = path.join(projectDir, 'components/Price/Readme.md');
+	fs.writeFileSync(readme, 'An example:\n\n```jsx\n<Price fallback="Free" />\n```\n');
+	try {
+		await collectUpdates();
+		const after = await (await fetch(BASE + url)).text();
+		expect(after).toContain('rsg-examples');
+	} finally {
+		fs.unlinkSync(readme);
+		await collectUpdates();
+	}
+
+	// …and disappears again when the file does
+	const removed = await (await fetch(BASE + url)).text();
+	expect(removed).not.toContain('rsg-examples');
+}, 30000);
+
+// A component's documentation is parsed from more than the component's file: react-docgen
+// follows its imports, so the module its `propTypes` live in is part of the answer. The
+// dev server has to watch those files and re-parse the components that read them.
+test('hot updates a component’s documentation when a file it imports changes', async () => {
+	const dir = path.join(projectDir, 'components/Imported');
+	fs.mkdirSync(dir, { recursive: true });
+	fs.writeFileSync(
+		path.join(dir, 'importedProps.js'),
+		"import PropTypes from 'prop-types';\nexport default { color: PropTypes.string };\n"
+	);
+	fs.writeFileSync(
+		path.join(dir, 'Imported.js'),
+		`import React from 'react';
+import importedProps from './importedProps.js';
+const Imported = (props) => <b>{props.color}</b>;
+Imported.propTypes = importedProps;
+export default Imported;
+`
+	);
+	await collectUpdates();
+
+	const url = propsUrl(path.join(dir, 'Imported.js'));
+	const before = await (await fetch(BASE + url)).text();
+	expect(before).toContain('"color"');
+	expect(before).not.toContain('"tone"');
+
+	// Only the imported file changes; the component's own bytes are untouched
+	fs.writeFileSync(
+		path.join(dir, 'importedProps.js'),
+		"import PropTypes from 'prop-types';\nexport default { tone: PropTypes.string };\n"
+	);
+	await collectUpdates();
+
+	const after = await (await fetch(BASE + url)).text();
+	expect(after).toContain('"tone"');
+	expect(after).not.toContain('"color"');
+
+	fs.rmSync(dir, { recursive: true, force: true });
+	await collectUpdates();
+}, 30000);

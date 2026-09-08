@@ -88,6 +88,73 @@ Styleguidist will look for any `Readme.md` or `ComponentName.md` files in the co
 
 > **Tip:** If you need to display some JavaScript code in your documentation that you don’t want to be rendered as an interactive playground you can use the `static` modifier with a language tag (e.g. `js static`).
 
+## MDX
+
+A Markdown page can only put a component inside a playground, where it is editable source code. An [MDX](https://mdxjs.com/) page can also use components as page furniture — a callout, a props matrix, a tabbed comparison — because its prose is compiled to a React tree. Everything else stays the same: fences, modifiers, the current component being in scope inside those fences, the isolated-example links, `docs.json`.
+
+MDX is optional and needs two dev dependencies:
+
+```bash
+npm install --save-dev @mdx-js/mdx remark-gfm
+```
+
+An `.mdx` file is found the same way a `.md` file is, and its extension is what selects the pipeline:
+
+- `Readme.mdx`, `ComponentName.mdx` or `FolderName.mdx` in the component’s folder. The candidates are interleaved by base name — `Readme.md`, `Readme.mdx`, `ComponentName.md`, `ComponentName.mdx`, `FolderName.md`, `FolderName.mdx` — so `Readme` still beats `ComponentName`, and `.md` still wins over `.mdx` for the same base name;
+- `sections[].content: 'docs/Intro.mdx'` for a section page;
+- `@example ./extra.mdx` in a doclet;
+- whatever a custom [getExampleFilename](Configuration.md#getexamplefilename) returns: return a `.md` path and you get Markdown, return an `.mdx` path and you get MDX.
+
+A page imports the components it wants to use in its prose, and writes fences exactly as it would in Markdown:
+
+````md
+import Callout from '../../docs/Callout'
+
+The `Button` component, documented in MDX.
+
+<Callout kind="info">
+  This callout is a component, not Markdown.
+</Callout>
+
+```jsx padded
+<Button size="small">Small</Button>
+<Button size="large">Large</Button>
+```
+````
+
+> **Info:** [See the MDX example style guide](../examples/mdx) for a working version of all of this, including a component that is still documented in `Readme.md`.
+
+The imports at the top of an `.mdx` file are in scope for the page, not for the playgrounds: a playground still imports what it needs inside its own fence, exactly as in Markdown. Custom element renderers can be added with the [mdxComponents](Configuration.md#mdxcomponents) option, and remark, rehype and recma plugins with [mdx](Configuration.md#mdx).
+
+### MDX is not Markdown
+
+MDX is not a superset of Markdown. Six constructs that a `.md` file accepts behave differently, and the first one is a trap rather than a compile error:
+
+| In an `.mdx` file | What happens | Write this instead |
+| --- | --- | --- |
+| A block indented by four spaces | **Not a code block.** MDX has no indented code, so the block is read as prose, and an indented JSX element is evaluated as a component instead of shown as a playground: `<Callout />` renders _live_ if the page imported it or [mdxComponents](Configuration.md#mdxcomponents) provides it, and otherwise the whole page is replaced by an “Expected component `Callout` to be defined” panel. Either way the build succeeds | A fenced block |
+| An HTML comment (`<!-- … -->`) | Compile error | A JSX expression comment, `{/* … */}` |
+| A void element without a trailing slash (`br`, `img`, `hr`) | Compile error | `<br />`, `<img />`, `<hr />` |
+| An autolink written with angle brackets | Compile error: MDX reads the `<` as the start of a JSX tag | A normal link, `[https://example.com](https://example.com)` |
+| Raw HTML, e.g. a `div` with a `class` attribute | It is JSX, so `class` reaches React verbatim and React warns | `className` |
+| A curly brace in prose | It starts a JavaScript expression | Escape it, `\{`, or wrap it in backticks |
+
+> **Warning:** The indented-block difference is the one to check first when an MDX page renders something unexpected, and the component the page documents is the worst case: `Button` is in scope inside a fence, but not in the page’s prose, so an indented `<Button />` is neither a playground nor source code — MDX evaluates it, finds nothing, and the page’s prose is replaced by an “Expected component `Button` to be defined” panel. A component the page did import fails the other way round: it renders live, where a playground was meant to be. Neither case fails the build — it exits 0 and warns about nothing — so the page itself is the only place you will see it. The indented examples earlier on this page are Markdown, and stay Markdown, for exactly that reason.
+
+GitHub-flavoured Markdown — tables, task lists, strikethrough, literal URLs — works out of the box, because [remark-gfm](https://github.com/remarkjs/remark-gfm) is enabled by default. If you replace the plugin list with the [mdx](Configuration.md#mdx) option, add it back yourself.
+
+Headings get ids, so they are deep-linkable: `#!/Button?id=sizes` opens the `Button` page and scrolls to its `Sizes` heading. The id is the slug of the heading text — `## Usage & setup` becomes `usage--setup` — and a heading that appears twice gets a `-1`, `-2` suffix. An `.mdx` page and a `.md` page slug the same way, so a page rewritten from one to the other keeps every link written against it. A heading whose text has no ASCII letter or digit gets no id, in either pipeline.
+
+One case is not equivalent. A `.md` page is rendered one block at a time, split at every example, and the `-1` suffix is counted per block: two headings with the same text and an example between them both get the plain id there, where an `.mdx` page numbers the second one. A component `Readme.md` whose headings and playgrounds alternate is exactly that shape, so give repeated headings text of their own if you link to them — a duplicate id can only ever be reached at its first occurrence anyway, and the “on this page” list ([pageNav](Configuration.md#pagenav)) lists it once.
+
+### Differences from a `.md` page
+
+- **Isolated-example links count differently.** In a Markdown page the index in `#!/Button/2` counts every chunk of the page, prose included; an MDX page has no prose chunks — the prose is one React tree — so its index counts playgrounds only, and `#!/Button/1` is the second playground. Both agree with `docs.json`.
+- **`docs.json` and `llms-full.txt` get the prose, not the source.** The Markdown parts of the page are written back as Markdown, JSX elements are kept as their MDX source, and `import`/`export` lines are dropped.
+- **Not supported yet:** playground code reading the page’s own imports, named exports being visible outside the page, a custom MDX layout, and YAML frontmatter (which `mdx.remarkPlugins` can add).
+
+> **Note:** Nothing changes for a style guide without an `.mdx` file: `.md` pages, their URLs and their `docs.json` output are exactly what they were, and neither `@mdx-js/mdx` nor `remark-gfm` is installed. An `.mdx` file found by discovery when `@mdx-js/mdx` is missing is skipped with a warning; one you named yourself in `sections[].content`, an `@example` doclet or `getExampleFilename` is an error, because you asked for that file by name.
+
 ## External examples using doclet tags
 
 Additional example files can be associated with components using `@example` doclet syntax.

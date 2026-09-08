@@ -18,7 +18,7 @@ export default function getAst(code: string): Program | undefined {
 			...ACORN_OPTIONS,
 			// types of acorn are too simplistic and we have to use the body
 		}) as any as Program;
-	} catch (err) {
+	} catch {
 		return undefined;
 	}
 }

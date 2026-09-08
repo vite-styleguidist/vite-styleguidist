@@ -16,6 +16,16 @@ describe('Tooltip', () => {
 		expect(container).toContainElement(getByTestId('child'));
 	});
 
+	test('should not read element.ref, which React 19 warns about', () => {
+		// @tippyjs/react clones a child trigger and reads `children.ref` to chain refs;
+		// TooltipRenderer hands it the trigger through `reference` instead so that
+		// React 19's removed `element.ref` getter is never touched. Guards the regression.
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		renderComponent();
+		expect(consoleError).not.toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+
 	test('should render content in the tooltop body', () => {
 		const { container, getByRole } = renderComponent();
 		fireEvent.focus(getByRole('button'));

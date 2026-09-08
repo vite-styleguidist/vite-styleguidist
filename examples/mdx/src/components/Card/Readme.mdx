@@ -1,0 +1,23 @@
+import Callout from '../../docs/Callout'
+
+`Card` groups related content under a title. Its documentation is MDX as well, which is what makes the callout below possible.
+
+```jsx
+<Card title="Delivery">
+  <p>Your parcel is on its way.</p>
+</Card>
+```
+
+Cards compose with the other components of this style guide. As in a `.md` page, a playground has to `import` whatever it uses besides the component being documented:
+
+```jsx
+import Button from 'rsg-example/components/Button'
+;<Card title="Confirm">
+  <p>This action cannot be undone.</p>
+  <Button size="small">Delete</Button>
+</Card>
+```
+
+<Callout kind="warning">
+  Page-level imports and playground imports are two different scopes. The `Callout` imported at the top of this file is available to the prose, not to the playgrounds; a playground still has to import what it needs inside its own fence.
+</Callout>

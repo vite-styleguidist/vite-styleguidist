@@ -14,6 +14,17 @@ This folder holds the architecture decision records (ADRs) of Vite Styleguidist:
 | [0006](0006-brand-and-logo.md) | Brand and logo | accepted |
 | [0007](0007-backlog-adoption.md) | Upstream backlog adoption | accepted |
 | [0008](0008-support-policy.md) | Support policy | accepted |
+| [0009](0009-end-to-end-testing.md) | End-to-end testing | accepted |
+| [0010](0010-code-editor.md) | Code editor | accepted |
+| [0011](0011-facelift-and-dark-mode-contract.md) | Facelift and dark-mode contract | accepted |
+| [0012](0012-ai-integration.md) | AI integration | accepted |
+| [0013](0013-react-16-support.md) | React 16.14 and 17 support | accepted |
+| [0014](0014-mdx-examples.md) | MDX examples and section pages | accepted |
+| [0015](0015-scroll-synced-selection.md) | Scroll-synced selection and hash | accepted |
+| [0016](0016-table-of-contents.md) | “On this page” navigation (`pageNav`) | accepted |
+| [0017](0017-typescript-props.md) | Props parser for TypeScript components | accepted |
+| [0018](0018-parse-cache-and-parallel-parsing.md) | Parse cache, parallel parsing and a parser with an identity | accepted |
+| [0019](0019-on-demand-documentation.md) | On-demand component documentation | accepted |
 
 ## Convention
 

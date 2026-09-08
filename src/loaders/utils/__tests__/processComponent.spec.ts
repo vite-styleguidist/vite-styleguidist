@@ -22,7 +22,7 @@ it('processComponent() should reference the component module and its props modul
 	// The component itself is imported as a namespace, the generated props module by its default export
 	expect(result.module).toEqual(importIt('pizza.js'));
 	expect(result.props).toEqual(importDefault(propsId('pizza.js')));
-	expect(result.props).toEqual({ __rsgImport: 'rsg-props:pizza.js', __rsgDefault: true });
+	expect(result.props).toEqual({ __rsgImport: 'virtual:rsg-props?file=pizza.js&rsg', __rsgDefault: true });
 });
 
 it('processComponent() should import the metadata file when it exists', () => {

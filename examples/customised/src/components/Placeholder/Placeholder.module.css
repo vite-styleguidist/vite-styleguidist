@@ -1,3 +1,10 @@
+/*
+ * The box shown while the remote image loads (and in place of it when the network is off).
+ * `--rsg-color-lightest` is the style guide's decorative grey — the token whose documented
+ * role is exactly this, placeholders and disabled marks — so the block stays visible but
+ * quiet in both colour schemes, instead of the light grey slab a literal `#ccc` left on the
+ * dark page. See Button.module.css for what these custom properties are.
+ */
 .root {
-	background: #ccc;
+	background: var(--rsg-color-lightest, #a8a29a);
 }

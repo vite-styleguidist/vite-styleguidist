@@ -58,9 +58,9 @@ describe('getMarkdown', () => {
 				'[See 1](#TestLink)',
 				'[See 2](#TestLink2)',
 				'[Link 1](#TestLink)',
-				'Authors: [Author 1](#TestLink), [Author 2](#TestLink2)',
-				'Version: 2.0.0',
-				'Since: 1.0.0',
+				'**Authors:** [Author 1](#TestLink), [Author 2](#TestLink2)',
+				'**Version:** 2.0.0',
+				'**Since:** 1.0.0',
 			].join('\n\n')
 		);
 	});
@@ -70,14 +70,14 @@ describe('getMarkdown', () => {
 		const result = getMarkdown({
 			author,
 		});
-		expect(result).toBe('Author: [Author 1](#TestLink)');
+		expect(result).toBe('**Author:** [Author 1](#TestLink)');
 	});
 
 	it('should return Markdown for multiple authors', () => {
 		const result = getMarkdown({
 			author: tags.author,
 		});
-		expect(result).toBe('Authors: [Author 1](#TestLink), [Author 2](#TestLink2)');
+		expect(result).toBe('**Authors:** [Author 1](#TestLink), [Author 2](#TestLink2)');
 	});
 });
 
@@ -86,6 +86,7 @@ describe('JsDoc', () => {
 		const { container, getByText, getAllByRole } = render(<JsDoc {...tags} />);
 
 		expect(getByText('Deprecated:').tagName).toBe('STRONG');
+		expect(getByText('Since:').tagName).toBe('STRONG');
 		expect(getByText('another').tagName).toBe('EM');
 		expect(container).toHaveTextContent('Deprecated: Use another method');
 		expect(container).toHaveTextContent('Authors: Author 1, Author 2');

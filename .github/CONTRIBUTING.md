@@ -53,49 +53,47 @@ To update snapshots:
 npx vitest -u
 ```
 
-To build the example style guides and check that they work in a real browser (no JavaScript errors on load):
-
-```bash
-npm run build:basic
-npm run test:browser:pre
-npm run test:browser:basic
-```
+The browser tests (the example smoke test and the UI checks) are a separate suite, see [End-to-end tests](#end-to-end-tests-playwright) below.
 
 **Don’t forget to add tests and update documentation for your changes.**
 
 **Please update npm lock file (`package-lock.json`) if you add or update dependencies.**
 
-## Integration tests (Cypress)
+## End-to-end tests (Playwright)
 
-First install dependencies:
+The unit tests run in jsdom. The end-to-end tests in `test/e2e/` run in a real headless Chromium through [Playwright](https://playwright.dev/) and cover three things: the style guide UI (isolated mode, the props table, editing an example in the code editor) against a dev server serving `examples/basic`, a smoke test that opens each of the ten built example style guides and fails on any JavaScript error, and the MDX page of the built `examples/mdx` (that its prose renders an imported component and that a playground inside that prose still works).
+
+Install the browser once (`@playwright/test` itself comes with `npm ci`, only the ~0.5 GB Chromium build is downloaded separately):
 
 ```bash
-npm run test:cypress:pre
+npx playwright install chromium
 ```
 
-Then compile the sources:
+The tests run against the compiled package, so compile first (or have `npm run compile:watch` running), and build the examples the smoke test opens:
 
 ```bash
 npm run compile
+npm run build:basic
+npm run build:customised
+npm run build:sections
+npm run build:themed
+npm run build:express
+npm run build:preact
+npm run build:styled-components
+npm run build:vite
+npm run build:mdx
+npm run build:typescript
 ```
 
-Then open a new terminal and start Styleguidist server:
+Then run everything:
 
 ```bash
-npm run test:cypress:startServer
+npm run test:e2e
 ```
 
-And, finally, in another separate terminal run tests:
+There is no server to start by hand: `playwright.config.ts` starts `test/run.server.js` (the basic example on port 8082) before the tests and stops it afterwards, and the smoke test serves the builds itself. If you only changed the build output, `npm run test:e2e:examples` runs the smoke test alone. `npm run test:e2e:ui` opens Playwright’s UI mode, which is the equivalent of the old `cypress open`: pick a test, watch it run, inspect every step.
 
-```bash
-npm run test:cypress:run
-```
-
-Or open Cypress UI:
-
-```bash
-npm run test:cypress:open
-```
+A failed test leaves a screenshot in `test-results/`; on CI the whole report (screenshots, traces of retried tests) is uploaded as the `playwright-report` artifact of the failed run.
 
 ## Commit messages
 
@@ -126,9 +124,11 @@ Please don’t report security vulnerabilities in public issues or pull requests
 ```bash
 npm run start:customised # if making changes to examples/customised
 npm run start:sections # if making changes to examples/sections
+npm run start:mdx # if making changes to examples/mdx or to MDX support
+npm run start:typescript # if making changes to examples/typescript
 ```
 
-See the `scripts` section of the top level [package.json](../package.json). If an example doesn't have a script just point to its config:
+See the `scripts` section of the top level [package.json](../package.json). If an example doesn't have a script just point to its config, with whatever extension that example's config has (`examples/typescript` is the one written in TypeScript):
 
 ```bash
 node lib/bin/styleguidist.js server --config examples/path/to/example/styleguide.config.js

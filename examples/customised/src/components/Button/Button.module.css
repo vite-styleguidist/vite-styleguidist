@@ -1,7 +1,21 @@
+/*
+ * A CSS Module, but custom properties are global by design: the class name below is scoped
+ * and `--rsg-color-*` is not. Those are the style guide's own colour tokens, published on the
+ * page as `--rsg-color-<kebab-name>` for every `theme.color.*` token, so the button follows
+ * the colour scheme instead of pinning a light grey on white. The value after the comma is
+ * the light-scheme fallback for anywhere the style guide is not around.
+ *
+ * This style guide forces the light scheme (`colorScheme: 'light'` in styleguide.config.js,
+ * because its `theme` pins a light `baseBackground`), so only the light values are ever seen
+ * here — the tokens are still the right thing to read, and the components stay correct if the
+ * forced scheme is ever dropped.
+ *
+ * See docs/Cookbook.md, "How to make my components follow the style guide’s colour scheme?".
+ */
 .root {
 	padding: 0.5em 1.5em;
-	color: #666;
-	background-color: #fff;
+	color: var(--rsg-color-light, #625d57);
+	background-color: var(--rsg-color-base-background, #fcfbf9);
 	border: 1px solid currentColor;
 	border-radius: 0.3em;
 	text-align: center;

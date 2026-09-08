@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, within } from '@testing-library/react';
 import TableOfContents from './TableOfContents.js';
 import { TableOfContentsRenderer } from './TableOfContentsRenderer.js';
 import Context from '../Context/index.js';
+import SidebarContext, { SIDEBAR_PANEL_ID } from '../StyleGuide/SidebarContext.js';
 
 const components = [
 	{
@@ -153,7 +154,7 @@ it('should render components of a single top section as root', () => {
 });
 
 it('should open the link in a new tab only for external links', () => {
-	const { getByText } = render(
+	const { getAllByTestId } = render(
 		<TableOfContents
 			sections={[
 				{
@@ -180,9 +181,81 @@ it('should open the link in a new tab only for external links', () => {
 		/>
 	);
 
-	expect(getByText('Intro')).not.toHaveAttribute('target');
-	expect(getByText('Chapter')).not.toHaveAttribute('target');
-	expect(getByText('Docs')).toHaveAttribute('target', '_blank');
+	// The small-screen chip row repeats the top-level entries, so query the list itself
+	const [intro, chapter, docs] = getAllByTestId('rsg-toc-link');
+	expect(intro).toHaveTextContent('Intro');
+	expect(intro).not.toHaveAttribute('target');
+	expect(chapter).not.toHaveAttribute('target');
+	expect(docs).toHaveTextContent('Docs');
+	expect(docs).toHaveAttribute('target', '_blank');
+});
+
+it('should announce when nothing matches the search term', () => {
+	const { getByPlaceholderText, queryAllByTestId, getByText, queryByText } = render(
+		<TableOfContents sections={sections} />
+	);
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'Toolt' } });
+	expect(queryAllByTestId('rsg-toc-link')).toHaveLength(0);
+	const message = getByText('No component matches “Toolt”.');
+	expect(message.closest('[aria-live="polite"]')).not.toBeNull();
+
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'put' } });
+	expect(queryByText(/No component matches/)).not.toBeInTheDocument();
+});
+
+it('should list the top-level entries as chips and mark the current subtree', () => {
+	const { container } = render(
+		<TableOfContents sections={sections} loc={{ pathname: '', hash: '#input' }} />
+	);
+	// Chips are the links that are not list links; they keep listing every top-level
+	// entry, whichever is selected below them
+	const chips = Array.from(container.querySelectorAll('a')).filter(
+		(link) => !link.hasAttribute('data-testid')
+	);
+	expect(chips.map((chip) => chip.textContent)).toEqual(['Introduction', 'Buttons', 'Forms']);
+	expect(chips.map((chip) => chip.getAttribute('aria-current'))).toEqual([null, null, 'true']);
+});
+
+it('should keep the chips while the list is filtered', () => {
+	const { container, getByPlaceholderText } = render(<TableOfContents sections={sections} />);
+	fireEvent.change(getByPlaceholderText('Filter by name'), { target: { value: 'frm' } });
+	const chips = Array.from(container.querySelectorAll('a')).filter(
+		(link) => !link.hasAttribute('data-testid')
+	);
+	expect(chips.map((chip) => chip.textContent)).toEqual(['Introduction', 'Buttons', 'Forms']);
+});
+
+it('should render the panel with the id the menu button controls, collapsed when the sidebar says so', () => {
+	const closePanel = vi.fn();
+	const { container, getAllByTestId } = render(
+		<SidebarContext.Provider value={{ isPanelOpen: false, closePanel }}>
+			<TableOfContents sections={sections} />
+		</SidebarContext.Provider>
+	);
+	const panel = container.querySelector(`#${SIDEBAR_PANEL_ID}`) as HTMLElement;
+	expect(panel).not.toBeNull();
+	expect(panel.className).toMatch(/rsg--isCollapsed-\d+/);
+	// Following a list link asks the sidebar to close the panel
+	fireEvent.click(getAllByTestId('rsg-toc-link')[0]);
+	expect(closePanel).toHaveBeenCalled();
+});
+
+/**
+ * The chip row is the collapsed state of the small-screen navigation, so the panel that
+ * the menu button opens has to replace it: with both on screen the top-level entries were
+ * listed twice, and read out twice (the maintainer's report, and QA F36 before it).
+ */
+it('should hide the chip row while the panel is open', () => {
+	const chipRow = (isPanelOpen: boolean) => {
+		const { container } = render(
+			<SidebarContext.Provider value={{ isPanelOpen, closePanel: () => undefined }}>
+				<TableOfContents sections={sections} />
+			</SidebarContext.Provider>
+		);
+		return container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+	};
+	expect(chipRow(false).className).not.toMatch(/rsg--isChipsHidden-\d+/);
+	expect(chipRow(true).className).toMatch(/rsg--isChipsHidden-\d+/);
 });
 
 /**
@@ -266,6 +339,83 @@ it('should detect sections containing current selection when tocMode is collapse
 	expect(getByText('1.1')).not.toBeEmptyDOMElement();
 });
 
+/**
+ * `scrollSync: 'selection'` is on by default, so `activeSlug` changes long after mount —
+ * and in `tocMode: 'collapse'` the section holding the new selection is closed, so its
+ * children are not in the DOM to carry the mark. Before the collapsed section stood in for
+ * them, the sidebar highlighted the first entry on load and then nothing at all for the
+ * rest of the page.
+ */
+it('should mark a collapsed section that holds the scrolled-to entry', () => {
+	const context = { config: { tocMode: 'collapse' } };
+	const Provider = (props: any) => <Context.Provider value={context} {...props} />;
+	const tree = [
+		{
+			sections: [
+				{ visibleName: 'Intro', href: '#/intro', slug: 'intro' },
+				{
+					visibleName: 'Components',
+					href: '#/components',
+					slug: 'components',
+					sections: [{ visibleName: 'Button', href: '#/button', slug: 'button' }],
+				},
+			],
+		},
+	];
+	const toc = (activeSlug: string) => (
+		<Provider>
+			<TableOfContents
+				tocMode="collapse"
+				sections={tree}
+				activeSlug={activeSlug}
+				loc={{ pathname: '', hash: '' }}
+			/>
+		</Provider>
+	);
+
+	// Mount somewhere else, so the section starts closed the way it does in a browser
+	const { queryAllByTestId, rerender } = render(toc('intro'));
+	// The list, not the small-screen chip row, which renders the same top-level entries
+	const row = (name: string) =>
+		queryAllByTestId('rsg-toc-link').find((link) => link.textContent === name);
+
+	expect(row('Intro')).toHaveAttribute('aria-current', 'true');
+
+	rerender(toc('button'));
+
+	expect(row('Button')).toBeUndefined();
+	expect(row('Components')).toHaveAttribute('aria-current', 'true');
+	expect(row('Intro')).not.toHaveAttribute('aria-current');
+});
+
+it('should mark the entry itself, not its ancestor, while the section is open', () => {
+	// The default `tocMode`: every level is rendered, so marking the ancestor as well would
+	// put two current entries in one list
+	const { queryAllByTestId } = render(
+		<TableOfContents
+			sections={[
+				{
+					sections: [
+						{
+							visibleName: 'Components',
+							href: '#/components',
+							slug: 'components',
+							sections: [{ visibleName: 'Button', href: '#/button', slug: 'button' }],
+						},
+					],
+				},
+			]}
+			activeSlug="button"
+			loc={{ pathname: '', hash: '' }}
+		/>
+	);
+	const row = (name: string) =>
+		queryAllByTestId('rsg-toc-link').find((link) => link.textContent === name);
+
+	expect(row('Button')).toHaveAttribute('aria-current', 'true');
+	expect(row('Components')).not.toHaveAttribute('aria-current');
+});
+
 it('should show sections with expand: true when tocMode is collapse', () => {
 	const { getByText } = render(
 		<TableOfContents
@@ -298,4 +448,137 @@ it('should show sections with expand: true when tocMode is collapse', () => {
 		/>
 	);
 	expect(getByText('1.1')).toBeVisible();
+});
+
+it('should give the chip row a group name of its own', () => {
+	// Without it a screen reader reads the top-level entries twice, once in the chip row
+	// and once in the panel list, as if they were one list (QA F36)
+	const { container } = render(<TableOfContents sections={sections} />);
+	// Queried by attribute: the chip row is display: none outside the small-screen media
+	// query, and an accessible name is not computed for a hidden element
+	const chipRow = container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+	expect(chipRow).not.toBeNull();
+	expect(
+		within(chipRow)
+			.getAllByRole('link', { hidden: true })
+			.map((chip) => chip.textContent)
+	).toEqual(['Introduction', 'Buttons', 'Forms']);
+});
+
+it('should mark the chip of the section a subsection page belongs to', () => {
+	// The sidebar never links to `#/Components/Buttons` itself, so no list link matches
+	// it exactly; the chips fall back to a prefix match on the route (QA F10)
+	const routerSections = [
+		{
+			sections: [
+				{
+					visibleName: 'Components',
+					name: 'Components',
+					href: '#/Components',
+					slug: 'components',
+					sections: [
+						{
+							visibleName: 'Buttons',
+							name: 'Buttons',
+							href: '#/Components/Buttons',
+							slug: 'buttons',
+						},
+					],
+				},
+				{
+					visibleName: 'Docs',
+					name: 'Docs',
+					href: '#/Docs',
+					slug: 'docs',
+				},
+			],
+		},
+	];
+	const chipStates = (hash: string) => {
+		const { container } = render(
+			<TableOfContents useRouterLinks sections={routerSections} loc={{ pathname: '', hash }} />
+		);
+		const chipRow = container.querySelector('[role="group"][aria-label="Sections"]') as HTMLElement;
+		return Array.from(chipRow.querySelectorAll('a')).map((chip) => [
+			chip.textContent,
+			chip.getAttribute('aria-current'),
+		]);
+	};
+
+	expect(chipStates('#/Components/Buttons?id=button')).toEqual([
+		['Components', 'true'],
+		['Docs', null],
+	]);
+	// A sibling route that merely starts with the same characters is not a match
+	expect(chipStates('#/Docs')).toEqual([
+		['Components', null],
+		['Docs', 'true'],
+	]);
+});
+
+/**
+ * `activeSlug` is the scroll spy's answer (`scrollSync`, ADR 0015). The route is what the
+ * reader last navigated to, which in the default display mode is never rewritten while
+ * they scroll, so once the spy has an answer the route must not have a say — in the list
+ * or in the chip row.
+ */
+describe('scroll-synced selection', () => {
+	const listSelection = (container: HTMLElement) =>
+		Array.from(container.querySelectorAll('[data-testid="rsg-toc-link"]'))
+			.filter((link) => link.getAttribute('aria-current') === 'true')
+			.map((link) => link.textContent);
+
+	const chipSelection = (container: HTMLElement) =>
+		Array.from(container.querySelectorAll('a'))
+			.filter((link) => !link.hasAttribute('data-testid'))
+			.filter((chip) => chip.getAttribute('aria-current') === 'true')
+			.map((chip) => chip.textContent);
+
+	it('should select the entry the reader has scrolled to instead of the one in the URL', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				loc={{ pathname: '', hash: '#input' }}
+				activeSlug="textarea"
+			/>
+		);
+
+		expect(listSelection(container)).toEqual(['Textarea']);
+	});
+
+	it('should mark the section that contains the scrolled-to component, and only it', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				// The reader clicked Introduction (a top-level entry of its own) and scrolled
+				// down into Forms; two current chips at once was the bug this guards
+				loc={{ pathname: '', hash: '#introduction' }}
+				activeSlug="textarea"
+			/>
+		);
+
+		expect(chipSelection(container)).toEqual(['Forms']);
+	});
+
+	it('should select nothing when the active anchor has no entry', () => {
+		const { container } = render(
+			<TableOfContents
+				sections={sections}
+				loc={{ pathname: '', hash: '#input' }}
+				activeSlug="a-heading-inside-a-page"
+			/>
+		);
+
+		expect(listSelection(container)).toEqual([]);
+		expect(chipSelection(container)).toEqual([]);
+	});
+
+	it('should fall back to the route while the spy has no answer', () => {
+		const { container } = render(
+			<TableOfContents sections={sections} loc={{ pathname: '', hash: '#input' }} />
+		);
+
+		expect(listSelection(container)).toEqual(['Input']);
+		expect(chipSelection(container)).toEqual(['Forms']);
+	});
 });

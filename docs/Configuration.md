@@ -364,7 +364,7 @@ module.exports = {
 
 With this on — it is on by default — the style guide’s entry script carries the section tree: every component’s name, slug, path line and anchor, which is what the sidebar, the routes, the headings and the deep links are drawn from. The documentation itself — the props table, the JSDoc description, the examples, and the component’s own module — is imported per component, when that component is what the page shows (an isolated `#!/Button` view, a [pagePerSection](#pagepersection) page, the target of a deep link) or when it comes near the viewport on the all-in-one page. On a style guide of 350 components this takes the entry chunk from 4.7 MB to 1.2 MB and the number of modules the dev server serves before the first render from 1130 to 67.
 
-A component whose documentation has not arrived yet renders its container and its heading, and nothing else — no props table, no examples, and not the “add examples to this component” hint either.
+A component whose documentation has not arrived yet renders its container and its heading, and — once the wait has lasted more than 200 ms — a small spinner labelled “Loading documentation…” where its body will be. It shows no props table and no examples, and the “add examples to this component” hint only for a component the style guide already knows has none. A component whose documentation could not be fetched says so in the same place, with a button that reloads the page. Both are the `DocsLoading` component, which [styleguideComponents](#styleguidecomponents) can replace like any other.
 
 Turn it off to put every component’s documentation back into the entry chunk, which is how style guides were built before this option existed. Two reasons to: a deployment that would rather serve one big file than many small ones, and a replaced `ReactComponent` (see [styleguideComponents](#styleguidecomponents)) that cannot cope with a component whose documentation is not there yet — see [the Cookbook](Cookbook.md#how-to-work-with-on-demand-documentation) for what a replaced component sees and how to group the chunks differently.
 
@@ -841,7 +841,7 @@ module.exports = {
 }
 ```
 
-Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
+Keys are component names (`Wrapper`, `StyleGuideRenderer`, `SectionsRenderer`, `DocsLoadingRenderer`), [check the source](../src/client/rsg-components) to see what components are available.
 
 Values are written like imports and Vite resolves them like imports: an absolute path, a path relative to the config file (`./styleguide/components/Wrapper`), or a module name from your dependencies. The extension (`.js`, `.jsx`, `.ts`, `.tsx`, etc.) may be omitted.
 

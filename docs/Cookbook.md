@@ -532,7 +532,7 @@ To use a CSS animation, you have to define its keyframe at the root of the rende
 
 ## How to change the layout of a style guide?
 
-You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
+You can replace any Styleguidist React component. But in most of the cases you’ll want to replace `*Renderer` components — all HTML is rendered by these components. For example `ReactComponentRenderer`, `ComponentsListRenderer`, `PropsRenderer`, `DocsLoadingRenderer`, etc. — [check the source](../src/client/rsg-components) to see what components are available.
 
 Every path in the recipes below is written without a file extension, which is fine: a [styleguideComponents](Configuration.md#styleguidecomponents) value is resolved like any other import, so `path.join(__dirname, 'src/styleguide/Wrapper')`, `'./src/styleguide/Wrapper'` (relative to the config file) and the same paths with `.js` all work. The same goes for a component of Styleguidist’s own that you import to wrap it: `vite-styleguidist/lib/client/rsg-components/Sections/SectionsRenderer`, with or without the `.js`.
 
@@ -1382,9 +1382,59 @@ If yours is slower than that shape, work down this list.
 
 By default ([`lazyDocs`](Configuration.md#lazydocs)) a component’s documentation is not in the script the browser downloads first: the style guide imports it when the component is the page (an isolated view, a [pagePerSection](Configuration.md#pagepersection) page, the target of a deep link) or when it comes near the viewport. Two things follow for a style guide that replaces Styleguidist’s own components.
 
-**What a replaced `ReactComponent` sees.** Its props are unchanged — `component`, `depth`, `exampleMode`, `usageMode` — and so is the shape of `component`: `name`, `visibleName`, `slug`, `href`, `filepath`, `pathLine`, `metadata` and `props` are all there from the first render. What changes is that until the documentation arrives, `props` is an empty placeholder: no `description`, an empty `props` array, an empty `methods` array, an empty `examples` array. A component written against those fields renders an empty component and then re-renders with the real one; `component.docsLoaded` is `false` while that is the case, which is how Styleguidist’s own renderer knows not to show its “add examples to this component” hint yet. `component.hasExamples` says whether there will be examples, and is known from the start.
+**What a replaced `ReactComponent` sees.** Its props are unchanged — `component`, `depth`, `exampleMode`, `usageMode` — and so is the shape of `component`: `name`, `visibleName`, `slug`, `href`, `filepath`, `pathLine`, `metadata` and `props` are all there from the first render. What changes is that until the documentation arrives, `props` is an empty placeholder: no `description`, an empty `props` array, an empty `methods` array, an empty `examples` array. A component written against those fields renders an empty component and then re-renders with the real one; `component.docsLoaded` is `false` while that is the case, which is how Styleguidist’s own renderer knows not to show its “add examples to this component” hint yet. `component.hasExamples` says whether there will be examples, and is known from the start. `component.docsError` is set — to the browser’s own message — when a load failed, and cleared again if a later one succeeds: it is what tells “not here yet” apart from “not coming”, which otherwise look exactly alike for ever.
 
 Two things are worth keeping in a replacement, because the rest of the style guide relies on them: the anchor (`id` equal to `component.slug`, which is what the deep links, the scroll spy and the viewport rule look for) and the heading. A replacement that renders neither still works — a component whose anchor cannot be found loads its documentation right away instead of waiting for the viewport — but the whole guide then loads at once, which is what the option exists to avoid.
+
+**What a replaced `ReactComponentRenderer` is told.** Alongside the props it has always had, it gets three more, and all three are optional — a renderer written before this existed keeps working unchanged:
+
+- `docsLoading` — the documentation is on its way. The `docs`, `tabButtons`, `tabBody` and `examples` props are empty because the answer has not arrived, not because there is nothing to show.
+- `docsError` — the documentation could not be fetched, in the browser’s own words.
+- `hasExamples` — whether this component has examples at all, which the section tree knows from the start.
+
+Styleguidist’s own renderer draws the heading and the path line as usual, sets `aria-busy` on the container while `docsLoading` is set, and puts `DocsLoading` where the body would be. It shows the “add examples to this component” hint straight away when `hasExamples` is `false`, because that answer never depended on the load.
+
+**Replacing the loading state itself.** `DocsLoadingRenderer` receives `status` (`'loading'` or `'error'`), `name` (the component) and, for a failed load, `error` (the message). `DocsLoading` — the component around it — is what waits 200 ms before showing anything, so that a fast load never flashes a spinner; replace that one instead if you want a different wait, or none.
+
+```javascript
+// styleguide.config.js
+const path = require('path')
+module.exports = {
+  styleguideComponents: {
+    DocsLoadingRenderer: path.join(__dirname, 'styleguide/DocsLoading')
+  }
+}
+```
+
+```jsx
+// styleguide/DocsLoading.js
+import React from 'react'
+import {
+  DOCS_LOADING_LABEL,
+  docsLoadingErrorMessage
+} from 'vite-styleguidist/lib/client/rsg-components/DocsLoading/strings.js'
+
+export default function DocsLoadingRenderer({ status, name, error }) {
+  return (
+    <div role="status" aria-live="polite">
+      {status === 'error' ? (
+        <>
+          <span title={error}>{docsLoadingErrorMessage(name)}</span>{' '}
+          <button type="button" onClick={() => location.reload()}>
+            Reload the page
+          </button>
+        </>
+      ) : (
+        DOCS_LOADING_LABEL
+      )}
+    </div>
+  )
+}
+```
+
+The two strings live in a module of their own because a replacement cannot import anything from the module it replaces — the alias points that path back at the replacement. Reuse them or write your own; nothing else reads them.
+
+Whatever you draw, keep it quiet under `prefers-reduced-motion: reduce`: the default spinner keeps its ring and simply stops turning.
 
 **How many chunks.** Each component’s documentation and its own module are two dynamic imports, so a build of 350 components emits about 700 scripts, and the browser fetches two per component it shows. If you would rather have fewer, bigger files, group them yourself:
 

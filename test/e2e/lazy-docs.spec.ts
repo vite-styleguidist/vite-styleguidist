@@ -7,7 +7,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
-import type { AddressInfo } from 'node:net';
+import net, { type AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,9 +68,7 @@ function recordDocsRequests(page: Page): string[] {
 }
 
 test.describe('on-demand documentation', () => {
-	test('renders every container and heading before any documentation arrives', async ({
-		page,
-	}) => {
+	test('renders every container and heading before any documentation arrives', async ({ page }) => {
 		// Hold every documentation module back: what is on the page until they arrive is
 		// exactly what the section tree alone can draw
 		let release = () => undefined as void;
@@ -102,9 +100,7 @@ test.describe('on-demand documentation', () => {
 		).toHaveCount(0);
 		// …while the one component the tree already knows has none says so at once
 		await expect(
-			page
-				.getByTestId(`${WITHOUT_EXAMPLES}-container`)
-				.getByText(/add examples to this component/i)
+			page.getByTestId(`${WITHOUT_EXAMPLES}-container`).getByText(/add examples to this component/i)
 		).toBeVisible();
 		await expect(page.getByText(/add examples to this component/i)).toHaveCount(1);
 
@@ -147,16 +143,26 @@ test.describe('on-demand documentation', () => {
 		// under it, which used to leave the reader a screenful or more above what they asked
 		// for (deepLinks.ts). Either the target is at the top of the viewport or the page is
 		// scrolled as far as it goes, which is as close to the top as it can be put.
+		// The placement is eventual: deepLinks.ts re-scrolls after every load for up to
+		// SETTLE_MS, and on a slow runner the last of those renders can land after the
+		// network has gone idle, so a single sample here raced it (it did, on CI). Poll
+		// for a little longer than the settle window instead of asserting one instant.
 		await page.waitForLoadState('networkidle');
-		const placed = await page.evaluate((id) => {
-			const element = document.getElementById(id);
-			return {
-				top: element ? element.getBoundingClientRect().top : null,
-				fromBottom:
-					document.documentElement.scrollHeight - window.innerHeight - Math.round(window.scrollY),
-			};
-		}, LAST.toLowerCase());
-		expect(placed.top === null || placed.top < 8 || placed.fromBottom < 8).toBe(true);
+		await expect
+			.poll(
+				() =>
+					page.evaluate((id) => {
+						const element = document.getElementById(id);
+						const top = element ? element.getBoundingClientRect().top : null;
+						const fromBottom =
+							document.documentElement.scrollHeight -
+							window.innerHeight -
+							Math.round(window.scrollY);
+						return top === null || top < 8 || fromBottom < 8;
+					}, LAST.toLowerCase()),
+				{ timeout: 6000 }
+			)
+			.toBe(true);
 	});
 
 	test('renders the one example an isolated example route shows', async ({ page }) => {
@@ -276,13 +282,27 @@ sectionsTest.describe('on-demand documentation with pagePerSection', () => {
 	);
 });
 
-
 // `lazyDocs: false` puts every component's documentation back in the entry chunk, so there
 // is never anything to wait for and neither state can appear. It needs a style guide of its
 // own: the shared dev server runs with the defaults. Same shape as config-restart.spec.ts —
 // a config in a folder outside the repository, so writing it does not reach the watcher of
 // the server the rest of the suite is looking at.
-const PORT = 6124;
+//
+// The port is whatever the OS has free when the suite starts, not a fixed number: Playwright
+// runs a retry (and `--repeat-each`) in another worker whose `beforeAll` would otherwise race
+// the first worker's server for the same port and wait out the whole start-up timeout.
+let eagerPort = 0;
+
+function freePort(): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const probe = net.createServer();
+		probe.once('error', reject);
+		probe.listen(0, '127.0.0.1', () => {
+			const { port } = probe.address() as AddressInfo;
+			probe.close(() => resolve(port));
+		});
+	});
+}
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const eagerDir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'rsg-eager-docs-'));
@@ -298,13 +318,14 @@ eagerTest.describe('with on-demand documentation turned off', () => {
 
 	eagerTest.beforeAll(async () => {
 		eagerTest.setTimeout(180_000);
+		eagerPort = await freePort();
 		const componentsDir = path.join(EXAMPLES_DIR, 'basic/src');
 		fs.writeFileSync(
 			eagerConfig,
 			`module.exports = {
 	components: ${JSON.stringify(path.join(componentsDir, 'components/**/[A-Z]*.js'))},
 	moduleAliases: { 'rsg-example': ${JSON.stringify(componentsDir)} },
-	serverPort: ${PORT},
+	serverPort: ${eagerPort},
 	previewDelay: 0,
 	lazyDocs: false,
 };
@@ -338,7 +359,7 @@ eagerTest.describe('with on-demand documentation turned off', () => {
 	});
 
 	eagerTest('never shows a spinner or a failure', async ({ page }) => {
-		await page.goto(`http://localhost:${PORT}/`);
+		await page.goto(`http://localhost:${eagerPort}/`);
 
 		// Every component is documented from the first render, the last one included: there
 		// is nothing on its way, so there is nothing to say about it

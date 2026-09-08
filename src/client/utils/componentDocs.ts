@@ -52,6 +52,12 @@ interface DocsEntry {
 	module?: unknown;
 	/** The last attempt failed. Kept so a hot update knows there is something to retry. */
 	failed?: boolean;
+	/**
+	 * Why the last attempt failed, in the browser’s own words. Set together with `failed`
+	 * and cleared by the next load that succeeds; it is what the component renders in place
+	 * of its body instead of staying blank for good (see DocsLoading).
+	 */
+	error?: string;
 }
 
 const entries = new Map<string, DocsEntry>();
@@ -105,6 +111,16 @@ export function getLoadedDocs(component: Rsg.Component): Rsg.ComponentDocs | und
 /** The component’s own module (`component.module`) if it has been loaded. */
 export function getLoadedModule(component: Rsg.Component): unknown {
 	return entries.get(docsKey(component))?.module;
+}
+
+/**
+ * Why this component’s documentation is not here, if the last attempt to fetch it failed.
+ *
+ * Cleared by a later attempt that succeeds, so it is “the state right now” rather than a
+ * log: a component that failed once and loaded on the second approach has none.
+ */
+export function getDocsError(component: Rsg.Component): string | undefined {
+	return entries.get(docsKey(component))?.error;
 }
 
 function notifyComponent(key: string): void {
@@ -200,6 +216,7 @@ export function loadComponentDocs(
 		(loaded) => {
 			entry.promise = undefined;
 			entry.failed = false;
+			entry.error = undefined;
 			entry.docs = (loaded && loaded.props) || {};
 			entry.module = loaded && loaded.module;
 			notifyComponent(key);
@@ -213,11 +230,16 @@ export function loadComponentDocs(
 			// the component again, a hot update) tries once more
 			entry.promise = undefined;
 			entry.failed = true;
+			entry.error = error instanceof Error ? error.message : String(error);
 			// eslint-disable-next-line no-console
 			console.error(
 				`Cannot load the documentation of ${component.nameFromPath || key}:`,
 				error
 			);
+			// The component is told about a failure exactly as it is told about an answer:
+			// it has something to render either way, and a container that stays blank for
+			// good is what this replaces (ADR 0019, DocsLoading)
+			notifyComponent(key);
 			// Whatever was waiting for the page to settle should stop waiting for this one
 			notifyLoad();
 		}
@@ -347,6 +369,9 @@ export function withDocs(
 		},
 		module: module !== undefined ? module : component.module,
 		docsLoaded: true,
+		// An answer clears a failure the same component may have carried from an earlier
+		// attempt (the store cleared its own copy; this is the one on the tree’s object)
+		docsError: undefined,
 	};
 }
 
@@ -358,6 +383,9 @@ export function withPlaceholderDocs(component: Rsg.Component): Rsg.Component {
 		visibleName: component.nameFromPath,
 		props: placeholderDocs(component.nameFromPath),
 		docsLoaded: false,
+		// Alongside `docsLoaded: false`, so that a replaced `ReactComponent` can tell “not
+		// here yet” from “not coming” without reaching into this module
+		docsError: getDocsError(component),
 	};
 }
 
@@ -373,7 +401,13 @@ export function applyLoadedDocs(component: Rsg.Component): Rsg.Component {
 		return component;
 	}
 	const entry = entries.get(docsKey(component));
-	return entry && entry.docs ? withDocs(component, entry.docs, entry.module) : component;
+	if (entry && entry.docs) {
+		return withDocs(component, entry.docs, entry.module);
+	}
+	// A load that failed since the tree was processed: the message rides on the component
+	// object the way `docsLoaded` does, so everything that renders one can see it
+	const error = entry && entry.error;
+	return error === component.docsError ? component : { ...component, docsError: error };
 }
 
 /** Forget everything. Only for tests: the store lives as long as the page does. */

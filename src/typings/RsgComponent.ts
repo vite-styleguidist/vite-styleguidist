@@ -66,6 +66,15 @@ export interface Component extends BaseComponent {
 	 * (no description, no props table, no examples).
 	 */
 	docsLoaded?: boolean;
+	/**
+	 * Why the last attempt to fetch this component’s documentation failed, if one did.
+	 *
+	 * The companion of `docsLoaded: false`: without it the two reasons a component has no
+	 * documentation — it has not been fetched yet, and it could not be fetched — look
+	 * exactly alike. Cleared by a later attempt that succeeds. See
+	 * docs/decisions/0019-on-demand-documentation.md.
+	 */
+	docsError?: string;
 }
 
 /** Component as produced on the Node side, before serialization into a virtual module. */

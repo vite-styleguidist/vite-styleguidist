@@ -1,6 +1,8 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import ReactComponent, { DOCS_ROOT_MARGIN } from './ReactComponent.js';
+import { DOCS_LOADING_GRACE } from '../DocsLoading/DocsLoading.js';
+import { DOCS_LOADING_LABEL, DOCS_LOADING_RELOAD } from '../DocsLoading/strings.js';
 import { placeholderDocs, resetComponentDocs } from '../../utils/componentDocs.js';
 import slots from '../slots/index.js';
 import Context from '../Context/index.js';
@@ -401,6 +403,76 @@ describe('on-demand documentation', () => {
 		expect(failing.loadDocs).toHaveBeenCalledTimes(2);
 		expect(await findByText('Bar')).toBeInTheDocument();
 		error.mockRestore();
+	});
+
+	// What the reader sees meanwhile, and what a replaced `ReactComponentRenderer` is told
+	// about it (DocsLoading, ADR 0019)
+	describe('what the reader sees meanwhile', () => {
+		/** A component whose documentation never arrives, so the pending state can be looked at. */
+		const neverArrives = () => {
+			const component = lazyComponent();
+			component.loadDocs = vi.fn(() => new Promise<never>(() => undefined));
+			return component;
+		};
+
+		it('should mark the container busy until the documentation is there', async () => {
+			const component = lazyComponent();
+			const { getByTestId, findByText } = renderComponent(component, DisplayModes.component);
+
+			expect(getByTestId('Foo-container')).toHaveAttribute('aria-busy', 'true');
+
+			expect(await findByText('Bar')).toBeInTheDocument();
+			expect(getByTestId('Foo-container')).not.toHaveAttribute('aria-busy');
+		});
+
+		it('should show a spinner once a load has taken long enough to be worth saying so', () => {
+			vi.useFakeTimers();
+			const { getByTestId, queryByTestId } = renderComponent(
+				neverArrives(),
+				DisplayModes.component
+			);
+
+			expect(queryByTestId('docs-loading')).not.toBeInTheDocument();
+			act(() => {
+				vi.advanceTimersByTime(DOCS_LOADING_GRACE);
+			});
+			expect(getByTestId('docs-loading')).toHaveTextContent(DOCS_LOADING_LABEL);
+			vi.useRealTimers();
+		});
+
+		// `hasExamples` is in the section tree from the start: this is the one thing about a
+		// component that does not have to wait for its documentation
+		it('should show the “add examples” hint at once for a component known to have none', () => {
+			const component = neverArrives();
+			component.hasExamples = false;
+			const { getByText } = renderComponent(component, DisplayModes.component);
+
+			expect(getByText(/add examples to this component/i)).toBeInTheDocument();
+		});
+
+		it('should show the failure of a load, and not retry it on every render', async () => {
+			const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+			const failing = lazyComponent();
+			failing.loadDocs = vi
+				.fn()
+				.mockRejectedValue(new Error('Failed to fetch dynamically imported module'));
+
+			const { findByText, getByRole, getByTestId } = renderComponent(
+				failing,
+				DisplayModes.component
+			);
+
+			expect(
+				await findByText('The documentation of Foo could not be loaded.')
+			).toBeInTheDocument();
+			expect(getByRole('button', { name: DOCS_LOADING_RELOAD })).toBeInTheDocument();
+			// Not busy any more: it is finished, and wrong
+			expect(getByTestId('Foo-container')).not.toHaveAttribute('aria-busy');
+			// A failure re-renders this component, and this component is what asks for the
+			// load on a page that *is* the component: retrying from there would be a loop
+			expect(failing.loadDocs).toHaveBeenCalledTimes(1);
+			consoleError.mockRestore();
+		});
 	});
 
 	it('should stop watching the viewport once the documentation is there', async () => {

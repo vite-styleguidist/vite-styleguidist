@@ -2,6 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Pathline from 'rsg-components/Pathline';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
+import DocsLoading from 'rsg-components/DocsLoading';
 import { Styles } from 'jss';
 import type * as Rsg from '../../../typings/index.js';
 
@@ -106,6 +107,23 @@ interface ReactComponentRendererProps extends JssInjectedProps {
 	docs?: React.ReactNode;
 	examples?: React.ReactNode;
 	isolated?: boolean;
+	/**
+	 * The documentation of this component is on its way (`lazyDocs`, ADR 0019). The body —
+	 * the prose, the tabs and the examples — is not empty because there is nothing to show
+	 * but because the answer has not arrived, so it is drawn as `DocsLoading` instead.
+	 *
+	 * Optional, and `false` by default, so a `ReactComponentRenderer` written before this
+	 * existed keeps behaving exactly as it did.
+	 */
+	docsLoading?: boolean;
+	/** The documentation could not be fetched, in the browser’s own words. */
+	docsError?: string;
+	/**
+	 * Whether this component has examples at all. Known from the section tree, before and
+	 * independently of the load, which is why the “add examples to this component” hint can
+	 * be shown at once for a component that has none.
+	 */
+	hasExamples?: boolean;
 }
 
 export const ReactComponentRenderer: React.FunctionComponent<ReactComponentRendererProps> = ({
@@ -118,26 +136,53 @@ export const ReactComponentRenderer: React.FunctionComponent<ReactComponentRende
 	examples,
 	tabButtons,
 	tabBody,
+	docsLoading = false,
+	docsError,
+	hasExamples,
 }) => {
+	// While the documentation is being fetched, or after a fetch that failed, everything
+	// below the heading is one slot saying so. The heading, the path line and the container
+	// stay: they are what the sidebar links to, what the scroll spy watches and what a deep
+	// link scrolls to, and they are the reason this is not a Suspense boundary (ADR 0019).
+	const awaitingDocs = docsLoading || !!docsError;
 	return (
-		<div className={classes.root} data-testid={`${name}-container`}>
+		<div
+			className={classes.root}
+			data-testid={`${name}-container`}
+			// Only while something is actually in flight: a failed load is not busy, it is
+			// finished and wrong, and a region left `aria-busy` for good is a region a
+			// screen reader keeps skipping
+			aria-busy={docsLoading || undefined}
+		>
 			<header className={classes.header}>
 				{heading}
 				{pathLine && <Pathline>{pathLine}</Pathline>}
-				{(description || docs) && (
+				{!awaitingDocs && (description || docs) && (
 					<div className={classes.docs}>
 						{description}
 						{docs}
 					</div>
 				)}
 			</header>
-			{tabButtons && (
-				<div className={classes.tabs}>
-					<div className={classes.tabButtons}>{tabButtons}</div>
-					<div className={classes.tabBody}>{tabBody}</div>
-				</div>
+			{awaitingDocs ? (
+				<>
+					<DocsLoading status={docsError ? 'error' : 'loading'} name={name} error={docsError} />
+					{/* One thing about a component is known before its documentation is: whether
+					    it has examples. When it has none, saying so now rather than after the
+					    load is both true and quicker. */}
+					{hasExamples === false && examples}
+				</>
+			) : (
+				<>
+					{tabButtons && (
+						<div className={classes.tabs}>
+							<div className={classes.tabButtons}>{tabButtons}</div>
+							<div className={classes.tabBody}>{tabBody}</div>
+						</div>
+					)}
+					{examples}
+				</>
 			)}
-			{examples}
 		</div>
 	);
 };
@@ -154,6 +199,9 @@ ReactComponentRenderer.propTypes = {
 	docs: PropTypes.any,
 	examples: PropTypes.any,
 	isolated: PropTypes.bool,
+	docsLoading: PropTypes.bool,
+	docsError: PropTypes.string,
+	hasExamples: PropTypes.bool,
 };
 
 export default Styled<ReactComponentRendererProps>(styles)(ReactComponentRenderer);

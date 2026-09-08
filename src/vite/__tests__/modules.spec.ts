@@ -119,6 +119,23 @@ describe('generateStyleguideModule', () => {
 			expect(importsOf(code)).toContain(component('Placeholder/Placeholder.json'));
 		});
 
+		// `hasExamples` is what draws the “add examples to this component” hint before a
+		// component’s documentation arrives, so in the lazy tree it has to mean “there will
+		// be examples” and not merely “there is an examples file” (ReactComponent)
+		it('should count the default example as examples', () => {
+			const withoutFiles = getConfig({
+				components: 'components/RandomButton/RandomButton.js',
+				defaultExample: false,
+			});
+			expect(generateStyleguideModule(withoutFiles).code).toMatch('"hasExamples": false');
+
+			const withDefault = getConfig({
+				components: 'components/RandomButton/RandomButton.js',
+				defaultExample: true,
+			});
+			expect(generateStyleguideModule(withDefault).code).toMatch('"hasExamples": true');
+		});
+
 		it('should name a component after its directory when the file is an index', () => {
 			const withIndex = getConfig({ components: 'components/**/index.js' });
 			const { code } = generateStyleguideModule(withIndex);

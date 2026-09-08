@@ -11,6 +11,7 @@ import ExamplePlaceholderDefault from 'rsg-components/ExamplePlaceholder';
 import {
 	DOCS_ROOT_MARGIN,
 	applyLoadedDocs,
+	getDocsError,
 	getLoadedDocs,
 	loadComponentDocs,
 	markSelfManaged,
@@ -78,6 +79,15 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 		if (!component.loadDocs || component.docsLoaded || getLoadedDocs(component)) {
 			// The documentation is here; there is nothing left to watch the viewport for
 			this.stopObserving();
+			return;
+		}
+		// A load that failed is not retried from here. This runs again on every re-render,
+		// and a failure now re-renders this component (the store notifies its listeners
+		// either way, so that the error can be shown at all): retrying here would be a
+		// fail → render → retry loop on any page that *is* the component. The retry that
+		// ADR 0019 promises is the viewport one below, which survives a failure, plus the
+		// “Reload the page” button DocsLoading offers when there is nothing else left.
+		if (getDocsError(component)) {
 			return;
 		}
 		const { displayMode } = this.context as StyleGuideContextContents;
@@ -194,10 +204,14 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 			return null;
 		}
 		const showUsage = usageMode !== UsageModes.hide;
-		// A component whose documentation is still on its way has no examples *yet*, which is
-		// not the same thing as having none: the “write a Readme.md” placeholder would be a
-		// lie, and an empty block is what the container is until the answer arrives.
-		const docsPending = component.loadDocs && !component.docsLoaded;
+		// The two ways a component can have no documentation on the page: it is on its way,
+		// or the fetch failed. Neither has examples *yet*, which is not the same thing as
+		// having none — the “write a Readme.md” placeholder would be a lie — so the body is
+		// the DocsLoading slot instead, and `hasExamples` below is what the tree knew all
+		// along about a component that really has none.
+		const docsError = component.docsError;
+		const docsLoading = !!component.loadDocs && !component.docsLoaded && !docsError;
+		const hasExamples = component.hasExamples;
 
 		return (
 			<ReactComponentRenderer
@@ -228,10 +242,13 @@ export default class ReactComponent extends Component<ReactComponentProps, React
 						{visibleName}
 					</SectionHeading>
 				}
+				docsLoading={docsLoading}
+				docsError={docsError}
+				hasExamples={hasExamples}
 				examples={
 					examples.length > 0 ? (
 						<Examples examples={examples} name={name} exampleMode={exampleMode} depth={depth} />
-					) : docsPending ? null : (
+					) : (docsLoading || docsError) && hasExamples !== false ? null : (
 						<ExamplePlaceholder name={name} />
 					)
 				}

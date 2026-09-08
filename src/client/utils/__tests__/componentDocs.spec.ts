@@ -1,5 +1,6 @@
 import {
 	applyLoadedDocs,
+	getDocsError,
 	getLoadedDocs,
 	getLoadedModule,
 	loadAllComponentDocs,
@@ -164,6 +165,49 @@ describe('loadComponentDocs', () => {
 		expect(getLoadedDocs(component)).toEqual({ displayName: 'Button' });
 		consoleError.mockRestore();
 	});
+
+	// The console is for whoever built the guide; the page needs the same fact, because a
+	// component whose documentation failed to arrive is otherwise indistinguishable from
+	// one whose documentation is still on its way — for ever (ADR 0019, DocsLoading)
+	it('should record why a load failed, and clear it when a later one succeeds', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		let attempts = 0;
+		const component: Rsg.Component = {
+			filepath: 'Button.js',
+			nameFromPath: 'Button',
+			loadDocs: () => {
+				attempts += 1;
+				return attempts === 1
+					? Promise.reject(new Error('Failed to fetch dynamically imported module'))
+					: Promise.resolve({ props: { displayName: 'Button' } });
+			},
+		};
+
+		expect(getDocsError(component)).toBeUndefined();
+
+		loadComponentDocs(component);
+		await flush();
+		expect(getDocsError(component)).toBe('Failed to fetch dynamically imported module');
+
+		loadComponentDocs(component);
+		await flush();
+		expect(getDocsError(component)).toBeUndefined();
+		consoleError.mockRestore();
+	});
+
+	it('should tell the component about a failure, as it tells it about an answer', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const component = makeComponent({ displayName: 'Button' });
+		component.loadDocs = () => Promise.reject(new Error('Nope'));
+		const listener = vi.fn();
+		subscribeToComponent(component, listener);
+
+		loadComponentDocs(component);
+		await flush();
+
+		expect(listener).toHaveBeenCalledTimes(1);
+		consoleError.mockRestore();
+	});
 });
 
 describe('loadAllComponentDocs', () => {
@@ -273,6 +317,32 @@ describe('applyLoadedDocs', () => {
 		const component: Rsg.Component = { props: { displayName: 'Foo' }, docsLoaded: true };
 		expect(applyLoadedDocs(component)).toBe(component);
 	});
+
+	// The message rides on the component object the way `docsLoaded` does, so that a
+	// replaced `ReactComponent` sees it without importing this module
+	it('should hand a component the failure of its last load, and take it back', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		let attempts = 0;
+		const component = makeComponent({ displayName: 'Button' });
+		component.loadDocs = () => {
+			attempts += 1;
+			return attempts === 1
+				? Promise.reject(new Error('Nope'))
+				: Promise.resolve({ props: { displayName: 'Button' } });
+		};
+		const placeholder = withPlaceholderDocs(component);
+
+		loadComponentDocs(component);
+		await flush();
+		expect(applyLoadedDocs(placeholder).docsError).toBe('Nope');
+
+		loadComponentDocs(component);
+		await flush();
+		const resolved = applyLoadedDocs(placeholder);
+		expect(resolved.docsLoaded).toBe(true);
+		expect(resolved.docsError).toBeUndefined();
+		consoleError.mockRestore();
+	});
 });
 
 describe('withPlaceholderDocs', () => {
@@ -286,5 +356,17 @@ describe('withPlaceholderDocs', () => {
 		});
 		expect(component.props?.examples).toEqual([]);
 		expect(component.props?.props).toEqual([]);
+		expect(component.docsError).toBeUndefined();
+	});
+
+	it('should carry the failure of a load the store already knows about', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		const component = makeComponent({ displayName: 'Button' });
+		component.loadDocs = () => Promise.reject(new Error('Nope'));
+		loadComponentDocs(component);
+		await flush();
+
+		expect(withPlaceholderDocs(component).docsError).toBe('Nope');
+		consoleError.mockRestore();
 	});
 });

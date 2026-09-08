@@ -1,10 +1,14 @@
 // On-demand component documentation (`lazyDocs`, docs/decisions/0019-on-demand-documentation.md).
 //
-// The first four tests run against the basic example served by test/run.server.js (see
+// Most tests run against the basic example served by test/run.server.js (see
 // playwright.config.ts); the `pagePerSection` one against the built sections example, like
-// pagenav.spec.ts next to it (`npm run build:sections` first).
+// pagenav.spec.ts next to it (`npm run build:sections` first); and the last one against a
+// style guide of its own, started with the option turned off.
+import { spawn, type ChildProcess } from 'node:child_process';
+import fs from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sirv from 'sirv';
@@ -17,6 +21,13 @@ const EXAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 /** The components of the basic example, in sidebar order. */
 const FIRST = 'Button';
 const LAST = 'WrappedButton';
+/**
+ * The one component of the basic example with no examples file of its own — and, as this
+ * suite’s dev server is configured (test/run.server.js sets no `defaultExample`), with no
+ * examples at all. Whether a component has any is in the section tree from the start, which
+ * is why its hint does not wait for the documentation.
+ */
+const WITHOUT_EXAMPLES = 'PushButton';
 
 /** A request for a component’s documentation: the `rsg-props:` module of one component. */
 const isDocsRequest = (url: string) => url.includes('rsg-props');
@@ -83,9 +94,19 @@ test.describe('on-demand documentation', () => {
 		await expect(page.getByTestId('rsg-toc-link').first()).toHaveText(FIRST);
 		// …and its anchor, which is what a deep link and the scroll spy need
 		expect(await page.locator('#wrappedbutton').count()).toBe(1);
-		// …but no examples, and not the “add examples to this component” placeholder either
+		// …but no examples, and not the “add examples to this component” placeholder for a
+		// component that may still turn out to have some
 		await expect(page.getByTestId(`${FIRST}-examples`)).toHaveCount(0);
-		await expect(page.getByText(/add examples to this component/i)).toHaveCount(0);
+		await expect(
+			page.getByTestId(`${FIRST}-container`).getByText(/add examples to this component/i)
+		).toHaveCount(0);
+		// …while the one component the tree already knows has none says so at once
+		await expect(
+			page
+				.getByTestId(`${WITHOUT_EXAMPLES}-container`)
+				.getByText(/add examples to this component/i)
+		).toBeVisible();
+		await expect(page.getByText(/add examples to this component/i)).toHaveCount(1);
 
 		release();
 		await expect(page.getByTestId(`${FIRST}-examples`)).toBeVisible();
@@ -147,6 +168,59 @@ test.describe('on-demand documentation', () => {
 		await expect(page.locator(`[data-testid^="${FIRST}-example-"]`)).toHaveCount(1);
 	});
 
+	// What the reader sees while a component’s documentation is on its way, and what they
+	// see instead when it never arrives (DocsLoading)
+	test('shows a spinner while a component’s documentation is slow, and nothing after', async ({
+		page,
+	}) => {
+		// Held until this test lets go rather than delayed by a timeout: a fixed delay makes
+		// the window in which the spinner exists a race against a busy machine. How long the
+		// spinner waits before appearing is where the wait is set, in DocsLoading.spec.tsx.
+		let release = () => undefined as void;
+		const held = new Promise<void>((resolve) => {
+			release = resolve as () => void;
+		});
+		await page.route(
+			(url) => isDocsRequest(url.href),
+			async (route) => {
+				await held;
+				await route.continue();
+			}
+		);
+
+		await page.goto('/');
+
+		const loading = page.getByTestId('docs-loading').first();
+		await expect(loading).toBeVisible();
+		await expect(loading).toHaveText(/loading documentation/i);
+		await expect(page.getByTestId('docs-loading-spinner').first()).toBeVisible();
+
+		// …and once the documentation is there it is the documentation, not a spinner
+		release();
+		await expect(page.getByTestId(`${FIRST}-examples`)).toBeVisible();
+		await expect(page.getByTestId('docs-loading')).toHaveCount(0);
+	});
+
+	test('says so when a component’s documentation cannot be fetched', async ({ page }) => {
+		await page.route(
+			(url) => isDocsRequest(url.href),
+			async (route) => {
+				await route.abort();
+			}
+		);
+
+		await page.goto('/');
+
+		await expect(page.getByTestId('docs-loading-error').first()).toHaveText(
+			new RegExp(`The documentation of ${FIRST} could not be loaded\\.`)
+		);
+		// The one recovery a built style guide has: the browser will not fetch a module URL
+		// whose fetch failed a second time (ADR 0019)
+		await expect(page.getByRole('button', { name: 'Reload the page' }).first()).toBeVisible();
+		// …and the container, its heading and its anchor are still there
+		await expect(page.getByTestId(`${FIRST}-container`)).toBeVisible();
+	});
+
 	test('loads only the component the isolated view shows', async ({ page }) => {
 		const requested = recordDocsRequests(page);
 
@@ -200,4 +274,77 @@ sectionsTest.describe('on-demand documentation with pagePerSection', () => {
 			expect(served).not.toContain('fantasy');
 		}
 	);
+});
+
+
+// `lazyDocs: false` puts every component's documentation back in the entry chunk, so there
+// is never anything to wait for and neither state can appear. It needs a style guide of its
+// own: the shared dev server runs with the defaults. Same shape as config-restart.spec.ts —
+// a config in a folder outside the repository, so writing it does not reach the watcher of
+// the server the rest of the suite is looking at.
+const PORT = 6124;
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const eagerDir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'rsg-eager-docs-'));
+const eagerConfig = path.join(eagerDir, 'styleguide.config.cjs');
+
+let eagerServer: ChildProcess | undefined;
+let eagerOutput = '';
+
+const eagerTest = base;
+
+eagerTest.describe('with on-demand documentation turned off', () => {
+	eagerTest.describe.configure({ mode: 'serial' });
+
+	eagerTest.beforeAll(async () => {
+		eagerTest.setTimeout(180_000);
+		const componentsDir = path.join(EXAMPLES_DIR, 'basic/src');
+		fs.writeFileSync(
+			eagerConfig,
+			`module.exports = {
+	components: ${JSON.stringify(path.join(componentsDir, 'components/**/[A-Z]*.js'))},
+	moduleAliases: { 'rsg-example': ${JSON.stringify(componentsDir)} },
+	serverPort: ${PORT},
+	previewDelay: 0,
+	lazyDocs: false,
+};
+`
+		);
+		eagerServer = spawn(
+			process.execPath,
+			['lib/bin/styleguidist.js', 'server', '--config', eagerConfig],
+			{ cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] }
+		);
+		eagerServer.stdout?.on('data', (chunk) => (eagerOutput += chunk));
+		eagerServer.stderr?.on('data', (chunk) => (eagerOutput += chunk));
+
+		const start = Date.now();
+		while (!eagerOutput.includes('You can now view your style guide')) {
+			if (Date.now() - start > 150_000) {
+				throw new Error(`Timed out starting the style guide:\n${eagerOutput}`);
+			}
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		}
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	});
+
+	eagerTest.afterAll(async () => {
+		if (eagerServer) {
+			const exited = new Promise<void>((resolve) => eagerServer?.on('exit', () => resolve()));
+			eagerServer.kill();
+			await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 5000))]);
+		}
+		fs.rmSync(eagerDir, { recursive: true, force: true });
+	});
+
+	eagerTest('never shows a spinner or a failure', async ({ page }) => {
+		await page.goto(`http://localhost:${PORT}/`);
+
+		// Every component is documented from the first render, the last one included: there
+		// is nothing on its way, so there is nothing to say about it
+		await expect(page.getByTestId(`${FIRST}-examples`)).toBeVisible();
+		await expect(page.getByTestId(`${LAST}-examples`)).toBeVisible();
+		await expect(page.getByTestId('docs-loading')).toHaveCount(0);
+		await expect(page.getByTestId('docs-loading-error')).toHaveCount(0);
+	});
 });

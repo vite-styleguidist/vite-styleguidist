@@ -84,10 +84,21 @@ export function collectSections(config: Rsg.SanitizedStyleguidistConfig): Rsg.Lo
  * `metadata` stays: it is a plain `.json` file next to the component, it is usually absent,
  * and the component toolbar reads it on the first paint.
  */
-function toLazyComponent(component: Rsg.LoaderComponent): Rsg.LazyLoaderComponent {
+function toLazyComponent(
+	component: Rsg.LoaderComponent,
+	config: Rsg.SanitizedStyleguidistConfig
+): Rsg.LazyLoaderComponent {
 	const { module, props, ...rest } = component;
 	return {
 		...rest,
+		// `hasExamples` is the one thing the client is told about a component’s examples
+		// before they are loaded, and it is what draws the “add examples to this component”
+		// hint at once for a component that has none (ReactComponent). On the Node side the
+		// flag means “there is an examples file”, which is what `skipComponentsWithoutExample`
+		// filters on; here it has to mean “there will be examples”, and with `defaultExample`
+		// configured a component without a file of its own still gets one. Only the lazy tree
+		// is corrected — the filtering above ran on the other meaning, on purpose.
+		hasExamples: component.hasExamples || !!config.defaultExample,
 		// The absolute path the guide imports the component from, which is what
 		// processComponent() derives the slug from and getProps() falls back to
 		nameFromPath: getNameFromFilePath(module.__rsgImport),
@@ -95,11 +106,14 @@ function toLazyComponent(component: Rsg.LoaderComponent): Rsg.LazyLoaderComponen
 	};
 }
 
-function toLazySections(sections: Rsg.LoaderSection[]): Rsg.LazyLoaderSection[] {
+function toLazySections(
+	sections: Rsg.LoaderSection[],
+	config: Rsg.SanitizedStyleguidistConfig
+): Rsg.LazyLoaderSection[] {
 	return sections.map((section) => ({
 		...section,
-		components: section.components.map(toLazyComponent),
-		sections: toLazySections(section.sections),
+		components: section.components.map((component) => toLazyComponent(component, config)),
+		sections: toLazySections(section.sections, config),
 	}));
 }
 
@@ -172,7 +186,7 @@ export default function generateStyleguideModule(
 		patterns,
 		// `sections` itself is handed to the machine-readable docs, which read the import
 		// markers the loaders produced (machineReadable.ts), so the lazy tree is a copy
-		sections: config.lazyDocs ? toLazySections(sections) : sections,
+		sections: config.lazyDocs ? toLazySections(sections, config) : sections,
 	});
 
 	const code = `${serializer.renderImports()}

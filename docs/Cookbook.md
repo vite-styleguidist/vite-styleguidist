@@ -1141,7 +1141,7 @@ module.exports = {
 
 That gets you the prop name, its type as you wrote it, whether it is required, the default value from the destructuring pattern and the JSDoc description — for interfaces and type aliases, unions and literal unions, enums, generics, `React.FC`, `React.forwardRef`, and prop types imported from a neighbouring module. It also documents the props a component _declares_: a component whose props extend `React.ButtonHTMLAttributes` gets a table of its own props, not the ~290 attributes the DOM interface adds.
 
-A runnable version of all of that is [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript).
+A runnable version of all of that is [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript). Its own config is written in TypeScript too — see [A TypeScript config file](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/examples/typescript/Readme.md#a-typescript-config-file) for `defineConfig`, the discovery order and what a `styleguide.config.ts` can and cannot do.
 
 Two things the default parser cannot do, and what to do about them:
 

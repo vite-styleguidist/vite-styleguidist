@@ -125,9 +125,10 @@ Please don’t report security vulnerabilities in public issues or pull requests
 npm run start:customised # if making changes to examples/customised
 npm run start:sections # if making changes to examples/sections
 npm run start:mdx # if making changes to examples/mdx or to MDX support
+npm run start:typescript # if making changes to examples/typescript
 ```
 
-See the `scripts` section of the top level [package.json](../package.json). If an example doesn't have a script just point to its config:
+See the `scripts` section of the top level [package.json](../package.json). If an example doesn't have a script just point to its config, with whatever extension that example's config has (`examples/typescript` is the one written in TypeScript):
 
 ```bash
 node lib/bin/styleguidist.js server --config examples/path/to/example/styleguide.config.js

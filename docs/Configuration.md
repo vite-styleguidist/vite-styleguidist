@@ -20,9 +20,13 @@ Which module system a file is written in follows Node’s own rules: `.mjs` and 
 TypeScript config files need no `ts-node`, `tsx` or any other loader: Styleguidist strips the types itself with [Sucrase](https://github.com/alangpierce/sucrase), the same compiler it uses for examples in the browser. Two things follow from that:
 
 - only the config file itself is compiled, so a TypeScript module it imports is left to Node.js, which can strip types from version 22.18 on. Import a JavaScript module instead if you support older versions;
-- the types are stripped, not checked, and an import that is only used as a type has to say so with `import type`, or it stays in the compiled file and fails to load at run time.
+- the types are stripped, not checked. Nothing at load time reads an annotation, so `tsc` and your editor are the only things that check one. Styleguidist still validates the resulting object against its own schema, so a wrong type is caught either way — later, and with a different message.
 
-The compiled file is written next to the original one, loaded, and deleted again, so the folder holding your config file has to be writable.
+Sucrase has no type information, so it decides what to erase by use: an import whose bindings never appear in a value position is dropped together with its `import` statement, whether or not it says `import type`. Write `import type` anyway — it states the intent, `tsc` enforces it under `verbatimModuleSyntax`, and it does not depend on a heuristic. Side-effect imports (`import './setup.js'`) have no bindings to judge and are always kept.
+
+The compiled file is written next to the original one, loaded, and deleted again, so the folder holding your config file has to be writable. Because it is a *sibling* of your config, it belongs to the same `package.json` and the same module system — `__dirname` and `import.meta.dirname` are the folder you expect. The file name is not: `__filename`, `import.meta.filename` and `import.meta.url` name the temporary file. Most configs need neither, because Styleguidist resolves the relative paths in a config against the folder the config file is in.
+
+> **Tip:** [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) is the worked example: a `styleguide.config.ts` with `defineConfig`, a `sections` tree typed as `ConfigSection[]` in a module of its own, and a [walkthrough](https://github.com/vite-styleguidist/vite-styleguidist/blob/main/examples/typescript/Readme.md#a-typescript-config-file) of the discovery order, the loading, what exists inside the file, and the JavaScript alternative.
 
 ## Type checking your config
 
@@ -49,11 +53,13 @@ export default {
 }
 ```
 
-Every type a config file needs is exported from the package: `StyleguidistConfig` for the config itself, `ConfigSection` for a [section](#sections), `Theme` and `RecursivePartial` for a [theme](#theme) of your own, `Styles` for [styles](#styles). See the [Node.js API](API.md#types) for the whole list.
+Every type a config file needs is exported from the package: `StyleguidistConfig` for the config itself, `ConfigSection` for a [section](#sections), `Theme` and `RecursivePartial` for a [theme](#theme) of your own, `Styles` for [styles](#styles). See the [Node.js API](API.md#types) for the whole list, and [`examples/typescript`](https://github.com/vite-styleguidist/vite-styleguidist/tree/main/examples/typescript) for both forms side by side — including what to annotate once a `sections` array moves out of `defineConfig` into a module of its own, where the type no longer flows in from the parameter.
 
 ## Restarting on a change
 
 The dev server watches the config file it was started from. When you save it, the style guide reloads the config and restarts itself; when the config you saved has a mistake in it, the error is printed and the style guide keeps running with the last config that worked. See [CLI commands](CLI.md#restarting-on-a-config-change).
+
+What is watched is that one file, not the modules it imports: a config split across several files restarts when the config file itself is saved.
 
 The rest of this page is the config options, in alphabetical order.
 

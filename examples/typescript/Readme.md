@@ -124,7 +124,7 @@ That last point is why `styleguide.meta.ts` annotates its export as `ConfigSecti
 
 Every type a config file might name is exported from the package root — `StyleguidistConfig`, `ConfigSection`, `Theme`, `RecursivePartial`, `Styles`, and the rest listed in the [Node.js API docs](../../docs/API.md#types).
 
-**For the editor to know any of this, the package has to be installed.** This example depends on the repository root through `file:../../`, so:
+**For the editor and `tsc` to know any of this, the package has to be installed.** Loading the config does not need it: `npm run build:typescript` and `npm run start:typescript` work in a fresh checkout with no `examples/typescript/node_modules` at all, because Styleguidist resolves a `vite-styleguidist` import in a config file to the copy that is loading it (see [Configuration](../../docs/Configuration.md#config-file-formats)). Type checking is the part that needs the install — `tsc` resolves imports its own way, and without it the config is `Cannot find module 'vite-styleguidist'` in the editor and every option in it goes unchecked. This example depends on the repository root through `file:../../`, so:
 
 ```bash
 cd examples/typescript

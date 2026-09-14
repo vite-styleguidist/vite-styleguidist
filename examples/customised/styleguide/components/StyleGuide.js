@@ -12,6 +12,11 @@ const styles = ({ fontFamily, color, mq }) => ({
 		color: color.base,
 		backgroundColor: color.baseBackground,
 	},
+	// The header paints its own background, so its text colour and that background are a pair
+	// that does not depend on the page behind them: one literal works in any colour scheme
+	// (8.6:1 here). `color.link` is a literal too in this style guide — styleguide.config.js
+	// pins it — which is why `#fff` can be hard-coded against it; a token that switched with
+	// the scheme would need a text colour that switched with it as well.
 	header: {
 		color: '#fff',
 		backgroundColor: color.link,

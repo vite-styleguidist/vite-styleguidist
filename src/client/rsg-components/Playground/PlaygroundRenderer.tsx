@@ -4,27 +4,59 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ space, color, borderRadius }: Rsg.Theme) => ({
+export const styles = ({ space, color, borderRadius, mq }: Rsg.Theme) => ({
 	root: {
-		marginBottom: space[4],
+		// 24 px between examples: Examples zeroes the last example’s margin (layout lane)
+		marginBottom: space[3],
 	},
+	// The preview box (Main artboard, examples section): 24 / 16 padding, a 1 px border on a
+	// 6 px radius and the page background; 20 / 16 on small screens (Mobile artboard).
 	preview: {
-		padding: space[2],
+		padding: [[space[3], space[2]]],
+		marginBottom: space[1],
 		border: [[1, color.border, 'solid']],
 		borderRadius,
-		// the next 2 lines are required to contain floated components
+		background: color.baseBackground,
+		// the next 3 lines are required to contain floated components; `top` removes the
+		// descender gap an inline-block leaves below itself
 		width: '100%',
 		display: 'inline-block',
+		verticalAlign: 'top',
+		[mq.small]: {
+			padding: [[20, space[2]]],
+		},
 	},
+	// The toolbar row between the preview and the code: the tab buttons on the left, the
+	// toolbar (“Open isolated”) pushed to the right
 	controls: {
 		display: 'flex',
 		alignItems: 'center',
+		gap: space[2],
 		marginBottom: space[1],
 	},
 	toolbar: {
 		marginLeft: 'auto',
 	},
 	tab: {}, // expose className to allow using it in 'styles' settings
+	// The tab-button row rendered `classes.tabs` since the tabs were introduced, but only
+	// `tab` (the tab body) was ever declared, so the row carried no class at all and a
+	// `styles: { Playground: { tabs: … } }` override silently did nothing. `tab` stays:
+	// rule keys are append-only (ADR 0011).
+	tabs: {
+		display: 'flex',
+		alignItems: 'center',
+		// The Slot renders its fills inside a wrapper element of its own, so the row of tab
+		// buttons (the Code tab, plus custom exampleTabs fills) is that wrapper, not this
+		// element: the flex row and the artboard’s 16 px gap have to go one level down or a
+		// second fill would sit flush against “View Code” (TabButton has no sibling margin).
+		// Mirrors ReactComponentRenderer.tabButtons.
+		'& > *': {
+			isolate: false,
+			display: 'flex',
+			alignItems: 'center',
+			gap: space[2],
+		},
+	},
 	padded: {
 		// add padding between each example element rendered
 		'& > *': {

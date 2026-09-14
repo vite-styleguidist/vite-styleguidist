@@ -1,0 +1,27 @@
+/*
+ * Page furniture follows the style guide's colour scheme by reading its custom properties
+ * (the same pattern as src/docs/Callout.css): every `theme.color.*` token is published as
+ * `--rsg-color-<kebab-name>` on the page, and the value after the comma is the light-scheme
+ * fallback for anywhere the style guide is not around (an app page, a test). The card is
+ * neutral chrome — a surface, a rule and a muted label — so all three come from tokens;
+ * hard-coded ones stayed white-on-white when a visitor switched to dark mode.
+ */
+.card {
+	padding: 1em;
+	border: 1px solid var(--rsg-color-border, #e6e2da);
+	border-radius: 6px;
+	background-color: var(--rsg-color-code-background, #f3f1ec);
+	color: var(--rsg-color-base, #262421);
+}
+
+.card-title {
+	margin: 0 0 0.5em;
+	font-size: 14px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--rsg-color-light, #625d57);
+}
+
+.card-body {
+	margin: 0;
+}

@@ -22,10 +22,13 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "rsg-components/*": ["src/client/rsg-components/*"]
+      "rsg-components/*": ["src/client/rsg-components/*"],
+      // The React root shim is picked per project by the Vite config (React 18+ or 16/17,
+      // see src/client/utils/reactRoot.ts); the repo type-checks against the modern one.
+      "rsg-react-root": ["src/client/utils/reactRoot.modern.ts"]
     },
     "types": ["vite/client", "node", "vitest/globals"]
   },
-  "include": ["src", "test/**/*.ts", "vitest.config.ts"],
+  "include": ["src", "test/**/*.ts", "vitest.config.ts", "playwright.config.ts"],
   "exclude": ["node_modules", "lib"]
 }

@@ -48,3 +48,22 @@ bash scripts/deploy.sh
 Every push to `main` that touches `docs/`, `site/`, `examples/` or `src/` rebuilds and deploys the site through the `Docs site` workflow. It can also be triggered by hand from the Actions tab. The repository's Pages source must be set to "GitHub Actions" (Settings -> Pages) once.
 
 The site is served from the `/vite-styleguidist/` sub-path, which is why every internal asset URL goes through `useBaseUrl`, and CSS uses relative `url(../../static/...)` paths.
+
+## Known dependency advisories
+
+`npm audit` in this folder reports a chain of high-severity findings that all come from a single package: **`image-size` 2.0.2**, reached through `@docusaurus/core` -> `@docusaurus/mdx-loader` -> `image-size`. Two advisories, [GHSA-w3rx-r6r6-pgpr][icns] (ICNS parser) and [GHSA-5p2g-fcmc-qvqq][jxl] (JXL and HEIF parsers), describe infinite loops (CWE-835) that hang the Node event loop when the parser is handed a crafted image buffer. Both are availability-only (`C:N/I:N/A:H`).
+
+**There is nothing to upgrade to.** 2.0.2 is the latest release, published in April 2025, and the upstream repository was archived in June 2026, a week before the advisories were published, so no patched version is coming. Docusaurus has an open pull request that replaces the dependency ([facebook/docusaurus#12388][pr], unmerged as of September 2026); when that ships in a 3.x release, bumping Docusaurus and deleting this section is the whole fix. A community fork (`image-size-next`) exists on npm, but it is a month old and has a single unknown maintainer, so swapping build-time code for it would trade an availability bug for a supply-chain risk. Not worth it.
+
+Why it is not exploitable here, and what would change that:
+
+- `image-size` runs **only during the build**, from `mdx-loader`'s `transformImage` remark plugin, which measures local images so it can emit `width`/`height` attributes. It never runs in the browser and is not part of the deployed static site.
+- The only images it opens are the ones committed to this repository (`site/static/img/*`, plus whatever the example builds copy in). They are PNG, JPEG and SVG: none of the three affected formats.
+- The worst case is therefore a hung `npm run build` on a CI runner, caused by someone who can already commit a file to this repository.
+- The `Audit` workflow only checks the published package's runtime tree (`npm audit --omit=dev` at the repo root), so this does not fail CI.
+
+It would become a real risk if the docs build ever started measuring images it does not control: images fetched at build time from a remote source, images supplied by a pull request from a fork that CI builds without review, or a user-content pipeline reusing this Docusaurus config. Don't add any of those while this dependency is in the tree.
+
+[icns]: https://github.com/advisories/GHSA-w3rx-r6r6-pgpr
+[jxl]: https://github.com/advisories/GHSA-5p2g-fcmc-qvqq
+[pr]: https://github.com/facebook/docusaurus/pull/12388

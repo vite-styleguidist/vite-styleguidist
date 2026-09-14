@@ -23,8 +23,8 @@ describe('importIt', () => {
 
 describe('importDefault', () => {
 	it('should return a marker importing the default export', () => {
-		expect(importDefault('rsg-props:/abs/path/Button.js')).toEqual({
-			__rsgImport: 'rsg-props:/abs/path/Button.js',
+		expect(importDefault('virtual:rsg-props?file=/abs/path/Button.js&rsg')).toEqual({
+			__rsgImport: 'virtual:rsg-props?file=/abs/path/Button.js&rsg',
 			__rsgDefault: true,
 		});
 	});

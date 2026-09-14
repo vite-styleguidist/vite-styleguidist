@@ -1,15 +1,22 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { Styles } from 'jss';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ color, fontFamily, fontSize }: Rsg.Theme) => ({
+const styles = ({ color, fontFamily, fontWeight, lineHeight, space, mq }: Rsg.Theme): Styles => ({
 	version: {
 		color: color.light,
-		margin: [[5, 0, 0, 0]],
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
-		fontWeight: 'normal',
+		margin: [[space[0], 0, 0, 0]],
+		fontFamily: fontFamily.monospace,
+		// One step below `fontSize.small`: a version string is a detail of the title
+		fontSize: 12,
+		fontWeight: fontWeight.normal,
+		lineHeight: lineHeight.base,
+		// No room for it in the small-screen header bar
+		[mq.small]: {
+			display: 'none',
+		},
 	},
 });
 

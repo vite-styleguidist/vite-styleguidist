@@ -8,6 +8,7 @@ exports[`should even parse examples with custom extensions 1`] = `
   },
   {
     "content": "<AppButton>Example in vue</AppButton>",
+    "lang": "vue",
     "settings": {},
     "type": "code",
   },
@@ -22,6 +23,7 @@ exports[`should parse examples settings correctly 1`] = `
   },
   {
     "content": "<h1>Hello Markdown!</h1>",
+    "lang": "js",
     "settings": {
       "showcode": true,
     },
@@ -29,6 +31,7 @@ exports[`should parse examples settings correctly 1`] = `
   },
   {
     "content": "<h1>Example in frame and Without editor</h1>",
+    "lang": "js",
     "settings": {
       "frame": {
         "width": "400px",
@@ -42,6 +45,7 @@ exports[`should parse examples settings correctly 1`] = `
   },
   {
     "content": "<h2>Hello Markdown!</h2>",
+    "lang": "jsx",
     "settings": {
       "noeditor": true,
     },
@@ -64,6 +68,7 @@ exports[`should parse undefined custom extensions without throwing 1`] = `
   },
   {
     "content": "<AppButton>Example in jsx with undefined extensions</AppButton>",
+    "lang": "jsx",
     "settings": {},
     "type": "code",
   },
@@ -110,6 +115,7 @@ This code example should be rendered as a playground:",
   },
   {
     "content": "<h3>Hello Markdown!</h3>",
+    "lang": "jsx",
     "settings": {
       "noeditor": true,
     },

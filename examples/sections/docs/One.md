@@ -50,7 +50,7 @@ A [link](http://example.com).
 
 ---
 
-![React](http://morning.photos/photos/thumb/2014-09-27-3218-thumb.jpg)
+![A blue circle on a pale background](data:image/svg+xml;utf8,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%27160%27%20height=%2790%27%20viewBox=%270%200%20160%2090%27%3E%3Crect%20width=%27160%27%20height=%2790%27%20rx=%276%27%20fill=%27%23dfe7f2%27/%3E%3Ccircle%20cx=%2780%27%20cy=%2745%27%20r=%2724%27%20fill=%27%235b8dbe%27/%3E%3C/svg%3E)
 
 ```js static
 function eatFood(food) {

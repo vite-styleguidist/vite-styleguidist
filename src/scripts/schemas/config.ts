@@ -3,12 +3,16 @@
 
 import path from 'node:path';
 import glogg from 'glogg';
+import mapValues from 'lodash/mapValues.js';
 import startCase from 'lodash/startCase.js';
 import kleur from 'kleur';
 import { builtinResolvers, defaultHandlers } from 'react-docgen';
 import type { Handler, Resolver } from 'react-docgen';
 import { DEFAULT_COMPILER_CONFIG } from '../../client/utils/compileCode.js';
+import { COLOR_SCHEMES } from '../../client/styles/colorSchemes.js';
+import { SCROLL_SYNC_MODES } from '../../client/consts.js';
 import FindAnnotatedExportsResolver from '../../loaders/utils/FindAnnotatedExportsResolver.js';
+import { resolvePropsParserPath } from '../../loaders/utils/propsParser.js';
 import getUserPackageJson from '../utils/getUserPackageJson.js';
 import fileExistsCaseInsensitive from '../utils/findFileCaseInsensitive.js';
 import dirname from '../utils/dirname.js';
@@ -47,14 +51,69 @@ export interface ConfigSchemaOptions<T> {
 const removedWebpackOption = (replacement: string) =>
 	`Styleguidist now uses Vite instead of webpack. Use the "${replacement}" option instead:\n${consts.DOCS_VITE}`;
 
+/**
+ * Default `getExampleFilename`: the examples file of a component, `.md` before `.mdx` for
+ * the same base name so that a style guide that has both keeps rendering the Markdown one.
+ *
+ * The *extension of the returned path selects the pipeline*: `.mdx` goes through
+ * @mdx-js/mdx, anything else through the Markdown one. That is what makes a custom
+ * `getExampleFilename` work with MDX without a new config option.
+ *
+ * Exported so the discovery code can tell a file it found itself (warn and skip when
+ * @mdx-js/mdx is missing) from one the user named explicitly (a hard error).
+ */
+export function defaultGetExampleFilename(componentPath: string): string | boolean {
+	const dir = path.dirname(componentPath);
+	const extension = path.extname(componentPath);
+	const files = [
+		path.join(dir, 'Readme.md'),
+		path.join(dir, 'Readme.mdx'),
+		// ComponentName.md
+		componentPath.replace(extension, '.md'),
+		componentPath.replace(extension, '.mdx'),
+		// FolderName.md when component definition file is index.js
+		path.join(dir, path.basename(dir) + '.md'),
+		path.join(dir, path.basename(dir) + '.mdx'),
+	];
+	for (const file of files) {
+		const existingFile = fileExistsCaseInsensitive(file);
+		if (existingFile) {
+			return existingFile;
+		}
+	}
+	return false;
+}
+
 const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.StyleguidistConfig>> = {
 	assetsDir: {
 		type: ['array', 'existing directory path'],
 		example: 'assets',
 	},
+	// Reuse the parses of previous runs (see src/vite/persistentCache.ts). On by default:
+	// a cold run is unchanged and a warm one is more than twice as fast; the cache lives in
+	// Vite's own cacheDir, so everything that clears Vite's caches clears this one.
+	cache: {
+		type: 'boolean',
+		default: true,
+	},
 	tocMode: {
 		type: 'string',
 		default: 'expand',
+	},
+	colorScheme: {
+		type: 'string',
+		default: 'system',
+		example: 'dark',
+		process: (value?: string): string | undefined => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value !== undefined && !COLOR_SCHEMES.includes(value as Rsg.ColorScheme)) {
+				throw new StyleguidistError(
+					`${kleur.bold('colorScheme')} config option must be one of ${COLOR_SCHEMES.map((scheme) => `"${scheme}"`).join(', ')}, got ${JSON.stringify(value)}.`,
+					'colorScheme'
+				);
+			}
+			return value;
+		},
 	},
 	compilerConfig: {
 		type: 'object',
@@ -99,6 +158,41 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 				? path.resolve(dirname(import.meta.url), '../../../templates/DefaultExample.md')
 				: val,
 	},
+	// Named after Vite’s own `envPrefix` because it selects variables the same way (a list
+	// of name prefixes) and because that is the word people already know. It is a separate
+	// option, not a copy: Vite’s governs `import.meta.env`, this one governs the
+	// `process.env.NAME` replacements, which is what a style guide migrating from webpack
+	// (and from `REACT_APP_`) actually has in its components. See getEnvDefine() in
+	// src/scripts/make-vite-config.ts.
+	envPrefix: {
+		type: ['string', 'array'],
+		default: [],
+		example: ['REACT_APP_'],
+		process: (value?: unknown): unknown => {
+			// Runs before the default is applied, so undefined must pass through; anything that
+			// is neither a string nor an array is left alone for the schema’s own type error.
+			if (value === undefined || (!Array.isArray(value) && typeof value !== 'string')) {
+				return value;
+			}
+			const prefixes = typeof value === 'string' ? [value] : value;
+			prefixes.forEach((prefix) => {
+				// An empty (or blank) prefix matches every variable name, which would inline the
+				// whole environment of the build machine — tokens included — into a public bundle.
+				// Vite rejects it in its own `envPrefix` for the same reason.
+				if (typeof prefix !== 'string' || prefix.trim() === '') {
+					throw new StyleguidistError(
+						`${kleur.bold(
+							'envPrefix'
+						)} config option must contain non-empty strings, got ${JSON.stringify(
+							prefix
+						)}. An empty prefix would expose every environment variable of the machine that builds the style guide.`,
+						'envPrefix'
+					);
+				}
+			});
+			return prefixes;
+		},
+	},
 	exampleMode: {
 		type: 'string',
 		process: (value: string, config: Rsg.StyleguidistConfig): string => {
@@ -112,22 +206,7 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	},
 	getExampleFilename: {
 		type: 'function',
-		default: (componentPath: string): string | boolean => {
-			const files = [
-				path.join(path.dirname(componentPath), 'Readme.md'),
-				// ComponentName.md
-				componentPath.replace(path.extname(componentPath), '.md'),
-				// FolderName.md when component definition file is index.js
-				path.join(path.dirname(componentPath), path.basename(path.dirname(componentPath)) + '.md'),
-			];
-			for (const file of files) {
-				const existingFile = fileExistsCaseInsensitive(file);
-				if (existingFile) {
-					return existingFile;
-				}
-			}
-			return false;
-		},
+		default: defaultGetExampleFilename,
 	},
 	handlers: {
 		type: 'function',
@@ -155,8 +234,49 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 			}
 		},
 	},
+	// On-demand documentation (see src/vite/modules/styleguide.ts and ADR 0019). On by
+	// default: it is what keeps a large style guide’s first paint small, and the cost for a
+	// six-component guide is one extra chunk. `false` restores the shape the style guide
+	// module had before it existed, byte for byte.
+	lazyDocs: {
+		type: 'boolean',
+		default: true,
+	},
 	logger: {
 		type: 'object',
+	},
+	// docs.json + llms.txt + llms-full.txt next to index.html (see src/vite/machineReadable.ts).
+	// On by default: a deployed style guide is public already, and the files are what AI
+	// tools and the planned MCP server read.
+	machineReadable: {
+		type: 'boolean',
+		default: true,
+	},
+	mdx: {
+		type: 'object',
+		default: {},
+		example: { remarkPlugins: [] },
+	},
+	mdxComponents: {
+		type: 'object',
+		default: {},
+		example: { Callout: 'src/docs/Callout' },
+		// String values are module paths the browser bundle imports (see
+		// src/vite/modules/styleguide.ts), and the virtual module they end up in has no
+		// directory of its own, so a relative specifier would be resolved against the
+		// package instead of the project. Resolve them here, against the config file’s
+		// folder, exactly as `styles` and `theme` resolve their path form — which also
+		// makes the watched file absolute. Component values are passed through: a config
+		// that is itself bundled can carry a real component.
+		process: (
+			val: Record<string, unknown> | undefined,
+			config: unknown,
+			configDir: string
+		): Record<string, unknown> | undefined =>
+			val &&
+			mapValues(val, (value) =>
+				typeof value === 'string' ? path.resolve(configDir, value) : value
+			),
 	},
 	minimize: {
 		type: 'boolean',
@@ -170,9 +290,67 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 		type: 'string',
 		default: 'rsg-root',
 	},
+	pageNav: {
+		// An object is accepted by the schema but rejected by `process()` below, on purpose:
+		// the option is a boolean today and the object form (`{ minLevel, maxLevel, title }`)
+		// is the way it is meant to grow (ADR 0016). Accepting `{}` silently now would let a
+		// config that means something specific do nothing, and *rejecting* it here is what
+		// keeps the future addition non-breaking: nobody can already have one in the wild.
+		type: ['boolean', 'object'],
+		default: false,
+		example: true,
+		process: (value?: boolean | Record<string, unknown>): boolean | undefined => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value !== undefined && typeof value !== 'boolean') {
+				throw new StyleguidistError(
+					`${kleur.bold('pageNav')} config option must be a boolean, got ${JSON.stringify(
+						value
+					)}. Per-page options (levels, title) are not implemented yet.`,
+					'pageNav'
+				);
+			}
+			return value;
+		},
+	},
 	pagePerSection: {
 		type: 'boolean',
 		default: false,
+	},
+	// Parse components and examples in worker threads (see src/vite/parsePool.ts).
+	// `'auto'` decides from the number of components the guide really resolved.
+	parallel: {
+		type: ['boolean', 'number', 'string'],
+		default: 'auto',
+		example: 4,
+		process: (value?: unknown): unknown => {
+			// Runs before the default is applied, so undefined must pass through
+			if (value === undefined || typeof value === 'boolean' || value === 'auto') {
+				return value;
+			}
+			if (typeof value === 'number') {
+				// `0` is rejected rather than read as “off”: a pool of no workers is not a thing,
+				// and guessing which of `false` and `1` was meant would be a coin toss
+				if (!Number.isInteger(value) || value < 1) {
+					throw new StyleguidistError(
+						`${kleur.bold('parallel')} config option must be a whole number of workers, at least 1, got ${JSON.stringify(
+							value
+						)}. Use ${kleur.bold('false')} to parse on the main thread.`,
+						'parallel'
+					);
+				}
+				return value;
+			}
+			if (typeof value === 'string') {
+				throw new StyleguidistError(
+					`${kleur.bold('parallel')} config option must be ${kleur.bold(
+						'"auto"'
+					)}, a boolean or a number of workers, got ${JSON.stringify(value)}.`,
+					'parallel'
+				);
+			}
+			// Anything else is left alone for the schema’s own type error
+			return value;
+		},
 	},
 	previewDelay: {
 		type: 'number',
@@ -184,8 +362,19 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 	printServerInstructions: {
 		type: 'function',
 	},
+	// Either the parser function itself, or the path of a module whose default export is
+	// that function. The module form is the recommended one: it has an identity, so the
+	// parse cache can trust it across runs, which a closure cannot (see
+	// src/loaders/utils/propsParser.ts and src/vite/persistentCache.ts).
 	propsParser: {
-		type: 'function',
+		type: ['function', 'string'],
+		example: './styleguide.parser.js',
+		process: (value: unknown, config: Rsg.StyleguidistConfig, rootDir: string): unknown => {
+			// Resolved here rather than at the first parse so that a path nobody can resolve is
+			// a config error, reported with every other config error, before anything is built.
+			// Stored absolute: it is what the cache fingerprint and every message name.
+			return typeof value === 'string' ? resolvePropsParserPath(value, rootDir) : value;
+		},
 	},
 	require: {
 		type: 'array',
@@ -239,6 +428,25 @@ const configSchema: Record<StyleguidistConfigKey, ConfigSchemaOptions<Rsg.Styleg
 				components: './lib/components/**/[A-Z]*.js',
 			},
 		],
+	},
+	scrollSync: {
+		type: ['boolean', 'string'],
+		default: 'selection',
+		example: 'hash',
+		process: (value?: boolean | string): boolean | string | undefined => {
+			// Runs before the default is applied, so undefined must pass through. `true` is
+			// rejected rather than aliased to 'selection': the option has two “on” modes and
+			// guessing which one a boolean meant would be a coin toss.
+			if (value !== undefined && !SCROLL_SYNC_MODES.includes(value as Rsg.ScrollSync)) {
+				throw new StyleguidistError(
+					`${kleur.bold('scrollSync')} config option must be one of ${SCROLL_SYNC_MODES.map(
+						(mode) => JSON.stringify(mode)
+					).join(', ')}, got ${JSON.stringify(value)}.`,
+					'scrollSync'
+				);
+			}
+			return value;
+		},
 	},
 	serverHost: {
 		type: 'string',

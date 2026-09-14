@@ -135,6 +135,7 @@ it('should call updateExample function for example', () => {
 			type: 'code',
 			content: '<h1>Hello Markdown!</h1>',
 			settings: {},
+			lang: 'jsx',
 		},
 	];
 	const updateExample = (props: Omit<Rsg.CodeExample, 'type'>): Omit<Rsg.CodeExample, 'type'> => {
@@ -221,4 +222,38 @@ it('should still only highlight a two-word fence language marked static', () => 
 	const actual = chunkify(markdown);
 	expect(actual).toHaveLength(1);
 	expect(actual[0].type).toBe('markdown');
+});
+
+// The machine-readable docs write the fence language back (see src/vite/machineReadable.ts);
+// it is kept on the chunk itself, so an identical static block in another language can
+// never be mistaken for the playground that follows it.
+it('should keep the fence language on playground chunks', () => {
+	const markdown = [
+		'```html',
+		'<Button />',
+		'```',
+		'',
+		'```tsx',
+		'<Button />',
+		'```',
+		'',
+		'```',
+		'<Button />',
+		'```',
+	].join('\n');
+	const codeChunks = chunkify(markdown).filter((chunk) => chunk.type === 'code');
+	expect(codeChunks.map((chunk) => (chunk as Rsg.CodeExample).lang)).toEqual(['tsx', undefined]);
+});
+
+test('should keep GFM task list markers unescaped', () => {
+	// remark-stringify escapes a `[` that opens a list item, which would hide the task
+	// marker from markdown-to-jsx and render `- [x] Coffee` as literal text
+	const result = chunkify('- [x] Coffee\n- [ ] Pizza\n');
+
+	expect(result).toEqual([
+		{
+			type: 'markdown',
+			content: '* [x] Coffee\n* [ ] Pizza',
+		},
+	]);
 });

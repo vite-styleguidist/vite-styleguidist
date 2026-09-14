@@ -1,5 +1,6 @@
 import path from 'node:path';
-import styleguidist from '../index.esm.js';
+import styleguidist, { defineConfig } from '../index.esm.js';
+import * as packageEntry from '../index.js';
 import { MOCK_BUILD_OUTPUT } from '../__mocks__/build.js';
 import { MOCK_SERVER } from '../__mocks__/server.js';
 import testConfig from '../../../test/data/styleguide.config.js';
@@ -99,5 +100,21 @@ describe('server', () => {
 	it('should resolve to the dev server without a callback', async () => {
 		const api = styleguidist({});
 		await expect(api.server()).resolves.toBe(MOCK_SERVER);
+	});
+});
+
+describe('defineConfig', () => {
+	// The helper only exists to type a config file; it must not touch the object, or a config
+	// would stop being the plain object the schema is validated against
+	it('should return the config it was given', () => {
+		const config = { title: 'Style guide' };
+		expect(defineConfig(config)).toBe(config);
+	});
+
+	it('should be exported by the package entry, for both module systems', () => {
+		expect(packageEntry.defineConfig).toBe(defineConfig);
+		// Node’s require(esm) hands CommonJS callers this export instead of the namespace
+		expect(packageEntry['module.exports']).toBe(packageEntry.default);
+		expect(packageEntry['module.exports'].defineConfig).toBe(defineConfig);
 	});
 });

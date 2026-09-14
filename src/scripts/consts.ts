@@ -31,3 +31,5 @@ export const DOCS_COMPONENTS = `${DOCS}/components/`;
 export const DOCS_VITE = `${DOCS}/vite/`;
 export const DOCS_DOCUMENTING = `${DOCS}/documenting/`;
 export const DOCS_THIRDPARTIES = `${DOCS}/thirdparties/`;
+export const DOCS_MIGRATION = `${DOCS}/migration/`;
+export const DOCS_COMPATIBILITY = `${DOCS}/compatibility/`;

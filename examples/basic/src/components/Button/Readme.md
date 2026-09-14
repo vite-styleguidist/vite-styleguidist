@@ -4,10 +4,10 @@ Basic button:
 <Button>Push Me</Button>
 ```
 
-Big pink button:
+Big pink button. One literal colour cannot stay legible on both the light and the dark page, so the pink comes from a custom property with a value per colour scheme (see `Button.css`):
 
 ```jsx
-<Button size="large" color="deeppink">
+<Button size="large" color="var(--button-pink, #b3125f)">
   Click Me
 </Button>
 ```

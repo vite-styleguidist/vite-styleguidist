@@ -15,3 +15,22 @@ describe('filterSectionExamples', () => {
 		});
 	});
 });
+
+describe('filterSectionExamples with an mdx page', () => {
+	const mdxSection = deepfreeze({
+		content: [
+			{
+				type: 'mdx',
+				Content: () => null,
+				examples: ['a', 'b', 'c'].map((x) => ({ type: 'code', content: x })),
+			},
+		],
+		other: 'info',
+	});
+
+	it('should return the nth playground of the page', () => {
+		const result = filterSectionExamples(mdxSection as any, 2);
+
+		expect(result.content).toEqual([{ type: 'code', content: 'c' }]);
+	});
+});

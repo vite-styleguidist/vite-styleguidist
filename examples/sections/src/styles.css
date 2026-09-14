@@ -3,6 +3,14 @@ body {
 	font-family: fantasy;
 }
 
+/*
+ * All HTML tags except div and span, to test style isolation: this is a deliberately garish
+ * probe, not a palette. Styleguidist renders its own UI through jss-plugin-isolate, which
+ * resets inherited properties on its elements, so none of this magenta may appear on the
+ * style guide's chrome; everything it does reach is a user component inside an example, which
+ * is exactly what a global stylesheet of yours is supposed to be able to restyle. It is left
+ * scheme-agnostic on purpose — a leak has to be loud in both colour schemes to be noticed.
+ */
 /* All HTML tags except div and span to test styles isolation */
 a,
 abbr,

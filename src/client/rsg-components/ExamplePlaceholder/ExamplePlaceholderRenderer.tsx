@@ -1,74 +1,67 @@
-import React, { Component } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
-import Markdown from 'rsg-components/Markdown';
 import { DOCS_DOCUMENTING } from '../../../scripts/consts.js';
 import type * as Rsg from '../../../typings/index.js';
 
-const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
-	button: {
-		padding: 0,
-		fontSize: fontSize.base,
+// Shown in place of the examples of a component that has none (development only, see
+// ReactComponent.tsx): a dashed box naming the Markdown file to create and linking to the
+// documenting guide (States artboard, “missing examples”).
+const styles = ({ space, color, fontFamily, fontSize, lineHeight, borderRadius }: Rsg.Theme) => ({
+	root: {
+		padding: space[2],
+		border: [[1, color.border, 'dashed']],
+		borderRadius,
 		fontFamily: fontFamily.base,
-		textDecoration: 'underline',
+		fontSize: fontSize.base,
+		lineHeight: lineHeight.base,
 		color: color.light,
-		border: 0,
-		cursor: 'pointer',
-		background: 'transparent',
-		'&:hover, &:active': {
+	},
+	// The file name, in the monospace face and the base colour so it stands out from the hint
+	file: {
+		fontFamily: fontFamily.monospace,
+		fontSize: fontSize.small,
+		color: color.base,
+	},
+	link: {
+		color: color.link,
+		textDecoration: 'none',
+		'&:hover, &:focus': {
 			isolate: false,
-			color: color.lightest,
+			color: color.linkHover,
+			textDecoration: 'underline',
 		},
 	},
+	// Until 1.0 the placeholder was a button that revealed the instructions on click; the key
+	// stays because rule keys are append-only (ADR 0011), but no element carries it any more.
+	button: {},
 });
 
 interface ExamplePlaceholderProps extends JssInjectedProps {
 	name?: string;
 }
 
-export class ExamplePlaceholderRenderer extends Component<ExamplePlaceholderProps> {
-	public static propTypes = {
-		classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
-		name: PropTypes.string,
-	};
+export const ExamplePlaceholderRenderer: React.FunctionComponent<ExamplePlaceholderProps> = ({
+	classes,
+	name,
+}) => (
+	<div className={classes.root}>
+		Add examples to this component in{' '}
+		{name ? (
+			<>
+				<code className={classes.file}>{name}.md</code> or{' '}
+			</>
+		) : null}
+		<code className={classes.file}>Readme.md</code> in its folder.{' '}
+		<a className={classes.link} href={DOCS_DOCUMENTING}>
+			How to document components
+		</a>
+	</div>
+);
 
-	public state = {
-		isVisible: false,
-	};
-
-	public handleOpen = () => {
-		this.setState({ isVisible: true });
-	};
-
-	public render() {
-		const { classes, name } = this.props;
-		const { isVisible } = this.state;
-		if (isVisible) {
-			return (
-				<Markdown
-					text={`
-Create **Readme.md** or **${name}.md** file in the component’s folder like this:
-
-    ${name} example:
-
-    \`\`\`js
-    <${name} pizza="\uD83C\uDF55" />
-	\`\`\`
-
-You may need to **restart** the style guide server after adding an example file.
-
-Read more in the [documenting components guide](${DOCS_DOCUMENTING}).
-					`}
-				/>
-			);
-		}
-
-		return (
-			<button className={classes.button} onClick={this.handleOpen}>
-				Add examples to this component
-			</button>
-		);
-	}
-}
+ExamplePlaceholderRenderer.propTypes = {
+	classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
+	name: PropTypes.string,
+};
 
 export default Styled<ExamplePlaceholderProps>(styles)(ExamplePlaceholderRenderer);

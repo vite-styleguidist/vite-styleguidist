@@ -1,0 +1,59 @@
+/*
+ * The button's surface, label and border are neutral chrome, so they read the style
+ * guide's colour tokens (see src/docs/Callout.css for the pattern and Card.css for the
+ * reasoning); the value after the comma is the light-scheme fallback.
+ */
+.button {
+	padding: 0.5em 1.5em;
+	color: var(--rsg-color-light, #625d57);
+	background-color: var(--rsg-color-base-background, #fcfbf9);
+	border: 1px solid currentColor;
+	border-radius: 0.3em;
+	text-align: center;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+.button[disabled] {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/*
+ * The pink of the `noeditor` example in Readme.mdx. It is the example's own colour, not a
+ * style guide token, so it gets one value per colour scheme in the shape Badge.css explains:
+ * `deeppink` was 3.5:1 on the light page, below the 4.5:1 WCAG AA asks for, and one literal
+ * cannot clear it on a near-white and a near-black page at once. These are 6.4:1 and 8.0:1.
+ */
+:root {
+	--button-pink: #b3125f;
+}
+
+[data-rsg-theme='dark'] {
+	--button-pink: #ff8ac0;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-rsg-theme='light']) {
+		--button-pink: #ff8ac0;
+	}
+}
+
+/*
+ * Used by the ```js { "props": { "className": "checks" } } fence in Readme.mdx: a
+ * transparency checkerboard. The squares are the guide's code surface, the gaps are the
+ * page behind them, so the pattern stays a faint texture in both colour schemes.
+ */
+.checks {
+	background-image:
+		linear-gradient(45deg, var(--rsg-color-code-background, #f3f1ec) 25%, transparent 25%),
+		linear-gradient(-45deg, var(--rsg-color-code-background, #f3f1ec) 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, var(--rsg-color-code-background, #f3f1ec) 75%),
+		linear-gradient(-45deg, transparent 75%, var(--rsg-color-code-background, #f3f1ec) 75%);
+	background-size: 16px 16px;
+	background-position:
+		0 0,
+		0 8px,
+		8px -8px,
+		-8px 0px;
+}

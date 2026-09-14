@@ -73,3 +73,17 @@ export const getParameterByName = (hash: string, name: string): string | null =>
 	}
 	return decodeURIComponent(results[2].replace(/\+/g, ' '));
 };
+
+/**
+ * The element id a fragment points at: the `?id=` parameter when the fragment is a route
+ * (`#/Section/Name`, `#!/Button`), the fragment itself otherwise. Empty for a route with
+ * no `?id=`, which means “the top of the page”.
+ *
+ * Both the initial scroll (src/client/index.ts) and on-demand documentation
+ * (ReactComponent, which loads the deep link’s target at once instead of waiting for it to
+ * scroll into view) ask the same question of the address.
+ */
+export const getOriginId = (hash: string): string | null =>
+	hasInHash(hash, '#/') || hasInHash(hash, '#!/')
+		? getParameterByName(hash, 'id')
+		: getHash(hash, '#');

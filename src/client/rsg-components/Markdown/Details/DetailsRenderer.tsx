@@ -3,11 +3,12 @@ import PropTypes from 'prop-types';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../../typings/index.js';
 
-const styles = ({ space, color, fontSize, fontFamily }: Rsg.Theme) => ({
+const styles = ({ space, color, fontSize, fontFamily, lineHeight }: Rsg.Theme) => ({
 	details: {
 		marginBottom: space[2],
 		fontFamily: fontFamily.base,
-		fontSize: fontSize.base,
+		fontSize: fontSize.text,
+		lineHeight: lineHeight.base,
 		color: color.base,
 	},
 });

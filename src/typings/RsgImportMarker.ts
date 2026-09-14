@@ -27,3 +27,23 @@ export const isIdentifierMarker = (value: unknown): value is IdentifierMarker =>
 	!!value &&
 	typeof value === 'object' &&
 	typeof (value as IdentifierMarker).__rsgIdentifier === 'string';
+
+/**
+ * Marker telling the serializer to emit a *loader*: a function that imports the given
+ * modules on demand and resolves to an object with the same keys.
+ *
+ * `{ props: importDefault(id), module: importIt(id) }` becomes
+ * `() => Promise.all([import(…), import(…)]).then(([a, b]) => ({ props: a.default, module: b }))`,
+ * which is what puts a component’s documentation in a chunk of its own (`lazyDocs`, see
+ * docs/decisions/0019-on-demand-documentation.md).
+ */
+export interface LazyMarker {
+	/** Modules to import on demand, keyed by the property they are exposed under. */
+	__rsgLazy: Record<string, ImportMarker>;
+}
+
+export const isLazyMarker = (value: unknown): value is LazyMarker =>
+	!!value &&
+	typeof value === 'object' &&
+	!!(value as LazyMarker).__rsgLazy &&
+	typeof (value as LazyMarker).__rsgLazy === 'object';

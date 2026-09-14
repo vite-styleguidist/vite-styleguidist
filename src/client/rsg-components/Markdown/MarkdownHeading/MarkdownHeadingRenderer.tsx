@@ -4,9 +4,19 @@ import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import Heading from 'rsg-components/Heading';
 import type * as Rsg from '../../../../typings/index.js';
 
+/**
+ * Spacing of headings inside Markdown prose. Heading itself has no margins (the
+ * component header and section titles own theirs), so the wrapper supplies them:
+ * more air above a heading than below it, and none above the first one of a block.
+ */
 const styles = ({ space }: Rsg.Theme) => ({
 	spacing: {
+		marginTop: space[3],
 		marginBottom: space[2],
+		'&:first-child': {
+			isolate: false,
+			marginTop: 0,
+		},
 	},
 });
 

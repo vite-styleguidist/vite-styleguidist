@@ -1,0 +1,41 @@
+/*
+ * The palette of this style guide, with a value per colour scheme.
+ *
+ * Loaded through the `require` option (styleguide.config.js). Styleguidist publishes every
+ * `theme.color.*` token as a custom property — `color.link` is `--rsg-color-link` — and
+ * defines the light values on `:root`, the dark values under the attribute the scheme toggle
+ * sets, and the dark values again inside `prefers-color-scheme` for visitors who have made no
+ * choice. Its own definitions are wrapped in `:where()`, which has no specificity, so the
+ * three rules below win wherever this file is loaded.
+ *
+ * The properties here are this example's own (`--themed-*`), not Styleguidist's, because
+ * styleguide.theme.js points the `link` and `linkHover` tokens at them: that keeps the whole
+ * palette in one file and leaves the `theme` option doing what it is for. Overriding
+ * `--rsg-color-link` directly, and dropping `color` from styleguide.theme.js, works exactly
+ * as well — see docs/Configuration.md, "Colour tokens and dark mode".
+ *
+ * What does NOT work is a literal in `theme.color.link`: it replaces the whole `var()`
+ * expression, so the token stops switching (ADR 0011, rule 4), and no single colour can be
+ * legible on both a near-white and a near-black page. The `#F50` this example used to set
+ * was 3.1:1 on the light page, below the 4.5:1 WCAG AA asks for. These are 5.6:1 and 8.5:1.
+ */
+:root {
+	--themed-accent: #a8480d;
+	--themed-accent-hover: #7d3409;
+	/* Decorative: the slab styleguide.styles.js draws beside every example. */
+	--themed-rule: #ffc0cb;
+}
+
+[data-rsg-theme='dark'] {
+	--themed-accent: #ff9d5c;
+	--themed-accent-hover: #ffbe93;
+	--themed-rule: #5c2b3d;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-rsg-theme='light']) {
+		--themed-accent: #ff9d5c;
+		--themed-accent-hover: #ffbe93;
+		--themed-rule: #5c2b3d;
+	}
+}

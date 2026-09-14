@@ -1,0 +1,41 @@
+/*
+ * Page furniture follows the style guide's colour scheme by reading its custom properties:
+ * every `theme.color.*` token is published as `--rsg-color-<kebab-name>` on the page, and the
+ * value after the comma is the light-scheme fallback for anywhere the style guide is not
+ * around (a Storybook page, a test). Hard-coded colours would stay light when a visitor
+ * switches to dark mode.
+ */
+.callout {
+	margin: 1em 0;
+	padding: 0.75em 1em;
+	border-left: 4px solid;
+	border-radius: 6px;
+	color: var(--rsg-color-base, #262421);
+}
+
+.callout-info {
+	border-left-color: var(--rsg-color-link, #0b7285);
+	background-color: var(--rsg-color-selected-background, #e3f1f3);
+}
+
+.callout-warning {
+	border-left-color: var(--rsg-color-error, #b42318);
+	background-color: var(--rsg-color-error-background, #fdf3f1);
+}
+
+.callout-kind {
+	display: block;
+	margin-bottom: 0.25em;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--rsg-color-light, #625d57);
+}
+
+.callout-body > :first-child {
+	margin-top: 0;
+}
+
+.callout-body > :last-child {
+	margin-bottom: 0;
+}

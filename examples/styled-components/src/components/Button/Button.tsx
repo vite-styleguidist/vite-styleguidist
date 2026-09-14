@@ -41,8 +41,12 @@ const Button = styled.button.withConfig({
 	user-select: none;
 	box-sizing: border-box;
 	/* We can't use :enabled here because it doesn't work with <a> */
+	/* The hover background is opaque, so the label needs the ink that pairs with it (6.9:1);
+	   without this the primary button kept its near-white label on the pink, at 2.1:1, and
+	   the default button kept whatever ink the page had — light text on pink in dark mode. */
 	&:hover:not(:disabled),
 	&:active:not(:disabled) {
+		color: ${themeGet('colors.hoverText')};
 		border-color: ${themeGet('colors.hover')};
 		background-color: ${themeGet('colors.hover')};
 		cursor: pointer;

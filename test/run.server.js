@@ -1,4 +1,5 @@
-// Starts the basic example with the compiled package; used by the Cypress tests (see package.json).
+// Starts the basic example with the compiled package. Only playwright.config.ts runs it
+// (as its `webServer`), for the end-to-end tests in test/e2e/.
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import styleguidist from '../lib/scripts/index.js';

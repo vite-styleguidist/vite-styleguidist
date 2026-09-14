@@ -5,7 +5,11 @@ import type { BuildOutput } from './build.js';
 import server from './server.js';
 import getConfig from './config.js';
 import setupLogger from './logger.js';
+import { defineConfig } from './defineConfig.js';
 import type * as Rsg from '../typings/index.js';
+
+// Re-exported so that both entry points of the package expose it (see index.ts)
+export { defineConfig };
 
 /**
  * Initialize Styleguide API.

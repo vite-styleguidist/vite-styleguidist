@@ -17,6 +17,18 @@ describe('Heading', () => {
 		expect(h5.className).toMatch(/^rsg--heading-\d+ rsg--heading5-\d+$/);
 	});
 
+	it('should take the visual size from the size prop, keeping the element from level', () => {
+		const { getByRole } = render(
+			<Heading level={3} size={1}>
+				The heading
+			</Heading>
+		);
+
+		const h3 = getByRole('heading', { level: 3 });
+		expect(h3.tagName).toBe('H3');
+		expect(h3.className).toMatch(/^rsg--heading-\d+ rsg--heading1-\d+$/);
+	});
+
 	it('should render a heading', () => {
 		const { getByRole } = render(<Heading level={2}>The heading</Heading>);
 

@@ -21,7 +21,9 @@ import 'prismjs/components/prism-diff.js';
 const logger = createLogger('rsg');
 
 const IGNORED_LANGUAGES = ['extend', 'insertBefore', 'DFS'];
-const getLanguages = () =>
+
+/** Names of the languages this module highlights (exported for the machine-readable docs). */
+export const getLanguages = () =>
 	Object.keys(Prism.languages).filter((x) => !IGNORED_LANGUAGES.includes(x));
 
 /**

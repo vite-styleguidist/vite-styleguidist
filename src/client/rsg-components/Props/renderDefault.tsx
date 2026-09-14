@@ -1,6 +1,6 @@
 import React from 'react';
 import Text from 'rsg-components/Text';
-import Code from 'rsg-components/Code';
+import PropDefault from './PropDefaultRenderer.js';
 import { showSpaces, unquote, PropDescriptor } from './util.js';
 
 const defaultValueBlacklist = ['null', 'undefined'];
@@ -18,12 +18,14 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 					: prop.tsType && prop.tsType.type;
 
 			if (defaultValueBlacklist.indexOf(prop.defaultValue.value) > -1) {
-				return <Code>{defaultValueString}</Code>;
+				return <PropDefault>{defaultValueString}</PropDefault>;
 			} else if (propName === 'func' || propName === 'function') {
 				return (
-					<Text size="small" color="light" underlined title={defaultValueString}>
-						Function
-					</Text>
+					<PropDefault>
+						<Text color="light" underlined title={defaultValueString}>
+							Function
+						</Text>
+					</PropDefault>
 				);
 			} else if (propName === 'shape' || propName === 'object') {
 				try {
@@ -34,30 +36,33 @@ export default function renderDefault(prop: PropDescriptor): React.ReactNode {
 					// and keeps bundlers from having to preserve the surrounding scope.
 					const object = (0, eval)(`(${prop.defaultValue.value})`);
 					return (
-						<Text size="small" color="light" underlined title={JSON.stringify(object, null, 2)}>
-							Shape
-						</Text>
+						<PropDefault>
+							<Text color="light" underlined title={JSON.stringify(object, null, 2)}>
+								Shape
+							</Text>
+						</PropDefault>
 					);
-				} catch (e) {
+				} catch {
 					// eval will throw if it contains a reference to a property not in the
 					// local scope. To avoid any breakage we fall back to rendering the
 					// prop without any formatting
 					return (
-						<Text size="small" color="light" underlined title={prop.defaultValue.value}>
-							Shape
-						</Text>
+						<PropDefault>
+							<Text color="light" underlined title={prop.defaultValue.value}>
+								Shape
+							</Text>
+						</PropDefault>
 					);
 				}
 			}
 		}
 
-		return <Code>{defaultValueString}</Code>;
+		// Plain monospace in the secondary colour (PropDefault.value): the Default column is
+		// a table field, not prose, so it does not take the inline-code chip (ADR 0011 and
+		// the 1.0 artboard show it unchipped)
+		return <PropDefault>{defaultValueString}</PropDefault>;
 	} else if (prop.required) {
-		return (
-			<Text size="small" color="light">
-				Required
-			</Text>
-		);
+		return <PropDefault required>Required</PropDefault>;
 	}
 	return '';
 }

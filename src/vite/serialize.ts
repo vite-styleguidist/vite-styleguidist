@@ -1,5 +1,6 @@
 import glogg from 'glogg';
-import { isIdentifierMarker, isImportMarker } from '../typings/index.js';
+import { isIdentifierMarker, isImportMarker, isLazyMarker } from '../typings/index.js';
+import type { ImportMarker } from '../typings/index.js';
 
 const logger = glogg('rsg');
 
@@ -10,6 +11,8 @@ const logger = glogg('rsg');
  * The value tree may contain:
  * - import markers (`importIt()` / `importDefault()`), turned into `import * as __rsg_N`
  *   statements hoisted to the top of the module;
+ * - lazy markers (`lazyImport()`), turned into a function that `import()`s the modules when
+ *   it is called — the on-demand documentation of ADR 0019;
  * - identifier markers, emitted verbatim (e.g. the `evalInContext` helper);
  * - functions, emitted with `Function.prototype.toString()` — they must therefore be
  *   self-contained (this is how a `styles: theme => ({...})` config function reaches the browser);
@@ -42,12 +45,45 @@ export default class ModuleSerializer {
 		).join('\n');
 	}
 
+	/**
+	 * A function importing the marked modules on demand, resolving to an object with the
+	 * marker’s own keys.
+	 *
+	 * The local names are scoped to the arrow function, so they cannot collide with the
+	 * `__rsg_N` bindings of the hoisted static imports however many loaders a module has.
+	 * The imports are written as literal `import()` calls with a string argument because
+	 * that is the only form a bundler can follow: a dynamic id (`import(ids[i])`) would be
+	 * left to the browser and break every production build.
+	 */
+	public serializeLazy(marker: { __rsgLazy: Record<string, ImportMarker> }): string {
+		const entries = Object.entries(marker.__rsgLazy);
+		const local = (index: number) => `__rsg_lazy_${index}`;
+		const value = (item: ImportMarker, index: number) =>
+			item.__rsgDefault
+				? `(${local(index)}.default !== undefined ? ${local(index)}.default : ${local(index)})`
+				: local(index);
+		const result = `({ ${entries
+			.map(([key, item], index) => `${JSON.stringify(key)}: ${value(item, index)}`)
+			.join(', ')} })`;
+		const imports = entries.map(([, item]) => `import(${JSON.stringify(item.__rsgImport)})`);
+		// One import needs no Promise.all: that is the common shape, and it keeps the
+		// generated module readable in the browser’s sources panel
+		if (imports.length === 1) {
+			return `(() => ${imports[0]}.then((${local(0)}) => ${result}))`;
+		}
+		const names = entries.map((_entry, index) => local(index)).join(', ');
+		return `(() => Promise.all([${imports.join(', ')}]).then(([${names}]) => ${result}))`;
+	}
+
 	/** Serialize a value into a JavaScript expression. */
 	public serialize(value: unknown, indent = ''): string {
 		if (isImportMarker(value)) {
 			return value.__rsgDefault
 				? this.importDefault(value.__rsgImport)
 				: this.importId(value.__rsgImport);
+		}
+		if (isLazyMarker(value)) {
+			return this.serializeLazy(value);
 		}
 		if (isIdentifierMarker(value)) {
 			return value.__rsgIdentifier;

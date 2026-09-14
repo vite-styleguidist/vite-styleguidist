@@ -36,17 +36,20 @@ const command = argv._[0];
 const env: Rsg.StyleguidistEnv = command === 'build' ? 'production' : 'development';
 process.env.NODE_ENV = process.env.NODE_ENV || env;
 
-// Load style guide config
-let config: Rsg.SanitizedStyleguidistConfig;
-try {
-	config = getConfig(argv.config, updateConfig);
-} catch (err) {
-	if (err instanceof StyleguidistError) {
-		const link = consts.DOCS_CONFIG + (err.extra ? `#${err.extra.toLowerCase()}` : '');
-		printErrorWithLink(err.message, `Learn how to configure your style guide:`, link);
-		process.exit(1);
-	} else {
-		throw err;
+// Load style guide config. `doctor` is the exception: it loads the config itself, in a mode
+// that collects every problem instead of dying on the first one — reporting them is its job.
+let config!: Rsg.SanitizedStyleguidistConfig;
+if (command !== 'doctor') {
+	try {
+		config = getConfig(argv.config, updateConfig);
+	} catch (err) {
+		if (err instanceof StyleguidistError) {
+			const link = consts.DOCS_CONFIG + (err.extra ? `#${err.extra.toLowerCase()}` : '');
+			printErrorWithLink(err.message, `Learn how to configure your style guide:`, link);
+			process.exit(1);
+		} else {
+			throw err;
+		}
 	}
 }
 
@@ -60,7 +63,9 @@ process.on('unhandledRejection', (err) => {
 	process.exit(1);
 });
 
-verboseLog('Styleguidist config:', config);
+if (command !== 'doctor') {
+	verboseLog('Styleguidist config:', config);
+}
 
 switch (command) {
 	case 'build':
@@ -68,6 +73,9 @@ switch (command) {
 		break;
 	case 'server':
 		commandServer();
+		break;
+	case 'doctor':
+		commandDoctor();
 		break;
 	default:
 		commandHelp();
@@ -84,6 +92,10 @@ function updateConfig(prevConfig: Rsg.StyleguidistConfig): Rsg.StyleguidistConfi
 	// Set serverPort from from command line or config option
 	const serverPort = parseInt(argv.port) || prevConfig.serverPort;
 
+	// `--no-cache` ignores (and does not write) the persistent parse cache for one run. mri
+	// turns `--no-<name>` into `<name>: false`, so an absent flag leaves the option alone.
+	const cache = argv.cache === false ? false : prevConfig.cache;
+
 	// Setup logger *before* config validation (because validations may use logger to print warnings)
 	setupLogger(prevConfig.logger as Record<string, (message: string) => void>, verbose);
 
@@ -91,6 +103,7 @@ function updateConfig(prevConfig: Rsg.StyleguidistConfig): Rsg.StyleguidistConfi
 		...prevConfig,
 		verbose,
 		serverPort,
+		cache,
 	};
 }
 
@@ -156,6 +169,26 @@ async function commandServer() {
 	}
 }
 
+async function commandDoctor() {
+	const { default: doctor, formatDoctorReport } = await import('../scripts/doctor.js');
+
+	let report;
+	try {
+		report = doctor({ config: argv.config });
+	} catch (err) {
+		// Only thrown when there is nothing to diagnose (a `--config` path that does not exist,
+		// a config file that cannot be loaded at all)
+		printError(err, 'Cannot run the doctor');
+		process.exit(1);
+	}
+
+	console.log(argv.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
+
+	// `process.exitCode` rather than `process.exit()`: writes to a pipe are asynchronous on
+	// macOS, and exiting straight after a large `--json` report would truncate it
+	process.exitCode = report.ok ? 0 : 1;
+}
+
 function commandHelp() {
 	console.log(
 		[
@@ -172,6 +205,9 @@ function commandHelp() {
 			'',
 			'    ' + kleur.cyan('build') + '           Build style guide',
 			'    ' + kleur.cyan('server') + '          Run development server',
+			'    ' +
+				kleur.cyan('doctor') +
+				'          Check the config, the environment and the project for problems',
 			'    ' + kleur.cyan('help') + '            Display Vite Styleguidist help',
 			'',
 			kleur.underline('Options'),
@@ -179,7 +215,11 @@ function commandHelp() {
 			'    ' + kleur.yellow('--config') + '        Config file path',
 			'    ' + kleur.yellow('--port') + '          Port to run development server on',
 			'    ' + kleur.yellow('--open') + '          Open Styleguidist in the default browser',
+			'    ' +
+				kleur.yellow('--no-cache') +
+				'      Ignore the parse cache for this run (build, server)',
 			'    ' + kleur.yellow('--verbose') + '       Print debug information',
+			'    ' + kleur.yellow('--json') + '          Print the doctor report as JSON',
 		].join('\n')
 	);
 }

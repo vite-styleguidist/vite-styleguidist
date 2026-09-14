@@ -136,6 +136,10 @@ Keep the contributor as the author of the squashed commit (GitHub does this by d
 
 Releases are automated with [semantic-release](https://semantic-release.gitbook.io/semantic-release/) using the `conventionalcommits` preset. On every push to a release branch, CI runs the tests, computes the next version from the commits since the last release, publishes to npm and creates a GitHub release with the generated notes. Nothing is committed back to the branch: the `main` ruleset only accepts pull requests and GitHub can’t exempt the Actions app from it, so the version lives in git tags and on npm (package.json keeps a `0.0.0-development` placeholder) and the release notes live on the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases). There is no manual version bump and no release day: a merged fix is published within minutes.
 
+The `main` ruleset also requires ten CI checks, matched by job name: “Lint and typecheck”, “PR title is a Conventional Commit”, “Unit tests (Node 22)”, “Unit tests (Node 24)”, “Examples and end-to-end tests”, “React compatibility (React 16.14.0)”, “React compatibility (React 17.0.2)”, “React compatibility (React 18.3.1)”, “Install from the packed tarball” and “Docs site build”. Renaming a job in `ci.yml` must be mirrored in the ruleset (Settings › Rules › main), otherwise pull requests into `main` wait forever for a check that no longer reports; adding a job (the three React compatibility checks were added with [decision 0013](decisions/0013-react-16-support.md) and must be added to the ruleset by hand) is only enforced once the ruleset lists it.
+
+That ruleset gates pull requests into `main`, not pushes to `next`: `next` accepts direct pushes, and the release workflow runs on its own (`npm ci`, `npm run compile`, `npm test` — lint, typecheck and the unit tests on React 19) without waiting for `ci.yml`. So nothing stops a push to `next` from publishing a prerelease before the integration, React compatibility, tarball and docs-site jobs have said anything. When a change needs the full matrix first, push it with releases paused (`gh variable set RELEASES_ENABLED --body false`), wait for CI to go green on `next`, then re-enable the variable and start the release workflow from the Actions tab (`workflow_dispatch`).
+
 | Branch | npm dist-tag | Versions | Used for |
 | --- | --- | --- | --- |
 | `main` | `latest` | `1.x.y` stable releases | Everything after 1.0.0 that isn’t part of the next major. |
@@ -144,10 +148,10 @@ Releases are automated with [semantic-release](https://semantic-release.gitbook.
 The flow around a major version:
 
 1. Breaking and non-breaking work lands on `next` through pull requests. Every release-worthy commit publishes a new `-next.N` prerelease to the `next` dist-tag; `npm install vite-styleguidist@next` gets it, plain `npm install vite-styleguidist` doesn’t.
-2. When the beta exit criteria are met (known blockers fixed, a handful of external projects have run a prerelease, the [migration guide](Migration.md) is complete), `next` is merged into `main` and semantic-release publishes the stable version to `latest`.
+2. When the beta exit criteria are met (known blockers fixed, a handful of external projects have run a prerelease, the [migration guide](Migration.md) is complete), a maintainer **fast-forwards `main` to `next`** (see [Promoting next to main](#promoting-next-to-main)) and semantic-release publishes the stable version to `latest`. Never merge `next` into `main` through a pull request: the repository only allows squash merges, which replaces the whole beta history with one commit that none of the `-next.N` tags point at, and deletes the `next` branch. semantic-release then can’t see the prereleases from `main`, and `next` can’t be re-created with its tags.
 3. Until the next major, fixes and features go to `main` directly and are released as patch and minor versions. `next` is only re-opened when a breaking change needs a beta.
 
-npm authentication is meant to go through [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, so no long-lived npm token lives in the repository secrets. One exception is unavoidable: a trusted publisher can only be registered for a package that already exists on npm, so the very first publish (`1.0.0-next.1`) uses a granular automation token stored as the `NPM_TOKEN` repository secret. Right after that release lands, the maintainer registers the trusted publisher on npmjs.com (GitHub Actions, organization `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no environment) and deletes the secret; from then on OIDC is the only credential. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
+npm authentication is meant to go through [trusted publishing](https://docs.npmjs.com/trusted-publishers): the release workflow authenticates through GitHub Actions OIDC and publishes with provenance, so no long-lived npm token lives in the repository secrets. One exception is unavoidable: a trusted publisher can only be registered for a package that already exists on npm, so the very first publish (`1.0.0-next.1`) uses a granular automation token stored as the `NPM_TOKEN` repository secret. Right after that release lands, the maintainer registers the trusted publisher on npmjs.com (GitHub Actions, organization `vite-styleguidist`, repository `vite-styleguidist`, workflow `release.yml`, no environment, **and “allow `npm publish`” ticked**: trusted publishers created after September 2026 only allow `npm stage publish` by default, and semantic-release runs a plain `npm publish`, which npm then refuses with `403 OIDC permission denied for this action`) and deletes the secret; from then on OIDC is the only credential. The npm account that owns the package has two-factor authentication enabled and publishing from anywhere but CI is the exception, not the rule. See [Versioning and release channels](decisions/0003-versioning-and-release-channels.md) for why it is set up this way.
 
 ### Patch releases
 
@@ -160,6 +164,17 @@ Any commit of a `feat` type merged into a release branch is published as a _mino
 ### Major releases
 
 Any commit with a `BREAKING CHANGE:` footer (and a `!` in the header) merged into a release branch is published as a _major_ release as soon as CI passes. On `next` it produces the first prerelease of the next major (`2.0.0-next.1`); on `main` it publishes the major directly, which is why breaking changes should go through `next` first.
+
+### Deprecating an option
+
+What users are promised is written down in the [deprecation policy](Compatibility.md#deprecation-policy); this is how a maintainer keeps it.
+
+1. Ship the replacement first, documented in [Configuration](Configuration.md). A deprecation with nothing to point at is a dead end for the person reading the warning.
+2. Add a `deprecated` string to the option’s entry in `src/scripts/schemas/config.ts`, naming the replacement (`'Use exampleMode option instead'`). Styleguidist prints it as a warning and the option keeps working; don’t change what it does at the same time.
+3. Say it in the commit body, so the sentence lands in the generated release notes of the version that introduces it.
+4. Remove it only in the next major: replace `deprecated` with `removed`, whose string must name the replacement, and add the option to the migration guide of that major. Inside a major, a removal is a breaking change dressed as a feature.
+
+An option that never worked is a different case: it can be corrected as a fix, because there is no behaviour to preserve.
 
 ### Release checklist
 
@@ -177,6 +192,33 @@ For every release:
 3. Wait for the release workflow to finish. Check the [Releases page](https://github.com/vite-styleguidist/vite-styleguidist/releases) and `npm view vite-styleguidist dist-tags`.
 4. Edit the release notes on GitHub if the generated notes need context: a screenshot or GIF for visual changes, a code example for a new option, a link to the relevant docs page (see [Changelogs](#changelogs)).
 5. For breaking changes, verify that the migration guide was updated in the same pull request and that the release notes link to it.
+6. While 1.0 is in beta only: semantic-release tags prereleases with `next`, while npm’s `latest` stays on the first version ever published, so a plain `npm install` would get a stale beta. Move it by hand after each prerelease: `npm dist-tag add vite-styleguidist@1.0.0-next.N latest` (asks for a 2FA code). The first stable release takes over `latest` automatically.
+
+### Promoting next to main
+
+The stable release must be built from the same commits the prereleases were tagged on, so `main` is moved with a fast-forward push, not with a pull request. The `main` ruleset requires pull requests, and repository admins are on its bypass list for exactly this case:
+
+```bash
+git fetch origin
+git merge-base --is-ancestor origin/main origin/next && echo "fast-forward possible"
+git push origin origin/next:main
+```
+
+If the check prints nothing, `main` has commits `next` doesn’t have (a hotfix released from `main`): rebase or merge them into `next` first, let the resulting prerelease go out, then promote. The release workflow refuses to release a version from `main` whose `-next.N` tags aren’t in `main`’s history, so a squash merge fails before anything is tagged or published. Open a pull request from `next` to `main` only to review the diff, and close it without merging.
+
+### When a release fails after the tag was pushed
+
+semantic-release pushes the version tag before it publishes to npm and creates the GitHub release. If a later step fails (npm refused the publish, GitHub was down), the tag and its channel note exist but nothing was published, and a re-run reports that there is nothing to release. Recover by removing the half-made release and re-running:
+
+```bash
+git push origin :refs/tags/v1.2.3
+git push origin :refs/notes/semantic-release-v1.2.3
+gh release delete v1.2.3 --yes   # only if the GitHub release was created
+```
+
+Then fix the cause and start the release workflow again from the Actions tab (`workflow_dispatch`). Check `npm view vite-styleguidist versions` first: if the npm publish did go through, keep the tag and create the GitHub release by hand instead.
+
+Pause releases while you clean up: `gh variable set RELEASES_ENABLED --body false` before touching branches or tags, `--body true` when the state is right again. Every push to `main` or `next` runs the release workflow, a reset of `main` included, and semantic-release tags whatever version it computes from the tags it finds at that moment; a stray stable tag on a commit that `next` contains makes the next prerelease jump a major version.
 
 ## Triage
 

@@ -28,11 +28,18 @@
       "types": "./lib/scripts/index.d.ts",
       "default": "./lib/scripts/index.js"
     },
-    "./lib/*": "./lib/*",
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*.cjs": "./lib/*.cjs",
+    "./lib/*.d.ts": "./lib/*.d.ts",
+    "./lib/*": [
+      "./lib/*.js",
+      "./lib/*"
+    ],
     "./package.json": "./package.json"
   },
   "bin": {
-    "styleguidist": "lib/bin/styleguidist.js"
+    "styleguidist": "lib/bin/styleguidist.js",
+    "vite-styleguidist": "lib/bin/styleguidist.js"
   },
   "files": [
     "lib",
@@ -46,6 +53,14 @@
     "node": "^22.12.0 || >=24.0.0"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.0",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.4",
+    "@codemirror/view": "^6.43.11",
+    "@lezer/highlight": "^1.2.3",
     "@tippyjs/react": "^4.2.6",
     "@vitejs/plugin-react": "^6.1.1",
     "acorn": "^8.18.0",
@@ -77,9 +92,7 @@
     "prop-types": "^15.8.1",
     "q-i": "^2.0.1",
     "react-docgen": "^8.0.3",
-    "react-group": "^4.0.0",
     "react-icons": "^5.7.0",
-    "react-simple-code-editor": "^0.14.1",
     "remark": "^15.0.1",
     "sirv": "^3.0.2",
     "strip-html-comments": "^1.0.0",
@@ -89,8 +102,18 @@
     "vite": "^8.2.2"
   },
   "peerDependencies": {
-    "react": ">=18.0",
-    "react-dom": ">=18.0"
+    "@mdx-js/mdx": "^3.0.0",
+    "react": ">=16.14.0",
+    "react-dom": ">=16.14.0",
+    "remark-gfm": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@mdx-js/mdx": {
+      "optional": true
+    },
+    "remark-gfm": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
@@ -98,6 +121,8 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@eslint/js": "^9.39.5",
+    "@mdx-js/mdx": "^3.1.1",
+    "@playwright/test": "^1.63.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/npm": "^13.1.5",
@@ -137,6 +162,7 @@
     "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "remark-gfm": "^4.0.1",
     "semantic-release": "^25.0.9",
     "styled-components": "^6.5.3",
     "typescript": "^5.9.3",
@@ -150,9 +176,14 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:examples": "playwright test examples.spec.ts",
     "start": "node lib/bin/styleguidist.js server --config examples/basic/styleguide.config.js",
     "start:customised": "node lib/bin/styleguidist.js server --config examples/customised/styleguide.config.js",
     "start:sections": "node lib/bin/styleguidist.js server --config examples/sections/styleguide.config.js",
+    "start:mdx": "node lib/bin/styleguidist.js server --config examples/mdx/styleguide.config.js",
+    "start:typescript": "node lib/bin/styleguidist.js server --config examples/typescript/styleguide.config.ts",
     "start:ui": "node lib/bin/styleguidist.js server",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --cache --fix",
@@ -162,26 +193,14 @@
     "build:basic": "node lib/bin/styleguidist.js build --config examples/basic/styleguide.config.js",
     "build:customised": "node lib/bin/styleguidist.js build --config examples/customised/styleguide.config.js",
     "build:sections": "node lib/bin/styleguidist.js build --config examples/sections/styleguide.config.js",
-    "test:browser:pre": "npm i --no-save puppeteer@25.10.0",
-    "test:browser:basic": "node test/browser.js examples/basic/styleguide",
-    "test:browser:customised": "node test/browser.js examples/customised/styleguide",
-    "test:browser:sections": "node test/browser.js examples/sections/styleguide",
     "format": "prettier --log-level warn --write \"**/*.{js,md}\"",
-    "test:cypress:pre": "npm i --no-save cypress@15.21.1 wait-on@9.1.0",
-    "test:cypress:open": "cypress open",
-    "test:cypress:run": "cypress run",
-    "test:cypress:startServer": "node test/run.server.js",
-    "test:cypress:startServer:post": "wait-on http://localhost:8082",
     "build:themed": "node lib/bin/styleguidist.js build --config examples/themed/styleguide.config.js",
-    "test:browser:themed": "node test/browser.js examples/themed/styleguide",
     "build:express": "node lib/bin/styleguidist.js build --config examples/express/styleguide.config.js",
-    "test:browser:express": "node test/browser.js examples/express/styleguide",
     "build:preact": "node lib/bin/styleguidist.js build --config examples/preact/styleguide.config.js",
-    "test:browser:preact": "node test/browser.js examples/preact/styleguide",
     "build:styled-components": "node lib/bin/styleguidist.js build --config examples/styled-components/styleguide.config.js",
-    "test:browser:styled-components": "node test/browser.js examples/styled-components/styleguide",
     "build:vite": "node lib/bin/styleguidist.js build --config examples/vite/styleguide.config.js",
-    "test:browser:vite": "node test/browser.js examples/vite/styleguide",
+    "build:mdx": "node lib/bin/styleguidist.js build --config examples/mdx/styleguide.config.js",
+    "build:typescript": "node lib/bin/styleguidist.js build --config examples/typescript/styleguide.config.ts",
     "hooks:install": "husky"
   },
   "keywords": [

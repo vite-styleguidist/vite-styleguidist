@@ -1,7 +1,17 @@
+/*
+ * The default button is neutral chrome, so its label, surface and border read the style
+ * guide's own colour tokens: every `theme.color.*` token is published on the page as a custom
+ * property named `--rsg-color-<kebab-name>`, and the button follows the light/dark toggle
+ * without knowing that the toggle exists. The value after the comma is the light-scheme
+ * fallback — what this component uses in the application itself (src/App.jsx), where the
+ * style guide is not around.
+ *
+ * See docs/Cookbook.md, "How to make my components follow the style guide’s colour scheme?".
+ */
 .button {
 	padding: 0.5em 1.5em;
-	color: #333;
-	background-color: #fff;
+	color: var(--rsg-color-base, #262421);
+	background-color: var(--rsg-color-base-background, #fcfbf9);
 	border: 1px solid currentColor;
 	border-radius: 0.3em;
 	font: inherit;
@@ -13,6 +23,12 @@
 	cursor: not-allowed;
 }
 
+/*
+ * The filled variants are the other half of the recipe: the blue and the red are this
+ * library's own identity, no style guide token can stand in for them, and they carry their
+ * own background — so the label/background pair does not depend on the page behind it and one
+ * value works in both colour schemes (5.1:1 and 5.9:1).
+ */
 .button--primary {
 	color: #fff;
 	background-color: #1673b1;

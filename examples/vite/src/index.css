@@ -1,3 +1,9 @@
+/*
+ * The application shell, loaded by src/main.jsx — not by the style guide, which never imports
+ * this file. The component stylesheets read the style guide's `--rsg-color-*` custom
+ * properties with these values as their fallbacks, so a component looks the same here as it
+ * does on the light page of the style guide.
+ */
 body {
 	margin: 0;
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

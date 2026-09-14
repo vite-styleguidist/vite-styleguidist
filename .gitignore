@@ -1,6 +1,9 @@
 node_modules/
 /examples/**/styleguide/build
 /examples/**/styleguide/index.html
+/examples/**/styleguide/docs.json
+/examples/**/styleguide/llms.txt
+/examples/**/styleguide/llms-full.txt
 /.publish/
 /lib
 /coverage/
@@ -13,9 +16,10 @@ Thumbs.db
 *.log
 .eslintcache
 yarn.lock
-/cypress/
-test/cypress/screenshots/
-test/cypress/videos/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 stats.json
 /site/build/
 /site/.docusaurus/

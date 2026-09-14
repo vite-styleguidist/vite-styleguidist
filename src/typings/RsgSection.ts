@@ -1,6 +1,11 @@
 import type { ImportMarker } from './RsgImportMarker.js';
 import type { MarkdownExample, Example } from './RsgExample.js';
-import type { LoaderComponent, ExpandMode, Component } from './RsgComponent.js';
+import type {
+	LoaderComponent,
+	LazyLoaderComponent,
+	ExpandMode,
+	Component,
+} from './RsgComponent.js';
 
 export interface BaseSection {
 	name?: string;
@@ -42,6 +47,12 @@ export interface TOCItem extends ProcessedSection {
 	heading?: boolean;
 	shouldOpenInNewTab?: boolean;
 	selected?: boolean;
+	/**
+	 * Whether the current entry is somewhere *inside* this one. A collapsed section stands
+	 * in for it then, because its children are not rendered at all (see
+	 * ComponentsList/ComponentsListRenderer).
+	 */
+	containsSelected?: boolean;
 	initialOpen?: boolean;
 	forcedOpen?: boolean;
 	content?: React.ReactNode;
@@ -68,4 +79,14 @@ export interface LoaderSection extends BaseSection {
 	content?: ImportMarker | MarkdownExample;
 	components: LoaderComponent[];
 	sections: LoaderSection[];
+}
+
+/**
+ * Section as serialized with `lazyDocs` on: same shape, except that each component keeps
+ * only what the tree can know without parsing it and hides the rest behind a loader
+ * (see LazyLoaderComponent and docs/decisions/0019-on-demand-documentation.md).
+ */
+export interface LazyLoaderSection extends Omit<LoaderSection, 'components' | 'sections'> {
+	components: LazyLoaderComponent[];
+	sections: LazyLoaderSection[];
 }

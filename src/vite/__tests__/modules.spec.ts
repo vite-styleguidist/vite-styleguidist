@@ -9,6 +9,7 @@ import getConfig from '../../scripts/config.js';
 import generateStyleguideModule, { CLIENT_CONFIG_OPTIONS } from '../modules/styleguide.js';
 import generatePropsModule from '../modules/props.js';
 import generateExamplesModule, { resolveExampleImport } from '../modules/examples.js';
+import { propsId, toPosix } from '../ids.js';
 import type * as Rsg from '../../typings/index.js';
 
 const logger = glogg('rsg');
@@ -69,17 +70,84 @@ describe('generateStyleguideModule', () => {
 		expect(() => parseModule(code)).not.toThrow();
 	});
 
+	// `lazyDocs: false`: the shape the module had before on-demand documentation existed
 	it('should import components, their docs and metadata', () => {
-		const { code } = generateStyleguideModule(config);
+		const { code } = generateStyleguideModule({ ...config, lazyDocs: false });
 		const imports = importsOf(code);
 		expect(imports).toContain(component('Button/Button.js'));
-		expect(imports).toContain(`rsg-props:${component('Button/Button.js')}`);
+		expect(imports).toContain(propsId(component('Button/Button.js')));
 		expect(imports).toContain(component('Placeholder/Placeholder.json'));
 		// Section/component data references the imports
 		expect(code).toMatch(/"module": __rsg_\d+,/);
 		expect(code).toMatch(
 			/"props": \(__rsg_\d+\.default !== undefined \? __rsg_\d+\.default : __rsg_\d+\)/
 		);
+		// Nothing is deferred
+		expect(code).not.toMatch(/import\(/);
+		expect(code).not.toMatch('"loadDocs"');
+	});
+
+	// `lazyDocs`, on by default (ADR 0019)
+	describe('on-demand documentation', () => {
+		const buttonProps = propsId(component('Button/Button.js'));
+
+		it('should put the documentation of every component behind a loader', () => {
+			const { code } = generateStyleguideModule(config);
+			// Neither the documentation nor the component itself is imported statically
+			const imports = importsOf(code);
+			expect(imports).not.toContain(buttonProps);
+			expect(imports).not.toContain(component('Button/Button.js'));
+			// One loader per component, importing exactly those two modules
+			expect(code).toContain(
+				`"loadDocs": (() => Promise.all([import(${JSON.stringify(buttonProps)}), ` +
+					`import(${JSON.stringify(component('Button/Button.js'))})]).then(` +
+					'([__rsg_lazy_0, __rsg_lazy_1]) => ({ "props": (__rsg_lazy_0.default !== undefined ? ' +
+					'__rsg_lazy_0.default : __rsg_lazy_0), "module": __rsg_lazy_1 })))'
+			);
+			expect(() => parseModule(code)).not.toThrow();
+		});
+
+		it('should keep in the tree what the guide can know without parsing a component', () => {
+			const { code } = generateStyleguideModule(config);
+			// The name the sidebar, the routes and the headings are drawn from meanwhile
+			expect(code).toMatch('"nameFromPath": "Button"');
+			// …with the slug, the path line and whether there are examples, as before
+			expect(code).toMatch('"slug": "button"');
+			expect(code).toMatch('"pathLine": "components/Button/Button.js"');
+			expect(code).toMatch('"hasExamples": true');
+			// Metadata is a plain JSON file, small and read on the first paint: it stays
+			expect(importsOf(code)).toContain(component('Placeholder/Placeholder.json'));
+		});
+
+		// `hasExamples` is what draws the “add examples to this component” hint before a
+		// component’s documentation arrives, so in the lazy tree it has to mean “there will
+		// be examples” and not merely “there is an examples file” (ReactComponent)
+		it('should count the default example as examples', () => {
+			const withoutFiles = getConfig({
+				components: 'components/RandomButton/RandomButton.js',
+				defaultExample: false,
+			});
+			expect(generateStyleguideModule(withoutFiles).code).toMatch('"hasExamples": false');
+
+			const withDefault = getConfig({
+				components: 'components/RandomButton/RandomButton.js',
+				defaultExample: true,
+			});
+			expect(generateStyleguideModule(withDefault).code).toMatch('"hasExamples": true');
+		});
+
+		it('should name a component after its directory when the file is an index', () => {
+			const withIndex = getConfig({ components: 'components/**/index.js' });
+			const { code } = generateStyleguideModule(withIndex);
+			expect(code).toMatch('"nameFromPath": "Label"');
+		});
+
+		it('should leave the section tree it hands to the machine-readable docs alone', () => {
+			const { sections } = generateStyleguideModule(config);
+			const [button] = sections[0].components;
+			expect(button.module.__rsgImport).toBe(component('Annotation/Annotation.js'));
+			expect(button.props.__rsgImport).toBe(propsId(component('Annotation/Annotation.js')));
+		});
 	});
 
 	it('should list component files and the directory to watch', () => {
@@ -129,6 +197,33 @@ describe('generateStyleguideModule', () => {
 		}
 	});
 
+	// The schema resolves a relative `mdxComponents` path against the config file, so the
+	// import the browser module gets is absolute and the watched file is a real path (C2)
+	it('should import an mdxComponents module path given relative to the config', () => {
+		const relative = 'components/Button/Button.js';
+		const absolute = path.join(testDir, relative);
+		const withComponents = getConfig({
+			components: 'components/**/[A-Z]*.js',
+			mdxComponents: { Callout: relative },
+		});
+		const { code, watchFiles } = generateStyleguideModule(withComponents);
+
+		expect(importsOf(code)).toEqual(expect.arrayContaining([absolute]));
+		expect(watchFiles).toEqual([absolute]);
+		expect(code).toMatch(/"Callout": \(__rsg_\d+\.default !== undefined/);
+	});
+
+	it('should serialize an mdxComponents component value without importing anything', () => {
+		const withComponents = {
+			...config,
+			mdxComponents: { Callout: function Callout() {} },
+		} as unknown as Rsg.SanitizedStyleguidistConfig;
+		const { code, watchFiles } = generateStyleguideModule(withComponents);
+
+		expect(watchFiles).toEqual([]);
+		expect(code).toMatch('function Callout()');
+	});
+
 	it('should show the welcome screen when nothing matches', () => {
 		// The welcome screen only lists array patterns (getComponentPatternsFromSections)
 		const emptyConfig = getConfig({ components: ['nothing/**/*.js'] });
@@ -160,11 +255,13 @@ describe('generatePropsModule', () => {
 	it('should reference the examples module', () => {
 		const { code, docs } = generatePropsModule(config, file, source);
 		expect(docs.examples).toEqual({
-			__rsgImport: expect.stringMatching(/^rsg-examples:.*Button\/Readme\.md\?displayName=Button/),
+			__rsgImport: expect.stringMatching(
+				/^virtual:rsg-examples\?file=.*Button\/Readme\.md&displayName=Button/
+			),
 			__rsgDefault: true,
 		});
 		expect(importsOf(code)).toEqual([
-			`rsg-examples:${component('Button/Readme.md')}?displayName=Button&component=${encodeURIComponent(file)}`,
+			`virtual:rsg-examples?file=${toPosix(component('Button/Readme.md'))}&displayName=Button&component=${toPosix(file)}&rsg`,
 		]);
 	});
 
@@ -175,7 +272,9 @@ describe('generatePropsModule', () => {
 			randomButton,
 			fs.readFileSync(randomButton, 'utf8')
 		);
-		expect(docs.examples?.__rsgImport).toMatch(/^rsg-examples:.*DefaultExample\.md\?.*&default=1$/);
+		expect(docs.examples?.__rsgImport).toMatch(
+			/^virtual:rsg-examples\?file=.*DefaultExample\.md&.*&default=1&rsg$/
+		);
 	});
 
 	it('should have no examples without an examples file nor default example', () => {
@@ -256,7 +355,7 @@ describe('generateExamplesModule', () => {
 		findDeclaration(code, 'evalInContext').arguments[1].value;
 
 	it('should generate an ES module exporting the examples', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		const ast = parseModule(code);
 		expect(ast.body.at(-1)?.type).toBe('ExportDefaultDeclaration');
 		expect(code).toMatch(
@@ -269,7 +368,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should split Markdown and code examples', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		expect(code).toMatch('"type": "markdown"');
 		expect(code).toMatch('"type": "code"');
 		expect(code).toMatch('"content": "<Button>Push Me</Button>"');
@@ -278,7 +377,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should import React and the current component implicitly', () => {
-		const code = generateExamplesModule(config, options, source);
+		const { code } = generateExamplesModule(config, options, source);
 		expect(importsOf(code)).toEqual(
 			expect.arrayContaining(['react', component('Button/Button.js')])
 		);
@@ -299,7 +398,7 @@ describe('generateExamplesModule', () => {
 			'    const Price = require("./Price.js");',
 			'    <Button />',
 		].join('\n');
-		const code = generateExamplesModule(config, options, markdown);
+		const { code } = generateExamplesModule(config, options, markdown);
 		expect(requireMapKeys(code)).toEqual([
 			'lodash/map',
 			'../Label',
@@ -314,7 +413,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should make context modules available in examples', () => {
-		const code = generateExamplesModule(
+		const { code } = generateExamplesModule(
 			{ ...config, context: { map: 'lodash/map', 'Foo.Bar': 'foo-bar' } },
 			options,
 			source
@@ -327,7 +426,7 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should expand the component placeholder of the default example', () => {
-		const code = generateExamplesModule(
+		const { code } = generateExamplesModule(
 			config,
 			{ ...options, shouldShowDefaultExample: true },
 			'    <__COMPONENT__>Default</__COMPONENT__>'
@@ -337,12 +436,12 @@ describe('generateExamplesModule', () => {
 	});
 
 	it('should not expand the placeholder of a regular examples file', () => {
-		const code = generateExamplesModule(config, options, '    <__COMPONENT__ />');
+		const { code } = generateExamplesModule(config, options, '    <__COMPONENT__ />');
 		expect(code).toMatch('__COMPONENT__');
 	});
 
 	it('should work without a component (section content)', () => {
-		const code = generateExamplesModule(config, { file }, '# Hello\n\n    <Button />');
+		const { code } = generateExamplesModule(config, { file }, '# Hello\n\n    <Button />');
 		expect(importsOf(code)).toEqual(['react']);
 		expect(header(code)).not.toMatch('Button');
 	});
@@ -352,7 +451,7 @@ describe('generateExamplesModule', () => {
 			...props,
 			content: `/* updated */ ${props.content}`,
 		}));
-		const code = generateExamplesModule({ ...config, updateExample }, options, source);
+		const { code } = generateExamplesModule({ ...config, updateExample }, options, source);
 		expect(updateExample).toHaveBeenCalledWith(
 			expect.objectContaining({ content: '<Button>Push Me</Button>' }),
 			file
@@ -373,16 +472,16 @@ describe('config wiring lost with the webpack loaders', () => {
 
 	it('skipComponentsWithoutExample removes components without an examples file', () => {
 		const withAll = generateStyleguideModule(fixturesConfig());
-		expect(withAll.code).toMatch('rsg-props:');
-		expect(withAll.code).toMatch(/rsg-props:[^"]*RandomButton\.js/);
+		expect(withAll.code).toMatch('virtual:rsg-props?');
+		expect(withAll.code).toMatch(/virtual:rsg-props\?file=[^"]*RandomButton\.js/);
 
 		const filtered = generateStyleguideModule({
 			...fixturesConfig(),
 			skipComponentsWithoutExample: true,
 		});
 		// Button has a Readme.md, RandomButton has no examples file
-		expect(filtered.code).toMatch(/rsg-props:[^"]*Button\.js/);
-		expect(filtered.code).not.toMatch(/rsg-props:[^"]*RandomButton\.js/);
+		expect(filtered.code).toMatch(/virtual:rsg-props\?file=[^"]*Button\.js/);
+		expect(filtered.code).not.toMatch(/virtual:rsg-props\?file=[^"]*RandomButton\.js/);
 	});
 
 	it('warns when a component file cannot be parsed', () => {

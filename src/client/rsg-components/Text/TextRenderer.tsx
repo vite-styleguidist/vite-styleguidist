@@ -3,7 +3,7 @@ import cx from 'clsx';
 import Styled, { JssInjectedProps } from 'rsg-components/Styled';
 import type * as Rsg from '../../../typings/index.js';
 
-export const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
+export const styles = ({ fontFamily, fontSize, fontWeight, color }: Rsg.Theme) => ({
 	text: {
 		fontFamily: fontFamily.base,
 	},
@@ -29,7 +29,7 @@ export const styles = ({ fontFamily, fontSize, color }: Rsg.Theme) => ({
 		fontStyle: 'italic',
 	},
 	strong: {
-		fontWeight: 'bold',
+		fontWeight: fontWeight.bold,
 	},
 	isUnderlined: {
 		borderBottom: [[1, 'dotted', color.lightest]],

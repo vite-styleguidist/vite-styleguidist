@@ -2,6 +2,7 @@ import React from 'react';
 import hashSum from 'hash-sum';
 import slots from 'rsg-components/slots';
 import StyleGuide from 'rsg-components/StyleGuide';
+import DocsAutoloader from './DocsAutoloader.js';
 import getPageTitle from './getPageTitle.js';
 import getRouteData from './getRouteData.js';
 import processSections from './processSections.js';
@@ -48,19 +49,29 @@ export default function renderStyleguide(
 	}
 
 	return (
-		<StyleGuide
-			codeRevision={codeRevision}
-			// Only calculate CSS revisions in development, when hot module replacement
-			// is on, to avoid stringifying the styles in production
-			cssRevision={import.meta.hot ? hashSum({ theme, styles }) : '0'}
-			config={styleguide.config}
-			slots={slots(styleguide.config)}
-			welcomeScreen={styleguide.welcomeScreen}
-			patterns={styleguide.patterns}
-			sections={sections}
-			allSections={allSections}
-			displayMode={displayMode}
-			pagePerSection={pagePerSection}
-		/>
+		<>
+			<StyleGuide
+				codeRevision={codeRevision}
+				// Only calculate CSS revisions in development, when hot module replacement
+				// is on, to avoid stringifying the styles in production
+				cssRevision={import.meta.hot ? hashSum({ theme, styles }) : '0'}
+				config={styleguide.config}
+				slots={slots(styleguide.config)}
+				welcomeScreen={styleguide.welcomeScreen}
+				patterns={styleguide.patterns}
+				sections={sections}
+				allSections={allSections}
+				displayMode={displayMode}
+				pagePerSection={pagePerSection}
+			/>
+			{/*
+				Renders nothing. It is here, after the style guide and outside every component
+				`styleguideComponents` can replace, because that is the only place from which a
+				component whose renderer never loads its own documentation can still get it
+				(`lazyDocs`, ADR 0019 point 5) — and “after” is what guarantees the components
+				of this page have already mounted and claimed themselves.
+			*/}
+			<DocsAutoloader sections={sections} displayMode={displayMode} />
+		</>
 	);
 }

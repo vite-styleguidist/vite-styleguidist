@@ -1,0 +1,29 @@
+{
+  // Type-checking config for this example's components *and its style guide config*
+  // (`npm run typecheck` inside this folder). react-docgen-typescript also reads it when you
+  // follow the second road in the Readme: it type-checks the whole program, so it needs a
+  // real tsconfig.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "pretty": true,
+    "strict": true,
+    "isolatedModules": true,
+    // `styleguide.config.ts` imports `version` out of package.json...
+    "resolveJsonModule": true,
+    // ...and its sections from `./styleguide.meta.ts`, spelled with the real extension
+    // because that is the specifier Node.js has to resolve at run time (Styleguidist
+    // compiles the config file, never the modules it imports). Safe here because nothing in
+    // this project emits: `noEmit` is on above.
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src", "styleguide.config.ts", "styleguide.meta.ts"],
+  "exclude": ["node_modules"]
+}

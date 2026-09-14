@@ -1,5 +1,6 @@
 // @vitest-environment node
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
@@ -9,11 +10,19 @@ import makeViteConfig, {
 	findExampleDependencies,
 	getAliases,
 	getAliasNames,
+	getReactRootFlavor,
+	resolveReactRoot,
 } from '../make-vite-config.js';
 import type * as Rsg from '../../typings/index.js';
 
 const testApp = (name: string) => path.resolve(import.meta.dirname, '../../../test/apps', name);
 const clientDir = path.resolve(import.meta.dirname, '../../client');
+
+// The react-dom of this repository, which is what a style guide with no react-dom of its own
+// falls back to. Read at run time, never hard-coded: the react-compat job of the CI workflow
+// swaps it for every supported major, and a test that assumed React 19 would then be a lie.
+const ownReactDomVersion: string = createRequire(import.meta.url)('react-dom/package.json').version;
+const ownFlavor = parseInt(ownReactDomVersion, 10) >= 18 ? 'modern' : 'legacy';
 
 const cwd = process.cwd();
 afterEach(() => {
@@ -46,10 +55,17 @@ const createTempDir = (files: Record<string, string>): string => {
 describe('getAliases', () => {
 	const findOf = (alias: Alias) => (alias.find instanceof RegExp ? alias.find.source : alias.find);
 
-	it('should always resolve rsg-components and the assert shim', () => {
+	it('should always resolve rsg-components, the React root and the assert shim', () => {
 		const aliases = getAliases(loadConfig('defaults'));
 		expect(aliases).toEqual([
 			{ find: 'rsg-components', replacement: path.join(clientDir, 'rsg-components') },
+			// The fixture app has no react-dom of its own, so the repo’s copy picks the root
+			{
+				find: /^rsg-react-root$/,
+				replacement: expect.stringMatching(
+					new RegExp(`/client/utils/reactRoot\\.${ownFlavor}\\.ts$`)
+				),
+			},
 			{
 				find: /^assert$/,
 				replacement: expect.stringMatching(/\/client\/utils\/assertShim\.cjs$/),
@@ -82,10 +98,30 @@ describe('getAliases', () => {
 			'^rsg-components\\/Logo\\/LogoRenderer$',
 			'^rsg-components\\/Wrapper$',
 			'rsg-components',
+			'^rsg-react-root$',
 			'^assert$',
 		]);
 		expect(aliases[0].replacement).toBe('/project/styleguide/Logo.js');
 		expect(aliases[1].replacement).toBe('/project/styleguide/Wrapper.js');
+	});
+
+	// The two halves of PageNav (ADR 0016) are replaceable like any other component, and the
+	// aliases have to match the specifiers the code imports: `rsg-components/PageNav` in
+	// StyleGuide, `rsg-components/PageNav/PageNavRenderer` in PageNav itself.
+	it('should alias both halves of PageNav', () => {
+		const [nav, renderer] = getAliases(
+			loadConfig('defaults', {
+				styleguideComponents: {
+					PageNav: '/project/styleguide/PageNav.js',
+					PageNavRenderer: '/project/styleguide/PageNavRenderer.js',
+				},
+			})
+		);
+		expect((nav.find as RegExp).test('rsg-components/PageNav')).toBe(true);
+		expect((nav.find as RegExp).test('rsg-components/PageNav/PageNav')).toBe(false);
+		expect(nav.replacement).toBe('/project/styleguide/PageNav.js');
+		expect((renderer.find as RegExp).test('rsg-components/PageNav/PageNavRenderer')).toBe(true);
+		expect(renderer.replacement).toBe('/project/styleguide/PageNavRenderer.js');
 	});
 
 	// A custom Wrapper typically imports the default one from `rsg-components/Wrapper/Wrapper`:
@@ -101,6 +137,104 @@ describe('getAliases', () => {
 		expect((wrapper.find as RegExp).test('rsg-components/WrapperFoo')).toBe(false);
 		expect((logo.find as RegExp).test('rsg-components/Logo/LogoRenderer')).toBe(true);
 		expect((logo.find as RegExp).test('rsg-components/Logo')).toBe(false);
+	});
+
+	// A Vite alias is a plain rewrite and the importer is Styleguidist’s own component
+	// inside node_modules, so a relative path only means anything once it is resolved here
+	it('should resolve relative styleguideComponents paths against the config file', () => {
+		const config = loadConfig('defaults', {
+			styleguideComponents: {
+				Wrapper: './styleguide/Wrapper',
+				LogoRenderer: '../shared/Logo.js',
+				// Absolute paths and package names are imports in their own right: untouched
+				PathlineRenderer: '/absolute/Pathline.js',
+				SectionsRenderer: 'my-design-system/Sections',
+			},
+		});
+		const aliases = getAliases(config);
+		expect(aliases.slice(0, 4).map((alias) => alias.replacement)).toEqual([
+			path.join(config.configDir, 'styleguide/Wrapper'),
+			path.resolve(config.configDir, '../shared/Logo.js'),
+			'/absolute/Pathline.js',
+			'my-design-system/Sections',
+		]);
+	});
+});
+
+describe('getReactRootFlavor', () => {
+	/** A fake project whose node_modules holds the given react-dom version. */
+	const createProject = (reactDomVersion?: string): string => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rsg-react-root-'));
+		fs.writeFileSync(path.join(dir, 'package.json'), '{ "name": "pizza" }');
+		if (reactDomVersion) {
+			const pkgDir = path.join(dir, 'node_modules/react-dom');
+			fs.mkdirSync(pkgDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(pkgDir, 'package.json'),
+				JSON.stringify({ name: 'react-dom', version: reactDomVersion, main: 'index.js' })
+			);
+			fs.writeFileSync(path.join(pkgDir, 'index.js'), '');
+		}
+		return dir;
+	};
+
+	it.each([
+		['16.14.0', 'legacy'],
+		['17.0.2', 'legacy'],
+		['18.3.1', 'modern'],
+		['19.2.8', 'modern'],
+		// The experimental channel is 19-based and has no render(), despite the 0 major
+		['0.0.0-experimental-abc', 'modern'],
+		// A version we cannot parse tells us nothing: prefer the API that still exists
+		['garbage', 'modern'],
+	])('should pick the root API for react-dom %s', (version, flavor) => {
+		const dir = createProject(version);
+		try {
+			expect(getReactRootFlavor(dir)).toBe(flavor);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should prefer the react-dom of the project over the one of this package', () => {
+		// Both copies exist here: the fake 16.14.0 in the temp project and the repo’s own. The
+		// project wins — on a repo running React 18 or 19 (the usual case) that is visible as a
+		// flavour the package’s copy would never have chosen.
+		const dir = createProject('16.14.0');
+		try {
+			expect(getReactRootFlavor(dir)).toBe('legacy');
+			expect(resolveReactRoot(dir)).toEqual({
+				flavor: 'legacy',
+				version: '16.14.0',
+				source: 'project',
+			});
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should fall back to the react-dom of this package when the project has none', () => {
+		// A config directory outside any project with a React (a temp folder, a design system
+		// elsewhere in a monorepo) is what Vite resolves from the importer instead — our own
+		// tree — so the root has to be chosen from the same copy.
+		const dir = createProject();
+		try {
+			expect(getReactRootFlavor(dir)).toBe(ownFlavor);
+			expect(resolveReactRoot(dir)).toEqual({
+				flavor: ownFlavor,
+				version: ownReactDomVersion,
+				source: 'package',
+			});
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('should resolve react-dom from the style guide config directory', () => {
+		// The fixture apps have no node_modules of their own: walking up finds the repo’s copy,
+		// which is the project’s as far as resolution is concerned
+		expect(getReactRootFlavor(testApp('defaults'))).toBe(ownFlavor);
+		expect(resolveReactRoot(testApp('defaults'))).toMatchObject({ source: 'project' });
 	});
 });
 
@@ -238,7 +372,12 @@ describe('makeViteConfig', () => {
 		const result = await makeViteConfig(loadConfig('defaults'), 'development');
 		const names = pluginNames(result.plugins);
 		expect(names).toContain('vite:react-babel');
-		expect(names.slice(-3)).toEqual(['rsg:absolute-paths', 'rsg:jsx-in-js', 'rsg:styleguidist']);
+		expect(names.slice(-4)).toEqual([
+			'rsg:absolute-paths',
+			'rsg:jsx-in-js',
+			'rsg:deep-imports',
+			'rsg:styleguidist',
+		]);
 	});
 
 	it('should point the dependency scanner at the client entry and the components', async () => {
@@ -249,7 +388,21 @@ describe('makeViteConfig', () => {
 			path.join(config.configDir, 'src/components/Button.js'),
 			path.join(config.configDir, 'src/components/Placeholder.js'),
 		]);
-		expect(result.optimizeDeps?.rolldownOptions).toEqual({ moduleTypes: { '.js': 'jsx' } });
+		expect(result.optimizeDeps?.rolldownOptions?.moduleTypes).toEqual({ '.js': 'jsx' });
+		// …plus the scan-only plugin that keeps that module type for files using import.meta.glob
+		expect(
+			(result.optimizeDeps?.rolldownOptions?.plugins as { name: string }[]).map((p) => p.name)
+		).toEqual(['rsg:scan-glob-jsx-in-js']);
+	});
+
+	it('should not run the dependency scanner in a build', async () => {
+		// `optimizeDeps` only drives the dev server's pre-bundling; filling it costs a run of
+		// the component globs and a read of every examples file, which a build must not pay
+		const result = await makeViteConfig(loadConfig('defaults'), 'production');
+		expect(result.optimizeDeps?.entries).toEqual([
+			expect.stringMatching(/\/client\/index\.[jt]s$/),
+		]);
+		expect(result.optimizeDeps?.include).toEqual([]);
 	});
 
 	it('should pre-bundle dependencies imported from examples', async () => {
@@ -279,8 +432,31 @@ describe('makeViteConfig', () => {
 			{ find: '~', replacement: '/src' },
 			{ find: /^rsg-components\/Wrapper$/, replacement: '/w.js' },
 			{ find: 'rsg-components', replacement: expect.any(String) },
+			{ find: /^rsg-react-root$/, replacement: expect.any(String) },
 			{ find: /^assert$/, replacement: expect.any(String) },
 		]);
+	});
+
+	it('should alias the React root matching the project’s react-dom', async () => {
+		const dir = createTempDir({ 'package.json': '{ "name": "pizza" }' });
+		const pkgDir = path.join(dir, 'node_modules/react-dom');
+		fs.mkdirSync(pkgDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(pkgDir, 'package.json'),
+			'{ "version": "16.14.0", "main": "index.js" }'
+		);
+		fs.writeFileSync(path.join(pkgDir, 'index.js'), '');
+		try {
+			process.chdir(dir);
+			const result = await makeViteConfig(getConfig({}), 'production');
+			expect(result.resolve?.alias).toContainEqual({
+				find: /^rsg-react-root$/,
+				replacement: expect.stringMatching(/\/client\/utils\/reactRoot\.legacy\.ts$/),
+			});
+		} finally {
+			process.chdir(cwd);
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	describe('user Vite config', () => {
@@ -318,6 +494,7 @@ describe('makeViteConfig', () => {
 			expect(result.resolve?.alias).toEqual([
 				{ find: 'components', replacement: '/project/components' },
 				{ find: 'rsg-components', replacement: expect.any(String) },
+				{ find: /^rsg-react-root$/, replacement: expect.any(String) },
 				{ find: /^assert$/, replacement: expect.any(String) },
 			]);
 		});

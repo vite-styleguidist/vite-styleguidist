@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import getNameFromFilePath from './getNameFromFilePath.js';
+import { isUsableExampleFile } from './getExamples.js';
 import importIt, { importDefault } from './importIt.js';
 import slugger from './slugger.js';
 import { propsId } from '../../vite/ids.js';
@@ -38,7 +39,9 @@ export default function processComponent(
 		pathLine: config.getComponentPathLine(componentPath),
 		module: importIt(filepath),
 		props: importDefault(propsId(filepath)),
-		hasExamples: !!(examplesFile && fs.existsSync(examplesFile)),
+		// An .mdx examples file that has to be skipped (no @mdx-js/mdx) counts as no examples,
+		// so that `skipComponentsWithoutExample` matches what the guide can actually show
+		hasExamples: isUsableExampleFile(config, examplesFile),
 		metadata: fs.existsSync(componentMetadataPath) ? importDefault(componentMetadataPath) : {},
 	};
 }

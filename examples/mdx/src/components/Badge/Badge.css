@@ -1,0 +1,61 @@
+/*
+ * Two ways to survive a colour-scheme switch, both on show here.
+ *
+ * The neutral badge is chrome, so it reads the style guide's own custom properties: every
+ * `theme.color.*` token is published as `--rsg-color-<kebab-name>` on the page, and the
+ * value after the comma is the light-scheme fallback for anywhere the style guide is not
+ * around (an app page, a test). See src/docs/Callout.css for the same pattern.
+ *
+ * The success and warning badges are the component's own identity — a green and an amber
+ * that no style guide token can stand in for — so they keep their colour and get a value
+ * per scheme instead, declared exactly the way the style guide declares its own
+ * (src/client/styles/cssVariables.ts): light on `:root`, dark under the attribute the
+ * toggle sets, and dark again when the system asks for it and no light choice was made.
+ * Copy this block for your own brand colours; the pairs below are all at 5.7:1 or better.
+ */
+:root {
+	--badge-success-ink: #1c6b30;
+	--badge-success-surface: #e2f5e6;
+	--badge-warning-ink: #7a4b00;
+	--badge-warning-surface: #fdf0d5;
+}
+
+[data-rsg-theme='dark'] {
+	--badge-success-ink: #8fd8a0;
+	--badge-success-surface: #16301d;
+	--badge-warning-ink: #e8c27a;
+	--badge-warning-surface: #33260f;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-rsg-theme='light']) {
+		--badge-success-ink: #8fd8a0;
+		--badge-success-surface: #16301d;
+		--badge-warning-ink: #e8c27a;
+		--badge-warning-surface: #33260f;
+	}
+}
+
+.badge {
+	display: inline-block;
+	padding: 0.15em 0.6em;
+	border-radius: 1em;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.badge-neutral {
+	background-color: var(--rsg-color-code-background, #f3f1ec);
+	color: var(--rsg-color-base, #262421);
+}
+
+.badge-success {
+	background-color: var(--badge-success-surface);
+	color: var(--badge-success-ink);
+}
+
+.badge-warning {
+	background-color: var(--badge-warning-surface);
+	color: var(--badge-warning-ink);
+}

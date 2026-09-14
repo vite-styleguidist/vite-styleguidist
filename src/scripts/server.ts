@@ -1,6 +1,7 @@
 import { createServer } from 'vite';
 import type { ViteDevServer } from 'vite';
 import makeViteConfig from './make-vite-config.js';
+import watchConfig from './watchConfig.js';
 import type * as Rsg from '../typings/index.js';
 
 /**
@@ -17,6 +18,16 @@ export default async function server(
 		const viteConfig = await makeViteConfig(config, 'development');
 		const devServer = await createServer(viteConfig);
 		await devServer.listen();
+		try {
+			// Reloading a changed config file is a convenience; a style guide that is already
+			// serving must not fail to start because the watch could not be set up
+			watchConfig(config, devServer);
+		} catch (err) {
+			devServer.config.logger.warn(
+				`Cannot watch the style guide config: ${(err as Error).message}`,
+				{ timestamp: true }
+			);
+		}
 		if (callback) {
 			callback(undefined, devServer);
 		}

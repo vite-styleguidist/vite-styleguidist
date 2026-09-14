@@ -9,6 +9,13 @@
 	cursor: pointer;
 }
 
+/*
+ * These two variants are driven by this library's own React context (ThemeContext), not by
+ * the style guide's colour scheme, and each one sets its text colour and its background
+ * together: a self-contained pair does not depend on the page behind it, so one value works
+ * in either scheme (15.9:1 both ways). Contrast that with Button.css, whose colours come from
+ * the style guide because the button has no opinion of its own.
+ */
 .ThemeButton--light {
 	color: #111133;
 	background-color: #eeeeff;

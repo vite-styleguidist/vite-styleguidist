@@ -34,7 +34,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/styled-system__theme-get": "^5.0.7",
-    "typescript": "^5.9.0",
+    "typescript": "^7.0.2",
     "vite-styleguidist": "file:../../"
   }
 }
